@@ -104,7 +104,7 @@ export default function InfluencersPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-full overflow-x-hidden">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="min-w-0 flex-1">
@@ -185,28 +185,28 @@ export default function InfluencersPage() {
           {filteredInfluencers.map((influencer) => (
             <div
               key={influencer.id}
-              className="rounded-lg bg-white p-5 border border-gray-200 hover:border-gray-900 transition-colors"
+              className="rounded-lg bg-white p-3 sm:p-5 border border-gray-200 hover:border-gray-900 transition-colors"
             >
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-3">
                 {/* Left: Profile */}
-                <div className="flex items-center gap-4 flex-1">
-                  <div className="h-12 w-12 rounded-full bg-black flex items-center justify-center text-white font-semibold">
+                <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                  <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-black flex items-center justify-center text-white font-semibold text-sm sm:text-base shrink-0">
                     {influencer.name[0]}
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-gray-900 mb-1">{influencer.name}</h3>
-                    <div className="flex items-center gap-4 text-sm text-gray-500">
+                    <h3 className="font-semibold text-gray-900 mb-0.5 sm:mb-1 text-sm sm:text-base truncate">{influencer.name}</h3>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs sm:text-sm text-gray-500">
                       {influencer.instagramHandle && (
-                        <span className="flex items-center gap-1">
-                          <Instagram className="h-4 w-4" />
-                          {influencer.instagramHandle}
+                        <span className="flex items-center gap-1 min-w-0">
+                          <Instagram className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
+                          <span className="truncate">{influencer.instagramHandle}</span>
                         </span>
                       )}
                       {influencer.email && (
-                        <span className="flex items-center gap-1">
-                          <Mail className="h-4 w-4" />
-                          {influencer.email}
+                        <span className="flex items-center gap-1 min-w-0">
+                          <Mail className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
+                          <span className="truncate">{influencer.email}</span>
                         </span>
                       )}
                     </div>
@@ -278,33 +278,33 @@ export default function InfluencersPage() {
                 </div>
 
                 {/* Right: Actions */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                   {activeTab === 'suggestion' && (
-                    <button className="px-3 py-1.5 bg-black text-white rounded-md text-sm font-medium hover:bg-gray-800 transition-colors">
+                    <button className="hidden sm:flex px-3 py-1.5 bg-black text-white rounded-md text-sm font-medium hover:bg-gray-800 transition-colors active:scale-95">
                       Contactar
                     </button>
                   )}
                   {activeTab === 'negotiating' && (
-                    <button className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-900 rounded-md text-sm font-medium hover:bg-gray-200 transition-colors">
+                    <button className="hidden sm:flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-900 rounded-md text-sm font-medium hover:bg-gray-200 transition-colors active:scale-95">
                       <MessageCircle className="h-4 w-4" />
                       Mensagem
                     </button>
                   )}
                   <Link
                     href={`/dashboard/influencers/${influencer.id}`}
-                    className="p-2 rounded-md hover:bg-gray-100 text-gray-600 hover:text-gray-900 transition-colors"
+                    className="p-1.5 sm:p-2 rounded-md hover:bg-gray-100 text-gray-600 hover:text-gray-900 transition-colors active:scale-95"
                   >
                     <Eye className="h-4 w-4" />
                   </Link>
                   <Link
                     href={`/dashboard/influencers/${influencer.id}/edit`}
-                    className="p-2 rounded-md hover:bg-gray-100 text-gray-600 hover:text-gray-900 transition-colors"
+                    className="hidden sm:inline-flex p-2 rounded-md hover:bg-gray-100 text-gray-600 hover:text-gray-900 transition-colors active:scale-95"
                   >
                     <Edit className="h-4 w-4" />
                   </Link>
                   <button 
                     onClick={() => handleDelete(influencer.id, influencer.name)}
-                    className="p-2 rounded-md hover:bg-gray-100 text-gray-600 hover:text-red-600 transition-colors"
+                    className="hidden sm:inline-flex p-2 rounded-md hover:bg-gray-100 text-gray-600 hover:text-red-600 transition-colors active:scale-95"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
