@@ -23,8 +23,8 @@ export default function AddVideoModal({ campaignId, campaignHashtag, isOpen, onC
   const [formData, setFormData] = useState({
     url: '',
     influencerId: '',
-    newInfluencerName: '',
-    newInfluencerTikTok: '',
+    tiktokHandle: '',
+    influencerName: '',
     title: '',
     views: '',
     likes: '',
@@ -32,7 +32,7 @@ export default function AddVideoModal({ campaignId, campaignHashtag, isOpen, onC
     shares: '',
     platform: 'TIKTOK',
   });
-  const [createNewInfluencer, setCreateNewInfluencer] = useState(false);
+  const [useExisting, setUseExisting] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -57,49 +57,43 @@ export default function AddVideoModal({ campaignId, campaignHashtag, isOpen, onC
     setLoading(true);
 
     try {
-      let influencerId = formData.influencerId;
-
-      // Create new influencer if needed
-      if (createNewInfluencer && formData.newInfluencerName) {
-        const resInfluencer = await fetch('/api/influencers', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: formData.newInfluencerName,
-            tiktokHandle: formData.newInfluencerTikTok,
-            status: 'working',
-          }),
-        });
-
-        if (resInfluencer.ok) {
-          const newInfluencer = await resInfluencer.json();
-          influencerId = newInfluencer.id;
-        } else {
-          alert('Erro ao criar influencer');
-          return;
-        }
-      }
-
-      if (!influencerId) {
-        alert('Seleciona ou cria um influencer');
+      // Validate: must have either influencerId OR tiktokHandle
+      if (!useExisting && !formData.tiktokHandle) {
+        alert('Preenche o @ do TikTok');
+        setLoading(false);
         return;
       }
 
-      // Create video
+      if (useExisting && !formData.influencerId) {
+        alert('Seleciona um influencer');
+        setLoading(false);
+        return;
+      }
+
+      // Create video (API will auto-create influencer if needed)
+      const payload: any = {
+        url: formData.url,
+        title: formData.title || null,
+        platform: formData.platform,
+        views: formData.views ? parseInt(formData.views) : null,
+        likes: formData.likes ? parseInt(formData.likes) : null,
+        comments: formData.comments ? parseInt(formData.comments) : null,
+        shares: formData.shares ? parseInt(formData.shares) : null,
+        campaignId,
+        campaignHashtag: campaignHashtag,
+      };
+
+      if (useExisting) {
+        payload.influencerId = formData.influencerId;
+      } else {
+        payload.tiktokHandle = formData.tiktokHandle;
+        payload.influencerName = formData.influencerName || formData.tiktokHandle;
+      }
+
       const resVideo = await fetch('/api/videos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          url: formData.url,
-          title: formData.title || null,
-          platform: formData.platform,
-          views: formData.views ? parseInt(formData.views) : null,
-          likes: formData.likes ? parseInt(formData.likes) : null,
-          comments: formData.comments ? parseInt(formData.comments) : null,
-          shares: formData.shares ? parseInt(formData.shares) : null,
-          influencerId,
-          campaignId,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (resVideo.ok) {
@@ -107,8 +101,8 @@ export default function AddVideoModal({ campaignId, campaignHashtag, isOpen, onC
         setFormData({
           url: '',
           influencerId: '',
-          newInfluencerName: '',
-          newInfluencerTikTok: '',
+          tiktokHandle: '',
+          influencerName: '',
           title: '',
           views: '',
           likes: '',
@@ -116,7 +110,7 @@ export default function AddVideoModal({ campaignId, campaignHashtag, isOpen, onC
           shares: '',
           platform: 'TIKTOK',
         });
-        setCreateNewInfluencer(false);
+        setUseExisting(false);
         onSuccess();
         onClose();
       } else {
@@ -200,61 +194,64 @@ export default function AddVideoModal({ campaignId, campaignHashtag, isOpen, onC
             />
           </div>
 
-          {/* Influencer Selection */}
+          {/* Influencer by @ Handle */}
           <div className="border-t border-gray-200 pt-6">
             <div className="flex items-center justify-between mb-4">
               <label className="block text-sm font-medium text-gray-700">
-                Influencer *
+                Influencer (pelo @) *
               </label>
               <button
                 type="button"
-                onClick={() => setCreateNewInfluencer(!createNewInfluencer)}
+                onClick={() => setUseExisting(!useExisting)}
                 className="flex items-center gap-1.5 text-xs text-purple-600 hover:text-purple-700"
               >
-                <Plus className="h-3 w-3" />
-                {createNewInfluencer ? 'Selecionar existente' : 'Criar novo'}
+                <User className="h-3 w-3" />
+                {useExisting ? 'Adicionar pelo @' : 'Selecionar existente'}
               </button>
             </div>
 
-            {createNewInfluencer ? (
-              <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
+            {!useExisting ? (
+              <div className="space-y-3 p-4 bg-purple-50 rounded-lg border border-purple-200">
                 <div>
-                  <label htmlFor="newInfluencerName" className="block text-xs font-medium text-gray-700 mb-1">
-                    Nome *
-                  </label>
-                  <input
-                    type="text"
-                    id="newInfluencerName"
-                    name="newInfluencerName"
-                    required={createNewInfluencer}
-                    value={formData.newInfluencerName}
-                    onChange={handleChange}
-                    placeholder="Nome do influencer"
-                    className="w-full rounded-md border border-gray-200 bg-white py-2 px-3 text-sm focus:border-purple-600 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="newInfluencerTikTok" className="block text-xs font-medium text-gray-700 mb-1">
-                    TikTok Handle
+                  <label htmlFor="tiktokHandle" className="block text-xs font-medium text-gray-700 mb-1">
+                    @ TikTok *
                   </label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">@</span>
                     <input
                       type="text"
-                      id="newInfluencerTikTok"
-                      name="newInfluencerTikTok"
-                      value={formData.newInfluencerTikTok}
+                      id="tiktokHandle"
+                      name="tiktokHandle"
+                      required={!useExisting}
+                      value={formData.tiktokHandle}
                       onChange={handleChange}
-                      placeholder="username"
+                      placeholder="beatriz_brito_"
                       className="w-full rounded-md border border-gray-200 bg-white py-2 pl-8 pr-3 text-sm focus:border-purple-600 focus:outline-none"
                     />
                   </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Se não existir, será criado automaticamente
+                  </p>
+                </div>
+                <div>
+                  <label htmlFor="influencerName" className="block text-xs font-medium text-gray-700 mb-1">
+                    Nome (opcional)
+                  </label>
+                  <input
+                    type="text"
+                    id="influencerName"
+                    name="influencerName"
+                    value={formData.influencerName}
+                    onChange={handleChange}
+                    placeholder="Nome completo"
+                    className="w-full rounded-md border border-gray-200 bg-white py-2 px-3 text-sm focus:border-purple-600 focus:outline-none"
+                  />
                 </div>
               </div>
             ) : (
               <select
                 name="influencerId"
-                required={!createNewInfluencer}
+                required={useExisting}
                 value={formData.influencerId}
                 onChange={handleChange}
                 className="w-full rounded-md border border-gray-200 bg-white py-2 px-4 text-sm focus:border-purple-600 focus:outline-none"

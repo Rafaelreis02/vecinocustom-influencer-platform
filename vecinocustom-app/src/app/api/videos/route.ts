@@ -43,15 +43,69 @@ export async function GET(request: Request) {
   }
 }
 
-// POST /api/videos - Create new video
+// POST /api/videos - Create new video (auto-creates influencer if needed)
 export async function POST(request: Request) {
   try {
     const body = await request.json();
 
     // Validate required fields
-    if (!body.url || !body.influencerId) {
+    if (!body.url) {
       return NextResponse.json(
-        { error: 'URL and influencerId are required' },
+        { error: 'URL is required' },
+        { status: 400 }
+      );
+    }
+
+    let influencerId = body.influencerId;
+
+    // Auto-create influencer if tiktokHandle or instagramHandle provided
+    if (!influencerId && (body.tiktokHandle || body.instagramHandle)) {
+      const handle = body.tiktokHandle || body.instagramHandle;
+      const handleField = body.tiktokHandle ? 'tiktokHandle' : 'instagramHandle';
+
+      // Check if influencer already exists
+      const existing = await prisma.influencer.findFirst({
+        where: { [handleField]: handle },
+      });
+
+      if (existing) {
+        influencerId = existing.id;
+      } else {
+        // Get default user (AI Agent)
+        let defaultUser = await prisma.user.findUnique({
+          where: { email: 'ai@vecinocustom.com' }
+        });
+
+        if (!defaultUser) {
+          defaultUser = await prisma.user.create({
+            data: {
+              email: 'ai@vecinocustom.com',
+              name: 'AI Agent 🤖',
+              role: 'ADMIN'
+            }
+          });
+        }
+
+        // Create new influencer
+        const newInfluencer = await prisma.influencer.create({
+          data: {
+            name: body.influencerName || handle,
+            [handleField]: handle,
+            status: 'suggestion',
+            primaryPlatform: body.platform || 'TIKTOK',
+            discoveryMethod: `Video with ${body.campaignHashtag || 'hashtag'}`,
+            discoveryDate: new Date(),
+            createdById: defaultUser.id,
+          },
+        });
+
+        influencerId = newInfluencer.id;
+      }
+    }
+
+    if (!influencerId) {
+      return NextResponse.json(
+        { error: 'influencerId or tiktokHandle/instagramHandle required' },
         { status: 400 }
       );
     }
@@ -61,7 +115,7 @@ export async function POST(request: Request) {
         url: body.url,
         title: body.title || null,
         platform: body.platform || 'TIKTOK',
-        influencerId: body.influencerId,
+        influencerId,
         campaignId: body.campaignId || null,
         views: body.views ? parseInt(body.views) : null,
         likes: body.likes ? parseInt(body.likes) : null,
@@ -75,16 +129,40 @@ export async function POST(request: Request) {
             id: true,
             name: true,
             tiktokHandle: true,
+            instagramHandle: true,
           },
         },
         campaign: {
           select: {
             id: true,
             name: true,
+            hashtag: true,
           },
         },
       },
     });
+
+    // If campaign provided, auto-add influencer to campaign
+    if (body.campaignId && influencerId) {
+      const existingLink = await prisma.campaignInfluencer.findUnique({
+        where: {
+          campaignId_influencerId: {
+            campaignId: body.campaignId,
+            influencerId,
+          },
+        },
+      });
+
+      if (!existingLink) {
+        await prisma.campaignInfluencer.create({
+          data: {
+            campaignId: body.campaignId,
+            influencerId,
+            status: 'pending',
+          },
+        });
+      }
+    }
 
     return NextResponse.json(video, { status: 201 });
   } catch (err: any) {
