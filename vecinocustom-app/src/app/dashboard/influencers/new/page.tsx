@@ -11,7 +11,9 @@ import {
   MapPin,
   Save,
   X,
-  Loader2
+  Loader2,
+  Sparkles,
+  Search
 } from 'lucide-react';
 
 export default function NewInfluencerPage() {
@@ -29,9 +31,59 @@ export default function NewInfluencerPage() {
     tier: 'micro',
     notes: '',
     tags: '',
+    engagementRate: '',
+    averageViews: '',
+    contentStability: '',
+    country: '',
+    language: '',
+    niche: '',
+    contentTypes: '',
+    primaryPlatform: '',
+    fitScore: '',
+    estimatedPrice: ''
   });
 
   const [saving, setSaving] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importHandle, setImportHandle] = useState('');
+  const [importPlatform, setImportPlatform] = useState('tiktok');
+
+  const handleImport = async () => {
+    if (!importHandle) return;
+    setImporting(true);
+
+    try {
+      const res = await fetch('/api/influencers/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          handle: importHandle, 
+          platform: importPlatform 
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        // Preencher formulário com dados importados
+        setFormData(prev => ({
+          ...prev,
+          name: data.data.name || prev.name,
+          tiktokHandle: importPlatform === 'tiktok' ? data.data.handle : prev.tiktokHandle,
+          instagramHandle: importPlatform === 'instagram' ? data.data.handle : prev.instagramHandle,
+          // Outros campos virão da API de importação
+        }));
+        alert('Dados importados com sucesso! (Modo Simulação - Pede ao Agente para completar se faltar algo)');
+      } else {
+        alert('Não foi possível importar automaticamente. Pede ao Agente no chat!');
+      }
+    } catch (error) {
+      console.error('Import error:', error);
+      alert('Erro na importação. Tenta pedir ao Agente no chat.');
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,6 +133,58 @@ export default function NewInfluencerPage() {
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
+        
+        {/* AI Import Section */}
+        <div className="rounded-xl bg-gradient-to-r from-purple-50 to-pink-50 p-6 border border-purple-100">
+          <h3 className="text-lg font-semibold text-purple-900 mb-2 flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-purple-600" />
+            Importar via AI
+          </h3>
+          <p className="text-sm text-purple-700 mb-4">
+            Cola o @username e deixa a IA preencher os dados automaticamente.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium">@</span>
+                <input
+                  type="text"
+                  value={importHandle}
+                  onChange={(e) => setImportHandle(e.target.value)}
+                  placeholder="username"
+                  className="w-full rounded-lg border-purple-200 bg-white py-2 pl-8 pr-4 text-sm focus:border-purple-600 focus:outline-none"
+                />
+              </div>
+            </div>
+            <select
+              value={importPlatform}
+              onChange={(e) => setImportPlatform(e.target.value)}
+              className="rounded-lg border-purple-200 bg-white px-4 py-2 text-sm focus:border-purple-600 focus:outline-none"
+            >
+              <option value="tiktok">TikTok</option>
+              <option value="instagram">Instagram</option>
+            </select>
+            <button
+              type="button"
+              onClick={handleImport}
+              disabled={importing || !importHandle}
+              className="flex items-center justify-center gap-2 px-6 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition disabled:opacity-50"
+            >
+              {importing ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  A analisar...
+                </>
+              ) : (
+                <>
+                  <Search className="h-4 w-4" />
+                  Verificar e Importar
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
         {/* Basic Info */}
         <div className="rounded-lg bg-white p-6 border border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Informação Básica</h3>

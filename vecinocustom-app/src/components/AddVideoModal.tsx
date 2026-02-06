@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Link as LinkIcon, User, Eye, Heart, MessageCircle, Share2, Loader2, Plus } from 'lucide-react';
+import { X, Link as LinkIcon, User, Eye, Heart, MessageCircle, Share2, Loader2, Plus, DollarSign } from 'lucide-react';
 
 interface AddVideoModalProps {
   campaignId: string;
@@ -30,6 +30,7 @@ export default function AddVideoModal({ campaignId, campaignHashtag, isOpen, onC
     likes: '',
     comments: '',
     shares: '',
+    cost: '',
     platform: 'TIKTOK',
   });
   const [useExisting, setUseExisting] = useState(false);
@@ -79,6 +80,7 @@ export default function AddVideoModal({ campaignId, campaignHashtag, isOpen, onC
         likes: formData.likes ? parseInt(formData.likes) : null,
         comments: formData.comments ? parseInt(formData.comments) : null,
         shares: formData.shares ? parseInt(formData.shares) : null,
+        cost: formData.cost ? parseFloat(formData.cost) : null,
         campaignId,
         campaignHashtag: campaignHashtag,
       };
@@ -108,6 +110,7 @@ export default function AddVideoModal({ campaignId, campaignHashtag, isOpen, onC
           likes: '',
           comments: '',
           shares: '',
+          cost: '',
           platform: 'TIKTOK',
         });
         setUseExisting(false);
@@ -264,6 +267,30 @@ export default function AddVideoModal({ campaignId, campaignHashtag, isOpen, onC
                 ))}
               </select>
             )}
+          </div>
+
+          {/* Cost */}
+          <div>
+            <label htmlFor="cost" className="block text-sm font-medium text-gray-700 mb-1">
+              Preço Pago (€)
+            </label>
+            <div className="relative">
+              <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <input
+                type="number"
+                id="cost"
+                name="cost"
+                min="0"
+                step="0.01"
+                value={formData.cost}
+                onChange={handleChange}
+                placeholder="0.00"
+                className="w-full rounded-md border border-gray-200 bg-white py-2 pl-10 pr-4 text-sm focus:border-purple-600 focus:outline-none transition-colors"
+              />
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Valor pago ao influencer por este conteúdo específico
+            </p>
           </div>
 
           {/* Metrics */}

@@ -365,6 +365,65 @@ export default function InfluencerDetailPage() {
             </div>
           )}
 
+          {/* Videos History */}
+          {influencer.videos && influencer.videos.length > 0 && (
+            <div className="rounded-2xl bg-white p-6 border border-gray-100 shadow-sm">
+              <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <Video className="h-5 w-5 text-purple-600" />
+                Vídeos Publicados ({influencer.videos.length})
+              </h3>
+              <div className="space-y-3">
+                {influencer.videos.map((video: any) => (
+                  <div key={video.id} className="p-4 rounded-xl border border-gray-100 hover:border-purple-200 transition bg-gray-50/50">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${
+                            video.platform === 'TIKTOK' ? 'bg-black text-white' : 
+                            video.platform === 'INSTAGRAM' ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white' : 
+                            'bg-gray-200 text-gray-700'
+                          }`}>
+                            {video.platform}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {new Date(video.publishedAt).toLocaleDateString('pt-PT')}
+                          </span>
+                        </div>
+                        <a href={video.url} target="_blank" rel="noopener noreferrer" className="font-medium text-gray-900 hover:text-purple-600 truncate block mb-1">
+                          {video.title || 'Sem título'}
+                        </a>
+                        <div className="flex items-center gap-4 text-xs text-gray-500">
+                          <span className="flex items-center gap-1">
+                            <Eye className="h-3 w-3" /> {(video.views || 0).toLocaleString()}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Heart className="h-3 w-3" /> {(video.likes || 0).toLocaleString()}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <MessageCircle className="h-3 w-3" /> {(video.comments || 0).toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        {video.cost ? (
+                          <>
+                            <p className="text-sm font-bold text-gray-900">€{video.cost}</p>
+                            <p className="text-[10px] text-gray-500 uppercase tracking-wide">Custo</p>
+                          </>
+                        ) : (
+                          <span className="text-xs text-gray-400 italic">Sem custo</span>
+                        )}
+                        <a href={video.url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center justify-center p-1.5 rounded-lg hover:bg-gray-200 text-gray-400 hover:text-gray-700 transition">
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Notes */}
           {influencer.notes && (
             <div className="rounded-2xl bg-white p-6 border border-gray-100 shadow-sm">

@@ -121,6 +121,7 @@ export async function POST(request: Request) {
         likes: body.likes ? parseInt(body.likes) : null,
         comments: body.comments ? parseInt(body.comments) : null,
         shares: body.shares ? parseInt(body.shares) : null,
+        cost: body.cost ? parseFloat(body.cost) : null,
         publishedAt: body.publishedAt ? new Date(body.publishedAt) : new Date(),
       },
       include: {

@@ -218,6 +218,9 @@ model Video {
   shares          Int?
   saves           Int?
   
+  // Financials
+  cost            Float?      // Custo/Preço pago por este vídeo específico
+  
   // Dates
   publishedAt     DateTime?
   createdAt       DateTime    @default(now())
