@@ -105,7 +105,7 @@ export default function InfluencerDetailPage() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in max-w-full overflow-x-hidden">
       {/* Back Button */}
       <Link
         href="/dashboard/influencers"
@@ -116,7 +116,7 @@ export default function InfluencerDetailPage() {
       </Link>
 
       {/* Header Card */}
-      <div className="rounded-2xl bg-gradient-to-br from-purple-600 via-pink-600 to-blue-600 p-4 sm:p-6 md:p-8 text-white shadow-xl">
+      <div className="rounded-2xl bg-gradient-to-br from-purple-600 via-pink-600 to-blue-600 p-4 sm:p-6 md:p-8 text-white shadow-xl overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4 sm:mb-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 flex-1">
             <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl bg-white/20 backdrop-blur-xl border-2 border-white/40 flex items-center justify-center text-3xl sm:text-4xl font-bold shadow-2xl shrink-0">
@@ -132,7 +132,7 @@ export default function InfluencerDetailPage() {
                   </span>
                 )}
               </div>
-              <div className="flex flex-wrap items-center gap-2 mb-3">
+              <div className="flex flex-wrap items-center gap-2 mb-3 max-w-full">
                 {influencer.tier && (
                   <span className="px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-semibold bg-white/20 backdrop-blur-xl border border-white/40">
                     {influencer.tier}
@@ -208,18 +208,18 @@ export default function InfluencerDetailPage() {
         </div>
 
         {/* Social Links */}
-        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 max-w-full">
           {influencer.instagramHandle && (
             <a
               href={`https://instagram.com/${influencer.instagramHandle.replace('@', '')}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl bg-white/20 backdrop-blur-xl border border-white/40 hover:bg-white/30 transition active:scale-95 min-w-0"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl bg-white/20 backdrop-blur-xl border border-white/40 hover:bg-white/30 transition active:scale-95 min-w-0 max-w-full"
             >
               <Instagram className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
-              <span className="font-medium text-xs sm:text-sm truncate">{influencer.instagramHandle}</span>
+              <span className="font-medium text-xs sm:text-sm truncate flex-1 min-w-0">{influencer.instagramHandle}</span>
               {influencer.instagramFollowers && (
-                <span className="text-xs opacity-80 whitespace-nowrap">
+                <span className="text-xs opacity-80 whitespace-nowrap shrink-0">
                   ({(influencer.instagramFollowers / 1000).toFixed(1)}K)
                 </span>
               )}
@@ -231,12 +231,12 @@ export default function InfluencerDetailPage() {
               href={`https://tiktok.com/@${influencer.tiktokHandle.replace('@', '')}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl bg-white/20 backdrop-blur-xl border border-white/40 hover:bg-white/30 transition active:scale-95 min-w-0"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl bg-white/20 backdrop-blur-xl border border-white/40 hover:bg-white/30 transition active:scale-95 min-w-0 max-w-full"
             >
               <Video className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
-              <span className="font-medium text-xs sm:text-sm truncate">{influencer.tiktokHandle}</span>
+              <span className="font-medium text-xs sm:text-sm truncate flex-1 min-w-0">{influencer.tiktokHandle}</span>
               {influencer.tiktokFollowers && (
-                <span className="text-xs opacity-80 whitespace-nowrap">
+                <span className="text-xs opacity-80 whitespace-nowrap shrink-0">
                   ({(influencer.tiktokFollowers / 1000).toFixed(1)}K)
                 </span>
               )}
@@ -308,7 +308,7 @@ export default function InfluencerDetailPage() {
       </div>
 
       {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-full">
         {/* Left Column */}
         <div className="lg:col-span-2 space-y-6">
           {/* Content Types */}
