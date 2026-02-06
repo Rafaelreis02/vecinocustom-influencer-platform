@@ -116,42 +116,42 @@ export default function InfluencerDetailPage() {
       </Link>
 
       {/* Header Card */}
-      <div className="rounded-2xl bg-gradient-to-br from-purple-600 via-pink-600 to-blue-600 p-8 text-white shadow-xl">
-        <div className="flex items-start justify-between mb-6">
-          <div className="flex items-center gap-6">
-            <div className="h-24 w-24 rounded-2xl bg-white/20 backdrop-blur-xl border-2 border-white/40 flex items-center justify-center text-4xl font-bold shadow-2xl">
+      <div className="rounded-2xl bg-gradient-to-br from-purple-600 via-pink-600 to-blue-600 p-4 sm:p-6 md:p-8 text-white shadow-xl">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4 sm:mb-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 flex-1">
+            <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl bg-white/20 backdrop-blur-xl border-2 border-white/40 flex items-center justify-center text-3xl sm:text-4xl font-bold shadow-2xl shrink-0">
               {influencer.name[0]}
             </div>
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-3xl font-bold">{influencer.name}</h1>
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
+                <h1 className="text-2xl sm:text-3xl font-bold truncate">{influencer.name}</h1>
                 {influencer.fitScore && (
-                  <span className="px-3 py-1 rounded-full text-sm font-semibold bg-yellow-400/90 text-yellow-900 flex items-center gap-1">
-                    <Award className="h-4 w-4" />
-                    Fit Score: {influencer.fitScore}/5
+                  <span className="px-3 py-1 rounded-full text-xs sm:text-sm font-semibold bg-yellow-400/90 text-yellow-900 flex items-center gap-1 w-fit">
+                    <Award className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="whitespace-nowrap">Fit {influencer.fitScore}/5</span>
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-2 mb-3">
+              <div className="flex flex-wrap items-center gap-2 mb-3">
                 {influencer.tier && (
-                  <span className="px-3 py-1 rounded-full text-sm font-semibold bg-white/20 backdrop-blur-xl border border-white/40">
+                  <span className="px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-semibold bg-white/20 backdrop-blur-xl border border-white/40">
                     {influencer.tier}
                   </span>
                 )}
-                <span className={`px-3 py-1 rounded-full text-sm font-semibold ${statusColors[influencer.status] || 'bg-gray-500/90'} flex items-center gap-1.5`}>
-                  <span className="h-2 w-2 rounded-full bg-white animate-pulse"></span>
+                <span className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-semibold ${statusColors[influencer.status] || 'bg-gray-500/90'} flex items-center gap-1.5 whitespace-nowrap`}>
+                  <span className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-white animate-pulse"></span>
                   {statusLabels[influencer.status] || influencer.status}
                 </span>
                 {influencer.primaryPlatform && (
-                  <span className="px-3 py-1 rounded-full text-sm font-semibold bg-white/20 backdrop-blur-xl border border-white/40">
+                  <span className="px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-semibold bg-white/20 backdrop-blur-xl border border-white/40 whitespace-nowrap">
                     📱 {influencer.primaryPlatform}
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-4 text-white/90 text-sm">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-white/90 text-xs sm:text-sm">
                 {influencer.country && (
-                  <span className="flex items-center gap-1.5">
-                    <Globe className="h-4 w-4" />
+                  <span className="flex items-center gap-1 sm:gap-1.5 whitespace-nowrap">
+                    <Globe className="h-3 w-3 sm:h-4 sm:w-4" />
                     {influencer.country}
                   </span>
                 )}
@@ -161,130 +161,132 @@ export default function InfluencerDetailPage() {
                   </span>
                 )}
                 {influencer.niche && (
-                  <span className="flex items-center gap-1.5">
-                    <Tag className="h-4 w-4" />
-                    {influencer.niche}
+                  <span className="flex items-center gap-1 sm:gap-1.5">
+                    <Tag className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="truncate">{influencer.niche}</span>
                   </span>
                 )}
               </div>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 self-end sm:self-auto">
             <Link
               href={`/dashboard/influencers/${id}/edit`}
-              className="p-3 rounded-xl bg-white/20 backdrop-blur-xl border border-white/40 hover:bg-white/30 transition"
+              className="p-2 sm:p-3 rounded-xl bg-white/20 backdrop-blur-xl border border-white/40 hover:bg-white/30 transition active:scale-95"
             >
-              <Edit className="h-5 w-5" />
+              <Edit className="h-4 w-4 sm:h-5 sm:w-5" />
             </Link>
             <button
               onClick={handleDelete}
-              className="p-3 rounded-xl bg-white/20 backdrop-blur-xl border border-white/40 hover:bg-red-500 transition"
+              className="p-2 sm:p-3 rounded-xl bg-white/20 backdrop-blur-xl border border-white/40 hover:bg-red-500 transition active:scale-95"
             >
-              <Trash2 className="h-5 w-5" />
+              <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
             </button>
           </div>
         </div>
 
         {/* Contact Info */}
-        <div className="flex items-center gap-4 text-white/90 text-sm mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-white/90 text-xs sm:text-sm mb-4">
           {influencer.email && (
-            <a href={`mailto:${influencer.email}`} className="flex items-center gap-1.5 hover:text-white transition">
-              <Mail className="h-4 w-4" />
-              {influencer.email}
+            <a href={`mailto:${influencer.email}`} className="flex items-center gap-1.5 hover:text-white transition active:scale-95 min-w-0">
+              <Mail className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
+              <span className="truncate">{influencer.email}</span>
             </a>
           )}
           {influencer.phone && (
-            <a href={`tel:${influencer.phone}`} className="flex items-center gap-1.5 hover:text-white transition">
-              <Phone className="h-4 w-4" />
+            <a href={`tel:${influencer.phone}`} className="flex items-center gap-1.5 hover:text-white transition active:scale-95 whitespace-nowrap">
+              <Phone className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
               {influencer.phone}
             </a>
           )}
           {influencer.address && (
-            <span className="flex items-center gap-1.5">
-              <MapPin className="h-4 w-4" />
-              {influencer.address}
+            <span className="flex items-center gap-1.5 min-w-0">
+              <MapPin className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
+              <span className="truncate">{influencer.address}</span>
             </span>
           )}
         </div>
 
         {/* Social Links */}
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
           {influencer.instagramHandle && (
             <a
               href={`https://instagram.com/${influencer.instagramHandle.replace('@', '')}`}
               target="_blank"
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/20 backdrop-blur-xl border border-white/40 hover:bg-white/30 transition"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl bg-white/20 backdrop-blur-xl border border-white/40 hover:bg-white/30 transition active:scale-95 min-w-0"
             >
-              <Instagram className="h-5 w-5" />
-              <span className="font-medium">{influencer.instagramHandle}</span>
+              <Instagram className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+              <span className="font-medium text-xs sm:text-sm truncate">{influencer.instagramHandle}</span>
               {influencer.instagramFollowers && (
-                <span className="text-sm opacity-80">
+                <span className="text-xs opacity-80 whitespace-nowrap">
                   ({(influencer.instagramFollowers / 1000).toFixed(1)}K)
                 </span>
               )}
-              <ExternalLink className="h-4 w-4" />
+              <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
             </a>
           )}
           {influencer.tiktokHandle && (
             <a
               href={`https://tiktok.com/@${influencer.tiktokHandle.replace('@', '')}`}
               target="_blank"
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/20 backdrop-blur-xl border border-white/40 hover:bg-white/30 transition"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl bg-white/20 backdrop-blur-xl border border-white/40 hover:bg-white/30 transition active:scale-95 min-w-0"
             >
-              <Video className="h-5 w-5" />
-              <span className="font-medium">{influencer.tiktokHandle}</span>
+              <Video className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+              <span className="font-medium text-xs sm:text-sm truncate">{influencer.tiktokHandle}</span>
               {influencer.tiktokFollowers && (
-                <span className="text-sm opacity-80">
+                <span className="text-xs opacity-80 whitespace-nowrap">
                   ({(influencer.tiktokFollowers / 1000).toFixed(1)}K)
                 </span>
               )}
-              <ExternalLink className="h-4 w-4" />
+              <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
             </a>
           )}
         </div>
       </div>
 
       {/* Key Metrics Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         {influencer.totalLikes && (
-          <div className="rounded-xl bg-white p-6 border border-gray-100 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm text-gray-600">Total Likes</p>
-              <Heart className="h-5 w-5 text-pink-500" />
+          <div className="rounded-xl bg-white p-3 sm:p-4 md:p-6 border border-gray-100 shadow-sm">
+            <div className="flex items-center justify-between mb-1 sm:mb-2">
+              <p className="text-xs sm:text-sm text-gray-600 truncate">Total Likes</p>
+              <Heart className="h-4 w-4 sm:h-5 sm:w-5 text-pink-500 shrink-0" />
             </div>
-            <p className="text-2xl font-bold text-gray-900">
+            <p className="text-xl sm:text-2xl font-bold text-gray-900">
               {(Number(influencer.totalLikes) / 1000000).toFixed(1)}M
             </p>
           </div>
         )}
 
         {influencer.engagementRate !== null && influencer.engagementRate !== undefined && (
-          <div className="rounded-xl bg-white p-6 border border-gray-100 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm text-gray-600">Engagement</p>
-              <TrendingUp className="h-5 w-5 text-purple-500" />
+          <div className="rounded-xl bg-white p-3 sm:p-4 md:p-6 border border-gray-100 shadow-sm">
+            <div className="flex items-center justify-between mb-1 sm:mb-2">
+              <p className="text-xs sm:text-sm text-gray-600 truncate">Engagement</p>
+              <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-purple-500 shrink-0" />
             </div>
-            <p className="text-2xl font-bold text-purple-600">{influencer.engagementRate}x</p>
+            <p className="text-xl sm:text-2xl font-bold text-purple-600">{influencer.engagementRate}x</p>
           </div>
         )}
 
         {influencer.averageViews && (
-          <div className="rounded-xl bg-white p-6 border border-gray-100 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm text-gray-600">Avg. Views</p>
-              <Eye className="h-5 w-5 text-blue-500" />
+          <div className="rounded-xl bg-white p-3 sm:p-4 md:p-6 border border-gray-100 shadow-sm">
+            <div className="flex items-center justify-between mb-1 sm:mb-2">
+              <p className="text-xs sm:text-sm text-gray-600 truncate">Avg. Views</p>
+              <Eye className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500 shrink-0" />
             </div>
-            <p className="text-2xl font-bold text-gray-900">{influencer.averageViews}</p>
+            <p className="text-xl sm:text-2xl font-bold text-gray-900">{influencer.averageViews}</p>
           </div>
         )}
 
         {influencer.contentStability && (
-          <div className="rounded-xl bg-white p-6 border border-gray-100 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm text-gray-600">Estabilidade</p>
-              <Sparkles className="h-5 w-5 text-yellow-500" />
+          <div className="rounded-xl bg-white p-3 sm:p-4 md:p-6 border border-gray-100 shadow-sm">
+            <div className="flex items-center justify-between mb-1 sm:mb-2">
+              <p className="text-xs sm:text-sm text-gray-600 truncate">Estabilidade</p>
+              <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500 shrink-0" />
             </div>
-            <p className={`text-2xl font-bold ${
+            <p className={`text-lg sm:text-xl md:text-2xl font-bold ${
               influencer.contentStability === 'HIGH' ? 'text-green-600' :
               influencer.contentStability === 'MEDIUM' ? 'text-yellow-600' :
               'text-red-600'
@@ -295,12 +297,12 @@ export default function InfluencerDetailPage() {
         )}
 
         {influencer.estimatedPrice && (
-          <div className="rounded-xl bg-white p-6 border border-gray-100 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm text-gray-600">Preço Est.</p>
-              <DollarSign className="h-5 w-5 text-green-500" />
+          <div className="rounded-xl bg-white p-3 sm:p-4 md:p-6 border border-gray-100 shadow-sm">
+            <div className="flex items-center justify-between mb-1 sm:mb-2">
+              <p className="text-xs sm:text-sm text-gray-600 truncate">Preço Est.</p>
+              <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-green-500 shrink-0" />
             </div>
-            <p className="text-2xl font-bold text-green-600">€{influencer.estimatedPrice}</p>
+            <p className="text-xl sm:text-2xl font-bold text-green-600">€{influencer.estimatedPrice}</p>
           </div>
         )}
       </div>
