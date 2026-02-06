@@ -4,11 +4,12 @@ import { prisma } from '@/lib/prisma';
 // GET /api/influencers/[id] - Ver detalhes de um influencer
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const influencer = await prisma.influencer.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         videos: {
           orderBy: { publishedAt: 'desc' },
@@ -71,9 +72,10 @@ export async function GET(
 // PUT /api/influencers/[id] - Editar influencer
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
 
     // Processar tags (string separada por vírgulas -> array)
@@ -83,7 +85,7 @@ export async function PUT(
     }
 
     const influencer = await prisma.influencer.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         name: body.name,
         email: body.email || null,
@@ -113,12 +115,13 @@ export async function PUT(
 // DELETE /api/influencers/[id] - Apagar influencer
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     // Verificar se existe
     const influencer = await prisma.influencer.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         campaigns: true,
         videos: true,
@@ -147,7 +150,7 @@ export async function DELETE(
 
     // Apagar (Prisma vai apagar relacionamentos automaticamente com cascade)
     await prisma.influencer.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ success: true });
