@@ -29,6 +29,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import AddVideoModal from '@/components/AddVideoModal';
+import AddInfluencerToCampaignModal from '@/components/AddInfluencerToCampaignModal';
 
 interface Campaign {
   id: string;
@@ -93,6 +94,7 @@ export default function CampaignDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAddVideoModal, setShowAddVideoModal] = useState(false);
+  const [showAddInfluencerModal, setShowAddInfluencerModal] = useState(false);
 
   useEffect(() => {
     fetchCampaign();
@@ -309,7 +311,10 @@ export default function CampaignDetailPage() {
             <Users className="h-5 w-5 text-purple-600" />
             Influencers ({campaign.influencers.length})
           </h2>
-          <button className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-black text-white rounded-md text-xs sm:text-sm font-medium hover:bg-gray-800 transition-colors">
+          <button
+            onClick={() => setShowAddInfluencerModal(true)}
+            className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-black text-white rounded-md text-xs sm:text-sm font-medium hover:bg-gray-800 transition-colors"
+          >
             <UserPlus className="h-4 w-4" />
             <span className="hidden sm:inline">Adicionar</span>
           </button>
@@ -491,6 +496,16 @@ export default function CampaignDetailPage() {
         campaignHashtag={campaign.hashtag}
         isOpen={showAddVideoModal}
         onClose={() => setShowAddVideoModal(false)}
+        onSuccess={fetchCampaign}
+      />
+
+      {/* Add Influencer Modal */}
+      <AddInfluencerToCampaignModal
+        campaignId={campaign.id}
+        campaignName={campaign.name}
+        existingInfluencerIds={campaign.influencers.map(ci => ci.influencer.id)}
+        isOpen={showAddInfluencerModal}
+        onClose={() => setShowAddInfluencerModal(false)}
         onSuccess={fetchCampaign}
       />
     </div>
