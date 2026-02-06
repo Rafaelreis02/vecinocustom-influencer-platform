@@ -13,7 +13,12 @@ import {
   X,
   Loader2,
   Sparkles,
-  Search
+  Search,
+  TrendingUp,
+  DollarSign,
+  Star,
+  Globe,
+  Tag
 } from 'lucide-react';
 
 export default function NewInfluencerPage() {
@@ -27,20 +32,30 @@ export default function NewInfluencerPage() {
     instagramFollowers: '',
     tiktokHandle: '',
     tiktokFollowers: '',
-    status: 'suggestion',
-    tier: 'micro',
-    notes: '',
-    tags: '',
+    youtubeHandle: '',
+    youtubeFollowers: '',
+    
+    // Metrics
     engagementRate: '',
     averageViews: '',
-    contentStability: '',
+    contentStability: 'MEDIUM',
+    totalLikes: '',
+    
+    // Demographics
     country: '',
-    language: '',
+    language: 'PT',
     niche: '',
     contentTypes: '',
-    primaryPlatform: '',
-    fitScore: '',
-    estimatedPrice: ''
+    primaryPlatform: 'TikTok',
+    
+    // Business
+    status: 'suggestion',
+    tier: 'micro',
+    fitScore: '3',
+    estimatedPrice: '',
+    
+    notes: '',
+    tags: '',
   });
 
   const [saving, setSaving] = useState(false);
@@ -49,40 +64,9 @@ export default function NewInfluencerPage() {
   const [importPlatform, setImportPlatform] = useState('tiktok');
 
   const handleImport = async () => {
-    if (!importHandle) return;
-    setImporting(true);
-
-    try {
-      const res = await fetch('/api/influencers/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          handle: importHandle, 
-          platform: importPlatform 
-        }),
-      });
-
-      const data = await res.json();
-
-      if (data.success) {
-        // Preencher formulário com dados importados
-        setFormData(prev => ({
-          ...prev,
-          name: data.data.name || prev.name,
-          tiktokHandle: importPlatform === 'tiktok' ? data.data.handle : prev.tiktokHandle,
-          instagramHandle: importPlatform === 'instagram' ? data.data.handle : prev.instagramHandle,
-          // Outros campos virão da API de importação
-        }));
-        alert('Dados importados com sucesso! (Modo Simulação - Pede ao Agente para completar se faltar algo)');
-      } else {
-        alert('Não foi possível importar automaticamente. Pede ao Agente no chat!');
-      }
-    } catch (error) {
-      console.error('Import error:', error);
-      alert('Erro na importação. Tenta pedir ao Agente no chat.');
-    } finally {
-      setImporting(false);
-    }
+    // Nota: A lógica de importação real será feita via chat com o Agente por enquanto,
+    // mas este botão pode chamar o endpoint se implementarmos scraping server-side depois.
+    alert('Para importar automaticamente com scraping, pede ao Agente no chat: "importa @username"');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -115,7 +99,7 @@ export default function NewInfluencerPage() {
   };
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="max-w-4xl space-y-6 pb-20">
       {/* Header */}
       <div>
         <Link
@@ -127,70 +111,35 @@ export default function NewInfluencerPage() {
         </Link>
         <h1 className="text-3xl font-semibold text-gray-900">Adicionar Influencer</h1>
         <p className="mt-1 text-sm text-gray-600">
-          Preenche os dados do novo influencer
+          Preenche os dados completos do novo influencer.
         </p>
+      </div>
+
+      {/* AI Import Callout */}
+      <div className="rounded-xl bg-gradient-to-r from-purple-50 to-pink-50 p-6 border border-purple-100 flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold text-purple-900 mb-1 flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-purple-600" />
+            Queres preenchimento automático?
+          </h3>
+          <p className="text-sm text-purple-700">
+            Pede ao Agente no chat: <span className="font-mono bg-white/50 px-2 py-0.5 rounded">importa @username</span>
+          </p>
+        </div>
       </div>
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
         
-        {/* AI Import Section */}
-        <div className="rounded-xl bg-gradient-to-r from-purple-50 to-pink-50 p-6 border border-purple-100">
-          <h3 className="text-lg font-semibold text-purple-900 mb-2 flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-purple-600" />
-            Importar via AI
-          </h3>
-          <p className="text-sm text-purple-700 mb-4">
-            Cola o @username e deixa a IA preencher os dados automaticamente.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium">@</span>
-                <input
-                  type="text"
-                  value={importHandle}
-                  onChange={(e) => setImportHandle(e.target.value)}
-                  placeholder="username"
-                  className="w-full rounded-lg border-purple-200 bg-white py-2 pl-8 pr-4 text-sm focus:border-purple-600 focus:outline-none"
-                />
-              </div>
-            </div>
-            <select
-              value={importPlatform}
-              onChange={(e) => setImportPlatform(e.target.value)}
-              className="rounded-lg border-purple-200 bg-white px-4 py-2 text-sm focus:border-purple-600 focus:outline-none"
-            >
-              <option value="tiktok">TikTok</option>
-              <option value="instagram">Instagram</option>
-            </select>
-            <button
-              type="button"
-              onClick={handleImport}
-              disabled={importing || !importHandle}
-              className="flex items-center justify-center gap-2 px-6 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition disabled:opacity-50"
-            >
-              {importing ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  A analisar...
-                </>
-              ) : (
-                <>
-                  <Search className="h-4 w-4" />
-                  Verificar e Importar
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-
         {/* Basic Info */}
-        <div className="rounded-lg bg-white p-6 border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Informação Básica</h3>
+        <div className="rounded-xl bg-white p-6 border border-gray-200 shadow-sm">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Globe className="h-5 w-5 text-gray-400" />
+            Informação Básica
+          </h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
+            <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Nome Completo *
               </label>
@@ -200,7 +149,7 @@ export default function NewInfluencerPage() {
                 required
                 value={formData.name}
                 onChange={handleChange}
-                className="w-full rounded-md border border-gray-200 px-4 py-2 text-sm focus:border-gray-900 focus:outline-none"
+                className="w-full rounded-md border border-gray-200 px-4 py-2 text-sm focus:border-purple-600 focus:outline-none transition-colors"
                 placeholder="Ex: Bárbara Vasconcelos"
               />
             </div>
@@ -216,7 +165,7 @@ export default function NewInfluencerPage() {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  className="w-full rounded-md border border-gray-200 pl-10 pr-4 py-2 text-sm focus:border-gray-900 focus:outline-none"
+                  className="w-full rounded-md border border-gray-200 pl-10 pr-4 py-2 text-sm focus:border-purple-600 focus:outline-none transition-colors"
                   placeholder="email@example.com"
                 />
               </div>
@@ -233,84 +182,70 @@ export default function NewInfluencerPage() {
                   name="phone"
                   value={formData.phone}
                   onChange={handleChange}
-                  className="w-full rounded-md border border-gray-200 pl-10 pr-4 py-2 text-sm focus:border-gray-900 focus:outline-none"
-                  placeholder="+351 912 345 678"
+                  className="w-full rounded-md border border-gray-200 pl-10 pr-4 py-2 text-sm focus:border-purple-600 focus:outline-none transition-colors"
+                  placeholder="+351..."
                 />
               </div>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Localização
+                País
               </label>
               <div className="relative">
                 <MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 <input
                   type="text"
-                  name="location"
-                  value={formData.location}
+                  name="country"
+                  value={formData.country}
                   onChange={handleChange}
-                  className="w-full rounded-md border border-gray-200 pl-10 pr-4 py-2 text-sm focus:border-gray-900 focus:outline-none"
-                  placeholder="Lisboa, Portugal"
+                  className="w-full rounded-md border border-gray-200 pl-10 pr-4 py-2 text-sm focus:border-purple-600 focus:outline-none transition-colors"
+                  placeholder="Portugal"
                 />
               </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Idioma
+              </label>
+              <select
+                name="language"
+                value={formData.language}
+                onChange={handleChange}
+                className="w-full rounded-md border border-gray-200 px-4 py-2 text-sm focus:border-purple-600 focus:outline-none transition-colors"
+              >
+                <option value="PT">Português</option>
+                <option value="ES">Espanhol</option>
+                <option value="EN">Inglês</option>
+                <option value="FR">Francês</option>
+              </select>
             </div>
           </div>
         </div>
 
         {/* Social Media */}
-        <div className="rounded-lg bg-white p-6 border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Redes Sociais</h3>
+        <div className="rounded-xl bg-white p-6 border border-gray-200 shadow-sm">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Instagram className="h-5 w-5 text-gray-400" />
+            Redes Sociais
+          </h3>
           
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Instagram Handle
-                </label>
-                <div className="relative">
-                  <Instagram className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    name="instagramHandle"
-                    value={formData.instagramHandle}
-                    onChange={handleChange}
-                    className="w-full rounded-md border border-gray-200 pl-10 pr-4 py-2 text-sm focus:border-gray-900 focus:outline-none"
-                    placeholder="@username"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Instagram Followers
-                </label>
-                <input
-                  type="number"
-                  name="instagramFollowers"
-                  value={formData.instagramFollowers}
-                  onChange={handleChange}
-                  className="w-full rounded-md border border-gray-200 px-4 py-2 text-sm focus:border-gray-900 focus:outline-none"
-                  placeholder="10000"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  TikTok Handle
+                  TikTok Handle (@)
                 </label>
                 <input
                   type="text"
                   name="tiktokHandle"
                   value={formData.tiktokHandle}
                   onChange={handleChange}
-                  className="w-full rounded-md border border-gray-200 px-4 py-2 text-sm focus:border-gray-900 focus:outline-none"
-                  placeholder="@username"
+                  className="w-full rounded-md border border-gray-200 px-4 py-2 text-sm focus:border-purple-600 focus:outline-none transition-colors"
+                  placeholder="username"
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   TikTok Followers
@@ -320,17 +255,118 @@ export default function NewInfluencerPage() {
                   name="tiktokFollowers"
                   value={formData.tiktokFollowers}
                   onChange={handleChange}
-                  className="w-full rounded-md border border-gray-200 px-4 py-2 text-sm focus:border-gray-900 focus:outline-none"
-                  placeholder="50000"
+                  className="w-full rounded-md border border-gray-200 px-4 py-2 text-sm focus:border-purple-600 focus:outline-none transition-colors"
+                  placeholder="0"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Instagram Handle (@)
+                </label>
+                <input
+                  type="text"
+                  name="instagramHandle"
+                  value={formData.instagramHandle}
+                  onChange={handleChange}
+                  className="w-full rounded-md border border-gray-200 px-4 py-2 text-sm focus:border-purple-600 focus:outline-none transition-colors"
+                  placeholder="username"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Instagram Followers
+                </label>
+                <input
+                  type="number"
+                  name="instagramFollowers"
+                  value={formData.instagramFollowers}
+                  onChange={handleChange}
+                  className="w-full rounded-md border border-gray-200 px-4 py-2 text-sm focus:border-purple-600 focus:outline-none transition-colors"
+                  placeholder="0"
                 />
               </div>
             </div>
           </div>
         </div>
 
-        {/* Status & Classification */}
-        <div className="rounded-lg bg-white p-6 border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Classificação</h3>
+        {/* Metrics & Performance */}
+        <div className="rounded-xl bg-white p-6 border border-gray-200 shadow-sm">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-gray-400" />
+            Métricas & Performance (Obrigatório para Working)
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Engagement Rate (%)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                name="engagementRate"
+                value={formData.engagementRate}
+                onChange={handleChange}
+                className="w-full rounded-md border border-gray-200 px-4 py-2 text-sm focus:border-purple-600 focus:outline-none transition-colors"
+                placeholder="4.5"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Average Views
+              </label>
+              <input
+                type="text"
+                name="averageViews"
+                value={formData.averageViews}
+                onChange={handleChange}
+                className="w-full rounded-md border border-gray-200 px-4 py-2 text-sm focus:border-purple-600 focus:outline-none transition-colors"
+                placeholder="10K-50K"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Content Stability
+              </label>
+              <select
+                name="contentStability"
+                value={formData.contentStability}
+                onChange={handleChange}
+                className="w-full rounded-md border border-gray-200 px-4 py-2 text-sm focus:border-purple-600 focus:outline-none transition-colors"
+              >
+                <option value="HIGH">Alta (Consistente)</option>
+                <option value="MEDIUM">Média</option>
+                <option value="LOW">Baixa (Viral hit)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Total Likes
+              </label>
+              <input
+                type="number"
+                name="totalLikes"
+                value={formData.totalLikes}
+                onChange={handleChange}
+                className="w-full rounded-md border border-gray-200 px-4 py-2 text-sm focus:border-purple-600 focus:outline-none transition-colors"
+                placeholder="1000000"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Business & Classification */}
+        <div className="rounded-xl bg-white p-6 border border-gray-200 shadow-sm">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <DollarSign className="h-5 w-5 text-gray-400" />
+            Negócio & Classificação
+          </h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -341,12 +377,49 @@ export default function NewInfluencerPage() {
                 name="status"
                 value={formData.status}
                 onChange={handleChange}
-                className="w-full rounded-md border border-gray-200 px-4 py-2 text-sm focus:border-gray-900 focus:outline-none"
+                className="w-full rounded-md border border-gray-200 px-4 py-2 text-sm focus:border-purple-600 focus:outline-none transition-colors"
               >
                 <option value="suggestion">Sugestão</option>
                 <option value="negotiating">Em Negociação</option>
                 <option value="working">A Trabalhar</option>
+                <option value="BLACKLISTED">Blacklisted</option>
               </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Fit Score (1-5)
+              </label>
+              <div className="relative">
+                <Star className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="number"
+                  min="1"
+                  max="5"
+                  name="fitScore"
+                  value={formData.fitScore}
+                  onChange={handleChange}
+                  className="w-full rounded-md border border-gray-200 pl-10 pr-4 py-2 text-sm focus:border-purple-600 focus:outline-none transition-colors"
+                  placeholder="5"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Preço Estimado (€)
+              </label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="number"
+                  name="estimatedPrice"
+                  value={formData.estimatedPrice}
+                  onChange={handleChange}
+                  className="w-full rounded-md border border-gray-200 pl-10 pr-4 py-2 text-sm focus:border-purple-600 focus:outline-none transition-colors"
+                  placeholder="150"
+                />
+              </div>
             </div>
 
             <div>
@@ -357,9 +430,10 @@ export default function NewInfluencerPage() {
                 name="tier"
                 value={formData.tier}
                 onChange={handleChange}
-                className="w-full rounded-md border border-gray-200 px-4 py-2 text-sm focus:border-gray-900 focus:outline-none"
+                className="w-full rounded-md border border-gray-200 px-4 py-2 text-sm focus:border-purple-600 focus:outline-none transition-colors"
               >
-                <option value="micro">Micro (1K-100K)</option>
+                <option value="nano">Nano (1K-10K)</option>
+                <option value="micro">Micro (10K-100K)</option>
                 <option value="macro">Macro (100K-1M)</option>
                 <option value="mega">Mega (1M+)</option>
               </select>
@@ -367,11 +441,44 @@ export default function NewInfluencerPage() {
           </div>
         </div>
 
-        {/* Notes & Tags */}
-        <div className="rounded-lg bg-white p-6 border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Notas & Tags</h3>
+        {/* Content */}
+        <div className="rounded-xl bg-white p-6 border border-gray-200 shadow-sm">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Tag className="h-5 w-5 text-gray-400" />
+            Conteúdo & Notas
+          </h3>
           
           <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nicho
+                </label>
+                <input
+                  type="text"
+                  name="niche"
+                  value={formData.niche}
+                  onChange={handleChange}
+                  className="w-full rounded-md border border-gray-200 px-4 py-2 text-sm focus:border-purple-600 focus:outline-none transition-colors"
+                  placeholder="Fashion, Lifestyle"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tipos de Conteúdo
+                </label>
+                <input
+                  type="text"
+                  name="contentTypes"
+                  value={formData.contentTypes}
+                  onChange={handleChange}
+                  className="w-full rounded-md border border-gray-200 px-4 py-2 text-sm focus:border-purple-600 focus:outline-none transition-colors"
+                  placeholder="Hauls, Unboxings, GRWM"
+                />
+              </div>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Notas Internas
@@ -381,8 +488,8 @@ export default function NewInfluencerPage() {
                 value={formData.notes}
                 onChange={handleChange}
                 rows={4}
-                className="w-full rounded-md border border-gray-200 px-4 py-2 text-sm focus:border-gray-900 focus:outline-none"
-                placeholder="Adiciona notas sobre este influencer..."
+                className="w-full rounded-md border border-gray-200 px-4 py-2 text-sm focus:border-purple-600 focus:outline-none transition-colors"
+                placeholder="Detalhes sobre a estratégia, pontos fortes, etc..."
               />
             </div>
 
@@ -395,18 +502,18 @@ export default function NewInfluencerPage() {
                 name="tags"
                 value={formData.tags}
                 onChange={handleChange}
-                className="w-full rounded-md border border-gray-200 px-4 py-2 text-sm focus:border-gray-900 focus:outline-none"
-                placeholder="Lifestyle, Fashion, Beauty"
+                className="w-full rounded-md border border-gray-200 px-4 py-2 text-sm focus:border-purple-600 focus:outline-none transition-colors"
+                placeholder="portugal, joias, gold, summer"
               />
             </div>
           </div>
         </div>
 
         {/* Actions */}
-        <div className="flex items-center justify-end gap-3">
+        <div className="flex items-center justify-end gap-3 pt-4">
           <Link
             href="/dashboard/influencers"
-            className="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-200 hover:bg-gray-50 text-sm font-medium text-gray-700 transition-colors"
+            className="flex items-center gap-2 px-6 py-2 rounded-md border border-gray-200 hover:bg-gray-50 text-sm font-medium text-gray-700 transition-colors"
           >
             <X className="h-4 w-4" />
             Cancelar
@@ -414,7 +521,7 @@ export default function NewInfluencerPage() {
           <button
             type="submit"
             disabled={saving}
-            className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-md text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-8 py-2 bg-black text-white rounded-md text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? (
               <>
