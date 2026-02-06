@@ -148,7 +148,7 @@ export default function InfluencersPage() {
                 <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
                 <span className="hidden xs:inline sm:inline">{tab.label}</span>
                 <span className="xs:hidden sm:hidden">
-                  {tab.id === 'working' ? 'Trabalhar' : tab.id === 'negotiating' ? 'Negociar' : 'Sugestões'}
+                  {tab.id === 'working' ? 'Trabalhar' : tab.id === 'negotiating' ? 'Negociar' : tab.id === 'suggestion' ? 'Sugestões' : 'Analisar'}
                 </span>
                 <span className={`
                   px-1.5 sm:px-2 py-0.5 rounded-full text-xs font-medium shrink-0
