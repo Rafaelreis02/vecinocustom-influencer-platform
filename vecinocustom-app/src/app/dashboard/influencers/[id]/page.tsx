@@ -19,7 +19,13 @@ import {
   Target,
   DollarSign,
   Sparkles,
-  Loader2
+  Loader2,
+  TrendingUp,
+  Globe,
+  Tag,
+  Calendar,
+  Award,
+  Video
 } from 'lucide-react';
 
 export default function InfluencerDetailPage() {
@@ -92,6 +98,12 @@ export default function InfluencerDetailPage() {
     suggestion: 'Sugestão',
   };
 
+  const statusColors: any = {
+    working: 'bg-green-500/90',
+    negotiating: 'bg-yellow-500/90',
+    suggestion: 'bg-blue-500/90',
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Back Button */}
@@ -105,7 +117,7 @@ export default function InfluencerDetailPage() {
 
       {/* Header Card */}
       <div className="rounded-2xl bg-gradient-to-br from-purple-600 via-pink-600 to-blue-600 p-8 text-white shadow-xl">
-        <div className="flex items-start justify-between">
+        <div className="flex items-start justify-between mb-6">
           <div className="flex items-center gap-6">
             <div className="h-24 w-24 rounded-2xl bg-white/20 backdrop-blur-xl border-2 border-white/40 flex items-center justify-center text-4xl font-bold shadow-2xl">
               {influencer.name[0]}
@@ -113,31 +125,45 @@ export default function InfluencerDetailPage() {
             <div>
               <div className="flex items-center gap-3 mb-2">
                 <h1 className="text-3xl font-bold">{influencer.name}</h1>
-                <span className="px-3 py-1 rounded-full text-sm font-semibold bg-white/20 backdrop-blur-xl border border-white/40">
-                  {influencer.tier || 'Micro'}
-                </span>
-                <span className="px-3 py-1 rounded-full text-sm font-semibold bg-green-500/90 flex items-center gap-1.5">
+                {influencer.fitScore && (
+                  <span className="px-3 py-1 rounded-full text-sm font-semibold bg-yellow-400/90 text-yellow-900 flex items-center gap-1">
+                    <Award className="h-4 w-4" />
+                    Fit Score: {influencer.fitScore}/5
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2 mb-3">
+                {influencer.tier && (
+                  <span className="px-3 py-1 rounded-full text-sm font-semibold bg-white/20 backdrop-blur-xl border border-white/40">
+                    {influencer.tier}
+                  </span>
+                )}
+                <span className={`px-3 py-1 rounded-full text-sm font-semibold ${statusColors[influencer.status] || 'bg-gray-500/90'} flex items-center gap-1.5`}>
                   <span className="h-2 w-2 rounded-full bg-white animate-pulse"></span>
                   {statusLabels[influencer.status] || influencer.status}
                 </span>
+                {influencer.primaryPlatform && (
+                  <span className="px-3 py-1 rounded-full text-sm font-semibold bg-white/20 backdrop-blur-xl border border-white/40">
+                    📱 {influencer.primaryPlatform}
+                  </span>
+                )}
               </div>
-              <div className="flex items-center gap-4 text-white/90">
-                {influencer.email && (
+              <div className="flex items-center gap-4 text-white/90 text-sm">
+                {influencer.country && (
                   <span className="flex items-center gap-1.5">
-                    <Mail className="h-4 w-4" />
-                    {influencer.email}
+                    <Globe className="h-4 w-4" />
+                    {influencer.country}
                   </span>
                 )}
-                {influencer.phone && (
-                  <span className="flex items-center gap-1.5">
-                    <Phone className="h-4 w-4" />
-                    {influencer.phone}
+                {influencer.language && (
+                  <span className="px-2 py-0.5 rounded bg-white/20 font-medium">
+                    {influencer.language}
                   </span>
                 )}
-                {influencer.location && (
+                {influencer.niche && (
                   <span className="flex items-center gap-1.5">
-                    <MapPin className="h-4 w-4" />
-                    {influencer.location}
+                    <Tag className="h-4 w-4" />
+                    {influencer.niche}
                   </span>
                 )}
               </div>
@@ -159,8 +185,30 @@ export default function InfluencerDetailPage() {
           </div>
         </div>
 
+        {/* Contact Info */}
+        <div className="flex items-center gap-4 text-white/90 text-sm mb-4">
+          {influencer.email && (
+            <a href={`mailto:${influencer.email}`} className="flex items-center gap-1.5 hover:text-white transition">
+              <Mail className="h-4 w-4" />
+              {influencer.email}
+            </a>
+          )}
+          {influencer.phone && (
+            <a href={`tel:${influencer.phone}`} className="flex items-center gap-1.5 hover:text-white transition">
+              <Phone className="h-4 w-4" />
+              {influencer.phone}
+            </a>
+          )}
+          {influencer.address && (
+            <span className="flex items-center gap-1.5">
+              <MapPin className="h-4 w-4" />
+              {influencer.address}
+            </span>
+          )}
+        </div>
+
         {/* Social Links */}
-        <div className="mt-6 flex gap-3">
+        <div className="flex gap-3">
           {influencer.instagramHandle && (
             <a
               href={`https://instagram.com/${influencer.instagramHandle.replace('@', '')}`}
@@ -169,6 +217,11 @@ export default function InfluencerDetailPage() {
             >
               <Instagram className="h-5 w-5" />
               <span className="font-medium">{influencer.instagramHandle}</span>
+              {influencer.instagramFollowers && (
+                <span className="text-sm opacity-80">
+                  ({(influencer.instagramFollowers / 1000).toFixed(1)}K)
+                </span>
+              )}
               <ExternalLink className="h-4 w-4" />
             </a>
           )}
@@ -178,152 +231,133 @@ export default function InfluencerDetailPage() {
               target="_blank"
               className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/20 backdrop-blur-xl border border-white/40 hover:bg-white/30 transition"
             >
-              <span className="font-bold">TT</span>
+              <Video className="h-5 w-5" />
               <span className="font-medium">{influencer.tiktokHandle}</span>
+              {influencer.tiktokFollowers && (
+                <span className="text-sm opacity-80">
+                  ({(influencer.tiktokFollowers / 1000).toFixed(1)}K)
+                </span>
+              )}
               <ExternalLink className="h-4 w-4" />
             </a>
           )}
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-xl bg-white p-6 border border-gray-100 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm text-gray-600">Total Views</p>
-            <Eye className="h-5 w-5 text-blue-500" />
+      {/* Key Metrics Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        {influencer.totalLikes && (
+          <div className="rounded-xl bg-white p-6 border border-gray-100 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm text-gray-600">Total Likes</p>
+              <Heart className="h-5 w-5 text-pink-500" />
+            </div>
+            <p className="text-2xl font-bold text-gray-900">
+              {(Number(influencer.totalLikes) / 1000000).toFixed(1)}M
+            </p>
           </div>
-          <p className="text-3xl font-bold text-gray-900">
-            {influencer.totalViews ? (influencer.totalViews / 1000).toFixed(1) + 'K' : '0'}
-          </p>
-          <p className="text-xs text-gray-500 mt-2">De {influencer.videos?.length || 0} vídeos</p>
-        </div>
-        <div className="rounded-xl bg-white p-6 border border-gray-100 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm text-gray-600">Engagement Rate</p>
-            <Heart className="h-5 w-5 text-pink-500" />
+        )}
+
+        {influencer.engagementRate !== null && influencer.engagementRate !== undefined && (
+          <div className="rounded-xl bg-white p-6 border border-gray-100 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm text-gray-600">Engagement</p>
+              <TrendingUp className="h-5 w-5 text-purple-500" />
+            </div>
+            <p className="text-2xl font-bold text-purple-600">{influencer.engagementRate}x</p>
           </div>
-          <p className="text-3xl font-bold text-purple-600">{influencer.avgEngagement || 0}%</p>
-          <p className="text-xs text-gray-500 mt-2">Média calculada</p>
-        </div>
-        <div className="rounded-xl bg-white p-6 border border-gray-100 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm text-gray-600">Campanhas</p>
-            <Target className="h-5 w-5 text-orange-500" />
+        )}
+
+        {influencer.averageViews && (
+          <div className="rounded-xl bg-white p-6 border border-gray-100 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm text-gray-600">Avg. Views</p>
+              <Eye className="h-5 w-5 text-blue-500" />
+            </div>
+            <p className="text-2xl font-bold text-gray-900">{influencer.averageViews}</p>
           </div>
-          <p className="text-3xl font-bold text-gray-900">{influencer.campaigns?.length || 0}</p>
-          <p className="text-xs text-gray-500 mt-2">Total de colaborações</p>
-        </div>
-        <div className="rounded-xl bg-white p-6 border border-gray-100 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm text-gray-600">Revenue Total</p>
-            <DollarSign className="h-5 w-5 text-green-500" />
+        )}
+
+        {influencer.contentStability && (
+          <div className="rounded-xl bg-white p-6 border border-gray-100 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm text-gray-600">Estabilidade</p>
+              <Sparkles className="h-5 w-5 text-yellow-500" />
+            </div>
+            <p className={`text-2xl font-bold ${
+              influencer.contentStability === 'HIGH' ? 'text-green-600' :
+              influencer.contentStability === 'MEDIUM' ? 'text-yellow-600' :
+              'text-red-600'
+            }`}>
+              {influencer.contentStability}
+            </p>
           </div>
-          <p className="text-3xl font-bold text-green-600">€{influencer.totalRevenue || 0}</p>
-          <p className="text-xs text-gray-500 mt-2">De {influencer.coupons?.length || 0} cupões</p>
-        </div>
+        )}
+
+        {influencer.estimatedPrice && (
+          <div className="rounded-xl bg-white p-6 border border-gray-100 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm text-gray-600">Preço Est.</p>
+              <DollarSign className="h-5 w-5 text-green-500" />
+            </div>
+            <p className="text-2xl font-bold text-green-600">€{influencer.estimatedPrice}</p>
+          </div>
+        )}
       </div>
 
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column - Videos & Campaigns */}
+        {/* Left Column */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Recent Videos */}
-          <div className="rounded-2xl bg-white p-6 border border-gray-100 shadow-sm">
-            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-purple-600" />
-              Vídeos Recentes
-            </h3>
-            {influencer.videos && influencer.videos.length > 0 ? (
-              <div className="space-y-3">
-                {influencer.videos.slice(0, 5).map((video: any) => (
-                  <div
-                    key={video.id}
-                    className="flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:border-purple-200 hover:bg-purple-50/50 transition"
+          {/* Content Types */}
+          {influencer.contentTypes && influencer.contentTypes.length > 0 && (
+            <div className="rounded-2xl bg-white p-6 border border-gray-100 shadow-sm">
+              <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <Video className="h-5 w-5 text-purple-600" />
+                Tipos de Conteúdo
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {influencer.contentTypes.map((type: string) => (
+                  <span
+                    key={type}
+                    className="px-4 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 border border-purple-200"
                   >
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-gray-900 mb-1">{video.title || 'Vídeo sem título'}</h4>
-                      <div className="flex items-center gap-4 text-sm text-gray-500">
-                        <span className="flex items-center gap-1">
-                          <Eye className="h-4 w-4" />
-                          {video.views ? (video.views / 1000).toFixed(1) + 'K' : '0'}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Heart className="h-4 w-4" />
-                          {video.likes ? (video.likes / 1000).toFixed(1) + 'K' : '0'}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <MessageCircle className="h-4 w-4" />
-                          {video.comments || 0}
-                        </span>
-                      </div>
-                    </div>
-                    {video.url && (
-                      <a
-                        href={video.url}
-                        target="_blank"
-                        className="p-2 rounded-lg hover:bg-purple-100 text-purple-600 transition"
-                      >
-                        <ExternalLink className="h-5 w-5" />
-                      </a>
-                    )}
-                  </div>
+                    {type}
+                  </span>
                 ))}
               </div>
-            ) : (
-              <p className="text-gray-500 text-center py-8">Ainda não há vídeos registados</p>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Campaign History */}
-          <div className="rounded-2xl bg-white p-6 border border-gray-100 shadow-sm">
-            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <Target className="h-5 w-5 text-purple-600" />
-              Histórico de Campanhas
-            </h3>
-            {influencer.campaigns && influencer.campaigns.length > 0 ? (
+          {influencer.campaigns && influencer.campaigns.length > 0 && (
+            <div className="rounded-2xl bg-white p-6 border border-gray-100 shadow-sm">
+              <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <Target className="h-5 w-5 text-purple-600" />
+                Histórico de Campanhas
+              </h3>
               <div className="space-y-2">
                 {influencer.campaigns.map((campInfluencer: any) => (
                   <div
                     key={campInfluencer.id}
-                    className="flex items-center justify-between p-4 rounded-xl border border-gray-100"
+                    className="flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:border-purple-200 transition"
                   >
                     <div>
                       <p className="font-semibold text-gray-900">{campInfluencer.campaign?.name || 'Campanha'}</p>
-                      <p className="text-sm text-gray-500">Fee: €{campInfluencer.agreedFee || 0}</p>
+                      {campInfluencer.agreedFee && (
+                        <p className="text-sm text-gray-500">Fee: €{campInfluencer.agreedFee}</p>
+                      )}
                     </div>
-                    <div className="text-right">
-                      <span className={`text-xs px-2 py-1 rounded-full ${
-                        campInfluencer.campaign?.status === 'active' 
+                    {campInfluencer.campaign?.status && (
+                      <span className={`text-xs px-3 py-1 rounded-full font-medium ${
+                        campInfluencer.campaign.status === 'ACTIVE' 
                           ? 'bg-green-100 text-green-700' 
                           : 'bg-gray-100 text-gray-600'
                       }`}>
-                        {campInfluencer.campaign?.status || 'unknown'}
+                        {campInfluencer.campaign.status}
                       </span>
-                    </div>
+                    )}
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500 text-center py-8">Ainda não há campanhas</p>
-            )}
-          </div>
-        </div>
-
-        {/* Right Column - Info & Notes */}
-        <div className="space-y-6">
-          {/* Tags */}
-          {influencer.tags && influencer.tags.length > 0 && (
-            <div className="rounded-2xl bg-white p-6 border border-gray-100 shadow-sm">
-              <h3 className="font-semibold text-gray-900 mb-3">Tags</h3>
-              <div className="flex flex-wrap gap-2">
-                {influencer.tags.map((tag: string) => (
-                  <span
-                    key={tag}
-                    className="px-3 py-1.5 rounded-full text-sm font-medium bg-purple-100 text-purple-700"
-                  >
-                    {tag}
-                  </span>
                 ))}
               </div>
             </div>
@@ -332,8 +366,57 @@ export default function InfluencerDetailPage() {
           {/* Notes */}
           {influencer.notes && (
             <div className="rounded-2xl bg-white p-6 border border-gray-100 shadow-sm">
-              <h3 className="font-semibold text-gray-900 mb-3">Notas Internas</h3>
-              <p className="text-sm text-gray-600">{influencer.notes}</p>
+              <h3 className="text-xl font-bold text-gray-900 mb-4">Notas Internas</h3>
+              <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-line">
+                {influencer.notes}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Right Column - Info Cards */}
+        <div className="space-y-6">
+          {/* Tags */}
+          {influencer.tags && influencer.tags.length > 0 && (
+            <div className="rounded-2xl bg-white p-6 border border-gray-100 shadow-sm">
+              <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                <Tag className="h-5 w-5 text-purple-600" />
+                Tags
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {influencer.tags.map((tag: string) => (
+                  <span
+                    key={tag}
+                    className="px-3 py-1.5 rounded-full text-sm font-medium bg-purple-100 text-purple-700"
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Discovery Info */}
+          {(influencer.discoveryMethod || influencer.discoveryDate) && (
+            <div className="rounded-2xl bg-white p-6 border border-gray-100 shadow-sm">
+              <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-purple-600" />
+                Descoberta
+              </h3>
+              <div className="space-y-2 text-sm">
+                {influencer.discoveryMethod && (
+                  <div>
+                    <span className="text-gray-600">Método:</span>
+                    <p className="font-medium text-gray-900 mt-1">{influencer.discoveryMethod}</p>
+                  </div>
+                )}
+                {influencer.discoveryDate && (
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <Calendar className="h-4 w-4" />
+                    {new Date(influencer.discoveryDate).toLocaleDateString('pt-PT')}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -341,28 +424,20 @@ export default function InfluencerDetailPage() {
           <div className="rounded-2xl bg-white p-6 border border-gray-100 shadow-sm">
             <h3 className="font-semibold text-gray-900 mb-3">Informação</h3>
             <div className="space-y-3 text-sm">
-              {influencer.instagramFollowers && (
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Instagram Followers</span>
-                  <span className="font-medium text-gray-900">
-                    {(influencer.instagramFollowers / 1000).toFixed(1)}K
-                  </span>
-                </div>
-              )}
-              {influencer.tiktokFollowers && (
-                <div className="flex justify-between">
-                  <span className="text-gray-600">TikTok Followers</span>
-                  <span className="font-medium text-gray-900">
-                    {(influencer.tiktokFollowers / 1000).toFixed(1)}K
-                  </span>
-                </div>
-              )}
               <div className="flex justify-between">
-                <span className="text-gray-600">Cupões Ativos</span>
-                <span className="font-medium text-purple-600">{influencer.activeCoupons || 0}</span>
+                <span className="text-gray-600">Total Followers</span>
+                <span className="font-medium text-gray-900">
+                  {((influencer.instagramFollowers || 0) + (influencer.tiktokFollowers || 0)) / 1000}K
+                </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Data de Registo</span>
+              {influencer.activeCoupons > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Cupões Ativos</span>
+                  <span className="font-medium text-purple-600">{influencer.activeCoupons}</span>
+                </div>
+              )}
+              <div className="flex justify-between pt-3 border-t border-gray-100">
+                <span className="text-gray-600">Registado em</span>
                 <span className="font-medium text-gray-900">
                   {new Date(influencer.createdAt).toLocaleDateString('pt-PT')}
                 </span>

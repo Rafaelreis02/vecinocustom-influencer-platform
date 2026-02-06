@@ -53,17 +53,36 @@ model Influencer {
   youtubeHandle     String?
   youtubeFollowers  Int?
   
+  // Metrics & Performance
+  totalLikes        BigInt?             // Total de likes
+  engagementRate    Float?              // Taxa de engagement (%)
+  averageViews      String?             // Ex: "3K-30K"
+  contentStability  String?             // HIGH, MEDIUM, LOW
+  
+  // Demographics & Content
+  country           String?             // País
+  language          String?             // Idioma (PT, ES, EN, etc.)
+  niche             String?             // Fashion, Lifestyle, etc.
+  contentTypes      String[]            // ["Hauls", "Unboxings", "Lifestyle"]
+  primaryPlatform   String?             // TikTok, Instagram, YouTube
+  
   // Business
   nif               String?             // Tax ID
   address           String?
   paymentMethod     PaymentMethod?      @default(BANK_TRANSFER)
   bankDetails       String?             // JSON or encrypted
+  estimatedPrice    Float?              // Preço estimado por vídeo
+  fitScore          Int?                // 1-5 score para joias
   
   // Status
   status            InfluencerStatus    @default(suggestion)
   tier              String?             // Micro, Macro, Mega, etc.
   notes             String?
   tags              String[]            // Array of tags
+  
+  // Discovery
+  discoveryMethod   String?             // Como foi encontrado
+  discoveryDate     DateTime?           // Quando foi descoberto
   
   // Metadata
   createdAt         DateTime            @default(now())
