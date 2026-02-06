@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-// GET /api/campaigns/[id] - Get campaign details
+// GET /api/campaigns/[id] - Get single campaign
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
+
     const campaign = await prisma.campaign.findUnique({
       where: { id },
       include: {
@@ -19,31 +20,52 @@ export async function GET(
                 name: true,
                 email: true,
                 instagramHandle: true,
-                instagramFollowers: true,
                 tiktokHandle: true,
+                instagramFollowers: true,
                 tiktokFollowers: true,
+                status: true,
               },
             },
           },
         },
         videos: {
-          include: {
-            influencer: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
+          select: {
+            id: true,
+            title: true,
+            url: true,
+            platform: true,
+            views: true,
+            likes: true,
+            comments: true,
+            shares: true,
+            publishedAt: true,
+          },
+          orderBy: {
+            publishedAt: 'desc',
           },
         },
         coupons: {
-          include: {
-            influencer: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
+          select: {
+            id: true,
+            code: true,
+            discountType: true,
+            discountValue: true,
+            usageCount: true,
+            usageLimit: true,
+            totalSales: true,
+            totalOrders: true,
+            validFrom: true,
+            validUntil: true,
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        },
+        createdBy: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
           },
         },
       },
@@ -63,9 +85,6 @@ export async function GET(
 
     return NextResponse.json({
       ...campaign,
-      influencersCount: campaign.influencers.length,
-      videosCount: campaign.videos.length,
-      couponsCount: campaign.coupons.length,
       totalViews,
       totalRevenue,
       spent,
@@ -82,10 +101,10 @@ export async function GET(
 // PUT /api/campaigns/[id] - Update campaign
 export async function PUT(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const body = await request.json();
 
     const campaign = await prisma.campaign.update({
@@ -93,12 +112,13 @@ export async function PUT(
       data: {
         name: body.name,
         description: body.description || null,
+        hashtag: body.hashtag || null,
         startDate: body.startDate ? new Date(body.startDate) : null,
         endDate: body.endDate ? new Date(body.endDate) : null,
         budget: body.budget ? parseFloat(body.budget) : null,
         targetViews: body.targetViews ? parseInt(body.targetViews) : null,
         targetSales: body.targetSales ? parseInt(body.targetSales) : null,
-        status: body.status,
+        status: body.status || 'DRAFT',
       },
     });
 
@@ -115,11 +135,11 @@ export async function PUT(
 // DELETE /api/campaigns/[id] - Delete campaign
 export async function DELETE(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    
+    const { id } = await context.params;
+
     await prisma.campaign.delete({
       where: { id },
     });
