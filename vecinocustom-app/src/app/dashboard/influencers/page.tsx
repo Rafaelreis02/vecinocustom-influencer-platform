@@ -106,25 +106,26 @@ export default function InfluencersPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold text-gray-900">Influencers</h1>
-          <p className="mt-1 text-sm text-gray-600">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900">Influencers</h1>
+          <p className="mt-1 text-xs sm:text-sm text-gray-600 line-clamp-2">
             Gere influencers ativos, em negociação e sugestões da IA
           </p>
         </div>
         <Link
           href="/dashboard/influencers/new"
-          className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-md text-sm font-medium hover:bg-gray-800 transition-colors"
+          className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-black text-white rounded-md text-xs sm:text-sm font-medium hover:bg-gray-800 transition-colors active:scale-95 whitespace-nowrap shrink-0"
         >
-          <Plus className="h-4 w-4" />
-          Adicionar Influencer
+          <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+          <span className="hidden xs:inline">Adicionar Influencer</span>
+          <span className="xs:hidden">Adicionar</span>
         </Link>
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200">
-        <nav className="flex space-x-8">
+      <div className="border-b border-gray-200 -mx-4 px-4 sm:mx-0 sm:px-0">
+        <nav className="flex gap-3 sm:gap-8 overflow-x-auto scrollbar-hide">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
             const Icon = tab.icon;
@@ -133,17 +134,20 @@ export default function InfluencersPage() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
                 className={`
-                  flex items-center gap-2 pb-4 px-1 border-b-2 font-medium text-sm transition-colors
+                  flex items-center gap-1.5 sm:gap-2 pb-3 sm:pb-4 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap shrink-0
                   ${isActive 
                     ? 'border-black text-gray-900' 
                     : 'border-transparent text-gray-500 hover:text-gray-900 hover:border-gray-300'
                   }
                 `}
               >
-                <Icon className="h-4 w-4" />
-                {tab.label}
+                <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                <span className="hidden xs:inline sm:inline">{tab.label}</span>
+                <span className="xs:hidden sm:hidden">
+                  {tab.id === 'working' ? 'Trabalhar' : tab.id === 'negotiating' ? 'Negociar' : 'Sugestões'}
+                </span>
                 <span className={`
-                  ml-2 px-2 py-0.5 rounded-full text-xs font-medium
+                  px-1.5 sm:px-2 py-0.5 rounded-full text-xs font-medium shrink-0
                   ${isActive ? 'bg-black text-white' : 'bg-gray-100 text-gray-600'}
                 `}>
                   {tab.count}
