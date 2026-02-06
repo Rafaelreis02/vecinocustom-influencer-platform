@@ -38,7 +38,7 @@ type Influencer = {
 };
 
 export default function InfluencersPage() {
-  const [activeTab, setActiveTab] = useState<'working' | 'negotiating' | 'suggestion'>('working');
+  const [activeTab, setActiveTab] = useState<'working' | 'negotiating' | 'suggestion' | 'IMPORT_PENDING'>('working');
   const [searchQuery, setSearchQuery] = useState('');
   const [allInfluencers, setAllInfluencers] = useState<Influencer[]>([]);
   const [loading, setLoading] = useState(true);
