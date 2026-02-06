@@ -6,217 +6,276 @@ import Link from 'next/link';
 import {
   ArrowLeft,
   Save,
-  X,
+  Loader2,
+  Target,
   Calendar,
   DollarSign,
-  Target
+  Hash,
+  FileText,
 } from 'lucide-react';
 
 export default function NewCampaignPage() {
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    hashtag: '',
     startDate: '',
     endDate: '',
     budget: '',
     targetViews: '',
     targetSales: '',
-    status: 'draft',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Guardar na BD
-    console.log('Nova campanha:', formData);
-    router.push('/dashboard/campaigns');
+    setLoading(true);
+
+    try {
+      const res = await fetch('/api/campaigns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...formData,
+          status: 'DRAFT',
+        }),
+      });
+
+      if (res.ok) {
+        const campaign = await res.json();
+        router.push(`/dashboard/campaigns/${campaign.id}`);
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Erro ao criar campanha');
+      }
+    } catch (error) {
+      console.error('Error creating campaign:', error);
+      alert('Erro ao criar campanha');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
   };
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="max-w-3xl mx-auto space-y-6">
+      {/* Back Button */}
+      <Link
+        href="/dashboard/campaigns"
+        className="inline-flex items-center gap-2 text-gray-600 hover:text-purple-600 transition"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Voltar às Campanhas
+      </Link>
+
       {/* Header */}
       <div>
-        <Link
-          href="/dashboard/campaigns"
-          className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-4"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Voltar às Campanhas
-        </Link>
         <h1 className="text-3xl font-semibold text-gray-900">Nova Campanha</h1>
         <p className="mt-1 text-sm text-gray-600">
-          Cria uma nova campanha de influencers
+          Cria uma nova campanha e associa influencers automaticamente via hashtag
         </p>
       </div>
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Basic Info */}
-        <div className="rounded-lg bg-white p-6 border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Informação Básica</h3>
-          
+        {/* Basic Info Card */}
+        <div className="rounded-2xl bg-white p-6 border border-gray-100 shadow-sm">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Target className="h-5 w-5 text-purple-600" />
+            Informação Básica
+          </h2>
+
           <div className="space-y-4">
+            {/* Name */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
                 Nome da Campanha *
               </label>
               <input
                 type="text"
+                id="name"
                 name="name"
                 required
                 value={formData.name}
                 onChange={handleChange}
-                className="w-full rounded-md border border-gray-200 px-4 py-2 text-sm focus:border-gray-900 focus:outline-none"
-                placeholder="Ex: Valentine's Day 2026"
+                placeholder="Ex: Dia dos Namorados 2026"
+                className="w-full rounded-md border border-gray-200 bg-white py-2 px-4 text-sm focus:border-purple-600 focus:outline-none transition-colors"
               />
             </div>
 
+            {/* Hashtag */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="hashtag" className="block text-sm font-medium text-gray-700 mb-1">
+                Hashtag de Tracking
+              </label>
+              <div className="relative">
+                <Hash className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  id="hashtag"
+                  name="hashtag"
+                  value={formData.hashtag}
+                  onChange={handleChange}
+                  placeholder="vecinodiadosnamorados"
+                  className="w-full rounded-md border border-gray-200 bg-white py-2 pl-10 pr-4 text-sm focus:border-purple-600 focus:outline-none transition-colors"
+                />
+              </div>
+              <p className="mt-1 text-xs text-gray-500">
+                Influencers que publicarem com esta hashtag serão automaticamente associados
+              </p>
+            </div>
+
+            {/* Description */}
+            <div>
+              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
                 Descrição
               </label>
               <textarea
+                id="description"
                 name="description"
+                rows={3}
                 value={formData.description}
                 onChange={handleChange}
-                rows={3}
-                className="w-full rounded-md border border-gray-200 px-4 py-2 text-sm focus:border-gray-900 focus:outline-none"
                 placeholder="Descreve os objetivos e detalhes da campanha..."
+                className="w-full rounded-md border border-gray-200 bg-white py-2 px-4 text-sm focus:border-purple-600 focus:outline-none transition-colors resize-none"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Dates Card */}
+        <div className="rounded-2xl bg-white p-6 border border-gray-100 shadow-sm">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-purple-600" />
+            Datas
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Start Date */}
+            <div>
+              <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-1">
+                Data de Início
+              </label>
+              <input
+                type="date"
+                id="startDate"
+                name="startDate"
+                value={formData.startDate}
+                onChange={handleChange}
+                className="w-full rounded-md border border-gray-200 bg-white py-2 px-4 text-sm focus:border-purple-600 focus:outline-none transition-colors"
               />
             </div>
 
+            {/* End Date */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Status
-              </label>
-              <select
-                name="status"
-                value={formData.status}
-                onChange={handleChange}
-                className="w-full rounded-md border border-gray-200 px-4 py-2 text-sm focus:border-gray-900 focus:outline-none"
-              >
-                <option value="draft">Rascunho</option>
-                <option value="active">Ativa</option>
-                <option value="paused">Pausada</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Dates */}
-        <div className="rounded-lg bg-white p-6 border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Datas</h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Data de Início *
-              </label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="date"
-                  name="startDate"
-                  required
-                  value={formData.startDate}
-                  onChange={handleChange}
-                  className="w-full rounded-md border border-gray-200 pl-10 pr-4 py-2 text-sm focus:border-gray-900 focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 mb-1">
                 Data de Fim
               </label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="date"
-                  name="endDate"
-                  value={formData.endDate}
-                  onChange={handleChange}
-                  className="w-full rounded-md border border-gray-200 pl-10 pr-4 py-2 text-sm focus:border-gray-900 focus:outline-none"
-                />
-              </div>
+              <input
+                type="date"
+                id="endDate"
+                name="endDate"
+                value={formData.endDate}
+                onChange={handleChange}
+                className="w-full rounded-md border border-gray-200 bg-white py-2 px-4 text-sm focus:border-purple-600 focus:outline-none transition-colors"
+              />
             </div>
           </div>
         </div>
 
-        {/* Budget & Goals */}
-        <div className="rounded-lg bg-white p-6 border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Budget & Objetivos</h3>
-          
+        {/* Budget & Goals Card */}
+        <div className="rounded-2xl bg-white p-6 border border-gray-100 shadow-sm">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <DollarSign className="h-5 w-5 text-purple-600" />
+            Orçamento & Objetivos
+          </h2>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Budget */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Budget (€)
-              </label>
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="number"
-                  name="budget"
-                  value={formData.budget}
-                  onChange={handleChange}
-                  className="w-full rounded-md border border-gray-200 pl-10 pr-4 py-2 text-sm focus:border-gray-900 focus:outline-none"
-                  placeholder="5000"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Target Views
-              </label>
-              <div className="relative">
-                <Target className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="number"
-                  name="targetViews"
-                  value={formData.targetViews}
-                  onChange={handleChange}
-                  className="w-full rounded-md border border-gray-200 pl-10 pr-4 py-2 text-sm focus:border-gray-900 focus:outline-none"
-                  placeholder="1000000"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Target Sales
+              <label htmlFor="budget" className="block text-sm font-medium text-gray-700 mb-1">
+                Orçamento (€)
               </label>
               <input
                 type="number"
+                id="budget"
+                name="budget"
+                min="0"
+                step="0.01"
+                value={formData.budget}
+                onChange={handleChange}
+                placeholder="5000"
+                className="w-full rounded-md border border-gray-200 bg-white py-2 px-4 text-sm focus:border-purple-600 focus:outline-none transition-colors"
+              />
+            </div>
+
+            {/* Target Views */}
+            <div>
+              <label htmlFor="targetViews" className="block text-sm font-medium text-gray-700 mb-1">
+                Meta de Views
+              </label>
+              <input
+                type="number"
+                id="targetViews"
+                name="targetViews"
+                min="0"
+                value={formData.targetViews}
+                onChange={handleChange}
+                placeholder="1000000"
+                className="w-full rounded-md border border-gray-200 bg-white py-2 px-4 text-sm focus:border-purple-600 focus:outline-none transition-colors"
+              />
+            </div>
+
+            {/* Target Sales */}
+            <div>
+              <label htmlFor="targetSales" className="block text-sm font-medium text-gray-700 mb-1">
+                Meta de Vendas
+              </label>
+              <input
+                type="number"
+                id="targetSales"
                 name="targetSales"
+                min="0"
                 value={formData.targetSales}
                 onChange={handleChange}
-                className="w-full rounded-md border border-gray-200 px-4 py-2 text-sm focus:border-gray-900 focus:outline-none"
                 placeholder="100"
+                className="w-full rounded-md border border-gray-200 bg-white py-2 px-4 text-sm focus:border-purple-600 focus:outline-none transition-colors"
               />
             </div>
           </div>
         </div>
 
         {/* Actions */}
-        <div className="flex items-center justify-end gap-3">
+        <div className="flex items-center justify-between pt-4">
           <Link
             href="/dashboard/campaigns"
-            className="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-200 hover:bg-gray-50 text-sm font-medium text-gray-700 transition-colors"
+            className="px-4 py-2 rounded-md text-gray-700 hover:bg-gray-100 transition-colors"
           >
-            <X className="h-4 w-4" />
             Cancelar
           </Link>
           <button
             type="submit"
-            className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-md text-sm font-medium hover:bg-gray-800 transition-colors"
+            disabled={loading || !formData.name}
+            className="flex items-center gap-2 px-6 py-2 bg-black text-white rounded-md font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Save className="h-4 w-4" />
-            Criar Campanha
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                A criar...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4" />
+                Criar Campanha
+              </>
+            )}
           </button>
         </div>
       </form>
