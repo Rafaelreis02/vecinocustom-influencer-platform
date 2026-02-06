@@ -102,6 +102,34 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
 
+    // Validação de campos obrigatórios (apenas para status working/negotiating)
+    const requiresFullData = body.status === 'working' || body.status === 'negotiating';
+    
+    if (requiresFullData) {
+      const missingFields = [];
+      
+      if (!body.name) missingFields.push('name');
+      if (!body.tiktokHandle && !body.instagramHandle) missingFields.push('tiktokHandle or instagramHandle');
+      if (!body.tiktokFollowers && !body.instagramFollowers) missingFields.push('followers');
+      if (body.engagementRate === undefined || body.engagementRate === null) missingFields.push('engagementRate');
+      if (!body.averageViews) missingFields.push('averageViews');
+      if (!body.contentStability) missingFields.push('contentStability');
+      if (!body.country) missingFields.push('country');
+      if (!body.language) missingFields.push('language');
+      if (!body.niche) missingFields.push('niche');
+      if (!body.contentTypes || (Array.isArray(body.contentTypes) && body.contentTypes.length === 0)) missingFields.push('contentTypes');
+      if (!body.primaryPlatform) missingFields.push('primaryPlatform');
+      if (body.fitScore === undefined || body.fitScore === null) missingFields.push('fitScore');
+      if (body.estimatedPrice === undefined || body.estimatedPrice === null) missingFields.push('estimatedPrice');
+      
+      if (missingFields.length > 0) {
+        return NextResponse.json(
+          { error: 'Campos obrigatórios em falta', missingFields },
+          { status: 400 }
+        );
+      }
+    }
+
     // Processar tags (string separada por vírgulas -> array)
     let tags = [];
     if (body.tags) {
@@ -109,6 +137,16 @@ export async function POST(request: Request) {
         tags = body.tags.split(',').map((t: string) => t.trim()).filter(Boolean);
       } else if (Array.isArray(body.tags)) {
         tags = body.tags;
+      }
+    }
+
+    // Processar contentTypes
+    let contentTypes = [];
+    if (body.contentTypes) {
+      if (typeof body.contentTypes === 'string') {
+        contentTypes = body.contentTypes.split(',').map((t: string) => t.trim()).filter(Boolean);
+      } else if (Array.isArray(body.contentTypes)) {
+        contentTypes = body.contentTypes;
       }
     }
 
@@ -132,15 +170,41 @@ export async function POST(request: Request) {
         name: body.name,
         email: body.email || null,
         phone: body.phone || null,
-        address: body.location || null,  // Map location -> address
+        address: body.location || body.address || null,
         instagramHandle: body.instagramHandle || null,
         instagramFollowers: body.instagramFollowers ? parseInt(body.instagramFollowers) : null,
         tiktokHandle: body.tiktokHandle || null,
         tiktokFollowers: body.tiktokFollowers ? parseInt(body.tiktokFollowers) : null,
+        youtubeHandle: body.youtubeHandle || null,
+        youtubeFollowers: body.youtubeFollowers ? parseInt(body.youtubeFollowers) : null,
+        
+        // Metrics
+        totalLikes: body.totalLikes ? BigInt(body.totalLikes) : null,
+        engagementRate: body.engagementRate ? parseFloat(body.engagementRate) : null,
+        averageViews: body.averageViews || null,
+        contentStability: body.contentStability || null,
+        
+        // Demographics
+        country: body.country || null,
+        language: body.language || null,
+        niche: body.niche || null,
+        contentTypes,
+        primaryPlatform: body.primaryPlatform || null,
+        
+        // Business
+        estimatedPrice: body.estimatedPrice ? parseFloat(body.estimatedPrice) : null,
+        fitScore: body.fitScore ? parseInt(body.fitScore) : null,
+        
+        // Discovery
+        discoveryMethod: body.discoveryMethod || null,
+        discoveryDate: body.discoveryDate ? new Date(body.discoveryDate) : null,
+        
+        // Status
         status: body.status || 'suggestion',
         tier: body.tier || 'micro',
         notes: body.notes || null,
         tags,
+        
         createdById: defaultUser.id,
       },
     });
