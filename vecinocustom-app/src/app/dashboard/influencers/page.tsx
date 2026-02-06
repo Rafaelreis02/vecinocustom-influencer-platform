@@ -322,13 +322,13 @@ export default function InfluencersPage() {
                   </Link>
                   <Link
                     href={`/dashboard/influencers/${influencer.id}/edit`}
-                    className="hidden sm:inline-flex p-2 rounded-md hover:bg-gray-100 text-gray-600 hover:text-gray-900 transition-colors active:scale-95"
+                    className="p-1.5 sm:p-2 rounded-md hover:bg-gray-100 text-gray-600 hover:text-gray-900 transition-colors active:scale-95"
                   >
                     <Edit className="h-4 w-4" />
                   </Link>
                   <button 
                     onClick={() => handleDelete(influencer.id, influencer.name)}
-                    className="hidden sm:inline-flex p-2 rounded-md hover:bg-gray-100 text-gray-600 hover:text-red-600 transition-colors active:scale-95"
+                    className="p-1.5 sm:p-2 rounded-md hover:bg-gray-100 text-gray-600 hover:text-red-600 transition-colors active:scale-95"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
