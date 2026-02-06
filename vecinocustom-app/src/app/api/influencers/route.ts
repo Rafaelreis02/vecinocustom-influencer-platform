@@ -106,6 +106,21 @@ export async function POST(request: Request) {
       }
     }
 
+    // Get or create default user (AI Agent)
+    let defaultUser = await prisma.user.findUnique({
+      where: { email: 'ai@vecinocustom.com' }
+    });
+
+    if (!defaultUser) {
+      defaultUser = await prisma.user.create({
+        data: {
+          email: 'ai@vecinocustom.com',
+          name: 'AI Agent 🤖',
+          role: 'ADMIN'
+        }
+      });
+    }
+
     const influencer = await prisma.influencer.create({
       data: {
         name: body.name,
@@ -120,6 +135,7 @@ export async function POST(request: Request) {
         tier: body.tier || 'micro',
         notes: body.notes || null,
         tags,
+        createdById: defaultUser.id,
       },
     });
 
