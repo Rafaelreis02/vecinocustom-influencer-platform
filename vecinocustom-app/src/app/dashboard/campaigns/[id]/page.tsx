@@ -25,7 +25,9 @@ import {
   FileText,
   Loader2,
   ExternalLink,
+  Plus,
 } from 'lucide-react';
+import AddVideoModal from '@/components/AddVideoModal';
 
 interface Campaign {
   id: string;
@@ -89,6 +91,7 @@ export default function CampaignDetailPage() {
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showAddVideoModal, setShowAddVideoModal] = useState(false);
 
   useEffect(() => {
     fetchCampaign();
@@ -374,6 +377,14 @@ export default function CampaignDetailPage() {
             <Video className="h-5 w-5 text-purple-600" />
             Vídeos ({campaign.videos.length})
           </h2>
+          <button
+            onClick={() => setShowAddVideoModal(true)}
+            className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-black text-white rounded-md text-xs sm:text-sm font-medium hover:bg-gray-800 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">Adicionar Vídeo</span>
+            <span className="sm:hidden">Adicionar</span>
+          </button>
         </div>
 
         {campaign.videos.length === 0 ? (
@@ -472,6 +483,15 @@ export default function CampaignDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Add Video Modal */}
+      <AddVideoModal
+        campaignId={campaign.id}
+        campaignHashtag={campaign.hashtag}
+        isOpen={showAddVideoModal}
+        onClose={() => setShowAddVideoModal(false)}
+        onSuccess={fetchCampaign}
+      />
     </div>
   );
 }
