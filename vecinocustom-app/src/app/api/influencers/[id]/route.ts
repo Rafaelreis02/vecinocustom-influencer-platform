@@ -123,7 +123,11 @@ export async function DELETE(
     const influencer = await prisma.influencer.findUnique({
       where: { id },
       include: {
-        campaigns: true,
+        campaigns: {
+          include: {
+            campaign: true,
+          },
+        },
         videos: true,
         coupons: true,
       },
@@ -138,7 +142,7 @@ export async function DELETE(
 
     // Verificar se tem campanhas ativas
     const activeCampaigns = influencer.campaigns.filter(
-      (c) => c.campaign && (c.campaign as any).status === 'active'
+      (c) => c.campaign && c.campaign.status === 'ACTIVE'
     );
 
     if (activeCampaigns.length > 0) {
