@@ -64,9 +64,35 @@ export default function NewInfluencerPage() {
   const [importPlatform, setImportPlatform] = useState('tiktok');
 
   const handleImport = async () => {
-    // Nota: A lógica de importação real será feita via chat com o Agente por enquanto,
-    // mas este botão pode chamar o endpoint se implementarmos scraping server-side depois.
-    alert('Para importar automaticamente com scraping, pede ao Agente no chat: "importa @username"');
+    if (!importHandle) return;
+    setImporting(true);
+
+    try {
+      // Cria registo pendente para o Agente processar
+      const res = await fetch('/api/influencers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          name: importHandle, // Nome temporário
+          tiktokHandle: importPlatform === 'tiktok' ? importHandle : '',
+          instagramHandle: importPlatform === 'instagram' ? importHandle : '',
+          status: 'IMPORT_PENDING',
+          notes: 'Aguardando processamento automático pelo Agente...'
+        }),
+      });
+
+      if (res.ok) {
+        alert('✅ Pedido enviado! O Agente vai processar este perfil em breve (aprox 30s). Podes ver o progresso na lista de influencers.');
+        router.push('/dashboard/influencers');
+      } else {
+        alert('Erro ao agendar importação.');
+      }
+    } catch (error) {
+      console.error('Import error:', error);
+      alert('Erro ao agendar importação.');
+    } finally {
+      setImporting(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

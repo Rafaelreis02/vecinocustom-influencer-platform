@@ -106,6 +106,7 @@ enum InfluencerStatus {
   working          // A Trabalhar (ativo)
   negotiating      // Em Negociação
   suggestion       // Sugestão da IA
+  IMPORT_PENDING   // ⏳ Aguardando importação pelo Agente
   INACTIVE
   BLACKLISTED
 }
