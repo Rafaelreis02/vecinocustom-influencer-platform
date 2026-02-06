@@ -26,6 +26,7 @@ import {
   Loader2,
   ExternalLink,
   Plus,
+  AlertCircle,
 } from 'lucide-react';
 import AddVideoModal from '@/components/AddVideoModal';
 
