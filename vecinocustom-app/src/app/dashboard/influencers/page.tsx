@@ -26,9 +26,12 @@ type Influencer = {
   instagramHandle: string | null;
   instagramFollowers: number | null;
   tiktokHandle: string | null;
+  tiktokFollowers: number | null;
   status: string;
   totalViews: number;
+  totalFollowers: number;
   engagement: number;
+  matchScore: number | null;
   campaigns: number;
   totalRevenue: number;
   activeCoupons: number;
@@ -220,12 +223,14 @@ export default function InfluencersPage() {
                       <div className="text-center">
                         <p className="text-xs text-gray-500 mb-1">Followers</p>
                         <p className="font-semibold text-gray-900">
-                          {influencer.instagramFollowers ? (influencer.instagramFollowers / 1000).toFixed(1) + 'K' : '-'}
+                          {influencer.totalFollowers > 0 ? (influencer.totalFollowers / 1000).toFixed(1) + 'K' : '-'}
                         </p>
                       </div>
                       <div className="text-center">
                         <p className="text-xs text-gray-500 mb-1">Engagement</p>
-                        <p className="font-semibold text-gray-900">{influencer.engagement}%</p>
+                        <p className="font-semibold text-purple-600">
+                          {influencer.engagement > 0 ? influencer.engagement + 'x' : '-'}
+                        </p>
                       </div>
                       <div className="text-center">
                         <p className="text-xs text-gray-500 mb-1">Campanhas</p>
@@ -233,7 +238,7 @@ export default function InfluencersPage() {
                       </div>
                       <div className="text-center">
                         <p className="text-xs text-gray-500 mb-1">Revenue</p>
-                        <p className="font-semibold text-gray-900">€{influencer.totalRevenue}</p>
+                        <p className="font-semibold text-green-600">€{influencer.totalRevenue}</p>
                       </div>
                     </>
                   )}
@@ -243,12 +248,14 @@ export default function InfluencersPage() {
                       <div className="text-center">
                         <p className="text-xs text-gray-500 mb-1">Followers</p>
                         <p className="font-semibold text-gray-900">
-                          {influencer.instagramFollowers ? (influencer.instagramFollowers / 1000).toFixed(1) + 'K' : '-'}
+                          {influencer.totalFollowers > 0 ? (influencer.totalFollowers / 1000).toFixed(1) + 'K' : '-'}
                         </p>
                       </div>
                       <div className="text-center">
                         <p className="text-xs text-gray-500 mb-1">Engagement</p>
-                        <p className="font-semibold text-gray-900">{influencer.engagement}%</p>
+                        <p className="font-semibold text-purple-600">
+                          {influencer.engagement > 0 ? influencer.engagement + 'x' : '-'}
+                        </p>
                       </div>
                       <div className="text-center">
                         <p className="text-xs text-gray-500 mb-1">Status</p>
@@ -262,16 +269,25 @@ export default function InfluencersPage() {
                       <div className="text-center">
                         <p className="text-xs text-gray-500 mb-1">Followers</p>
                         <p className="font-semibold text-gray-900">
-                          {influencer.instagramFollowers ? (influencer.instagramFollowers / 1000).toFixed(1) + 'K' : '-'}
+                          {influencer.totalFollowers > 0 ? (influencer.totalFollowers / 1000).toFixed(1) + 'K' : '-'}
                         </p>
                       </div>
                       <div className="text-center">
                         <p className="text-xs text-gray-500 mb-1">Engagement</p>
-                        <p className="font-semibold text-gray-900">{influencer.engagement}%</p>
+                        <p className="font-semibold text-purple-600">
+                          {influencer.engagement > 0 ? influencer.engagement + 'x' : '-'}
+                        </p>
                       </div>
                       <div className="text-center">
-                        <p className="text-xs text-gray-500 mb-1">Match Score</p>
-                        <p className="font-semibold text-gray-900">-</p>
+                        <p className="text-xs text-gray-500 mb-1">Fit Score</p>
+                        <p className="font-semibold text-gray-900">
+                          {influencer.matchScore ? (
+                            <span className="flex items-center justify-center gap-1">
+                              {influencer.matchScore}/5
+                              <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                            </span>
+                          ) : '-'}
+                        </p>
                       </div>
                     </>
                   )}

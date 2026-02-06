@@ -64,9 +64,13 @@ export async function GET(request: Request) {
       const totalRevenue = inf.coupons.reduce((sum, c) => sum + (c.totalSales || 0), 0);
       
       const totalFollowers = (inf.instagramFollowers || 0) + (inf.tiktokFollowers || 0);
-      const engagementRate = totalFollowers > 0 
-        ? ((totalLikes + totalComments + totalShares) / totalFollowers) * 100
-        : 0;
+      
+      // Use stored engagementRate if available, otherwise calculate from videos
+      const engagement = inf.engagementRate !== null && inf.engagementRate !== undefined
+        ? inf.engagementRate 
+        : (totalFollowers > 0 
+            ? parseFloat((((totalLikes + totalComments + totalShares) / totalFollowers) * 100).toFixed(2))
+            : 0);
 
       return {
         ...inf,
@@ -75,7 +79,9 @@ export async function GET(request: Request) {
         totalComments,
         totalShares,
         totalRevenue,
-        engagement: parseFloat(engagementRate.toFixed(2)),
+        totalFollowers,
+        engagement,
+        matchScore: inf.fitScore || null, // Add fitScore as matchScore
         campaigns: inf.campaigns.length,
         activeCoupons: inf.coupons.filter(c => c.usageCount > 0).length,
       };
