@@ -104,6 +104,7 @@ export default function InfluencersPage() {
     { id: 'working', label: 'A Trabalhar', icon: Check, count: allInfluencers.filter(i => i.status === 'working').length },
     { id: 'negotiating', label: 'Em Negociação', icon: Clock, count: allInfluencers.filter(i => i.status === 'negotiating').length },
     { id: 'suggestion', label: 'Sugestões', icon: Star, count: allInfluencers.filter(i => i.status === 'suggestion').length },
+    { id: 'IMPORT_PENDING', label: 'A Analisar', icon: Loader2, count: allInfluencers.filter(i => i.status === 'IMPORT_PENDING').length },
   ];
 
   return (
@@ -291,6 +292,13 @@ export default function InfluencersPage() {
                       </div>
                     </>
                   )}
+
+                  {activeTab === 'IMPORT_PENDING' && (
+                    <div className="flex items-center gap-2 text-purple-600 font-medium animate-pulse">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      A Recolher Dados...
+                    </div>
+                  )}
                 </div>
 
                 {/* Right: Actions */}
@@ -342,6 +350,7 @@ export default function InfluencersPage() {
             {activeTab === 'working' && 'Adiciona influencers com quem já estás a trabalhar'}
             {activeTab === 'negotiating' && 'Move influencers em processo de negociação para aqui'}
             {activeTab === 'suggestion' && 'A IA vai sugerir influencers que combinam com a tua marca'}
+            {activeTab === 'IMPORT_PENDING' && 'Os influencers em análise aparecerão aqui temporariamente'}
           </p>
           <Link
             href="/dashboard/influencers/new"
