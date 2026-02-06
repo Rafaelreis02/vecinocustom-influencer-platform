@@ -1,0 +1,161 @@
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+
+// GET /api/influencers/[id] - Ver detalhes de um influencer
+export async function GET(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const influencer = await prisma.influencer.findUnique({
+      where: { id: params.id },
+      include: {
+        videos: {
+          orderBy: { publishedAt: 'desc' },
+        },
+        campaigns: {
+          include: {
+            campaign: true,
+          },
+        },
+        coupons: {
+          orderBy: { createdAt: 'desc' },
+        },
+        payments: {
+          orderBy: { createdAt: 'desc' },
+        },
+        files: {
+          orderBy: { uploadedAt: 'desc' },
+        },
+      },
+    });
+
+    if (!influencer) {
+      return NextResponse.json(
+        { error: 'Influencer not found' },
+        { status: 404 }
+      );
+    }
+
+    // Calcular estatísticas
+    const totalViews = influencer.videos.reduce((sum, v) => sum + (v.views || 0), 0);
+    const totalLikes = influencer.videos.reduce((sum, v) => sum + (v.likes || 0), 0);
+    const totalComments = influencer.videos.reduce((sum, v) => sum + (v.comments || 0), 0);
+    const totalShares = influencer.videos.reduce((sum, v) => sum + (v.shares || 0), 0);
+    const totalRevenue = influencer.coupons.reduce((sum, c) => sum + (c.totalSales || 0), 0);
+    
+    const totalFollowers = (influencer.instagramFollowers || 0) + (influencer.tiktokFollowers || 0);
+    const engagementRate = totalFollowers > 0 
+      ? ((totalLikes + totalComments + totalShares) / totalFollowers) * 100
+      : 0;
+
+    return NextResponse.json({
+      ...influencer,
+      totalViews,
+      totalLikes,
+      totalComments,
+      totalShares,
+      totalRevenue,
+      avgEngagement: parseFloat(engagementRate.toFixed(2)),
+      activeCoupons: influencer.coupons.filter(c => c.usageCount > 0).length,
+    });
+  } catch (err: any) {
+    console.log('[API ERROR] Fetching influencer:', err?.message || String(err));
+    return NextResponse.json(
+      { error: 'Failed to fetch influencer', details: err?.message },
+      { status: 500 }
+    );
+  }
+}
+
+// PUT /api/influencers/[id] - Editar influencer
+export async function PUT(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const body = await request.json();
+
+    // Processar tags (string separada por vírgulas -> array)
+    let tags = body.tags;
+    if (typeof body.tags === 'string') {
+      tags = body.tags.split(',').map((t: string) => t.trim()).filter(Boolean);
+    }
+
+    const influencer = await prisma.influencer.update({
+      where: { id: params.id },
+      data: {
+        name: body.name,
+        email: body.email || null,
+        phone: body.phone || null,
+        address: body.location || null,  // Map location -> address
+        instagramHandle: body.instagramHandle || null,
+        instagramFollowers: body.instagramFollowers ? parseInt(body.instagramFollowers) : null,
+        tiktokHandle: body.tiktokHandle || null,
+        tiktokFollowers: body.tiktokFollowers ? parseInt(body.tiktokFollowers) : null,
+        status: body.status,
+        tier: body.tier,
+        notes: body.notes || null,
+        tags: tags || [],
+      },
+    });
+
+    return NextResponse.json(influencer);
+  } catch (err: any) {
+    console.log('[API ERROR] Updating influencer:', err?.message || String(err));
+    return NextResponse.json(
+      { error: 'Failed to update influencer', details: err?.message },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE /api/influencers/[id] - Apagar influencer
+export async function DELETE(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    // Verificar se existe
+    const influencer = await prisma.influencer.findUnique({
+      where: { id: params.id },
+      include: {
+        campaigns: true,
+        videos: true,
+        coupons: true,
+      },
+    });
+
+    if (!influencer) {
+      return NextResponse.json(
+        { error: 'Influencer not found' },
+        { status: 404 }
+      );
+    }
+
+    // Verificar se tem campanhas ativas
+    const activeCampaigns = influencer.campaigns.filter(
+      (c) => c.campaign && (c.campaign as any).status === 'active'
+    );
+
+    if (activeCampaigns.length > 0) {
+      return NextResponse.json(
+        { error: 'Cannot delete influencer with active campaigns' },
+        { status: 400 }
+      );
+    }
+
+    // Apagar (Prisma vai apagar relacionamentos automaticamente com cascade)
+    await prisma.influencer.delete({
+      where: { id: params.id },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    console.log('[API ERROR] Deleting influencer:', err?.message || String(err));
+    return NextResponse.json(
+      { error: 'Failed to delete influencer', details: err?.message },
+      { status: 500 }
+    );
+  }
+}

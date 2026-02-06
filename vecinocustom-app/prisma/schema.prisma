@@ -1,0 +1,338 @@
+// VecinoCustom Influencer Platform - Database Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USERS & AUTH
+// ============================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String?   // Hashed
+  role          UserRole  @default(ADMIN)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  createdInfluencers  Influencer[]  @relation("CreatedBy")
+  createdCampaigns    Campaign[]    @relation("CreatedBy")
+  
+  @@map("users")
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  VIEWER
+}
+
+// ============================================
+// INFLUENCERS
+// ============================================
+
+model Influencer {
+  id                String              @id @default(cuid())
+  name              String
+  email             String?
+  phone             String?
+  
+  // Social Media
+  instagramHandle   String?
+  instagramFollowers Int?
+  tiktokHandle      String?
+  tiktokFollowers   Int?
+  youtubeHandle     String?
+  youtubeFollowers  Int?
+  
+  // Business
+  nif               String?             // Tax ID
+  address           String?
+  paymentMethod     PaymentMethod?      @default(BANK_TRANSFER)
+  bankDetails       String?             // JSON or encrypted
+  
+  // Status
+  status            InfluencerStatus    @default(suggestion)
+  tier              String?             // Micro, Macro, Mega, etc.
+  notes             String?
+  tags              String[]            // Array of tags
+  
+  // Metadata
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  createdById       String
+  createdBy         User                @relation("CreatedBy", fields: [createdById], references: [id])
+  
+  // Relations
+  campaigns         CampaignInfluencer[]
+  videos            Video[]
+  coupons           Coupon[]
+  payments          Payment[]
+  files             File[]
+  
+  @@map("influencers")
+}
+
+enum InfluencerStatus {
+  ACTIVE           // Manter temporariamente
+  PENDING          // Manter temporariamente
+  working          // A Trabalhar (ativo)
+  negotiating      // Em Negociação
+  suggestion       // Sugestão da IA
+  INACTIVE
+  BLACKLISTED
+}
+
+enum PaymentMethod {
+  BANK_TRANSFER
+  PAYPAL
+  REVOLUT
+  MBWAY
+  OTHER
+}
+
+// ============================================
+// CAMPAIGNS
+// ============================================
+
+model Campaign {
+  id                String              @id @default(cuid())
+  name              String
+  description       String?
+  
+  // Dates
+  startDate         DateTime?
+  endDate           DateTime?
+  
+  // Budget & Goals
+  budget            Float?
+  targetViews       Int?
+  targetSales       Int?
+  
+  // Status
+  status            CampaignStatus      @default(DRAFT)
+  
+  // Metadata
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  createdById       String
+  createdBy         User                @relation("CreatedBy", fields: [createdById], references: [id])
+  
+  // Relations
+  influencers       CampaignInfluencer[]
+  videos            Video[]
+  coupons           Coupon[]
+  files             File[]
+  
+  @@map("campaigns")
+}
+
+enum CampaignStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+// ============================================
+// CAMPAIGN <> INFLUENCER (Many-to-Many)
+// ============================================
+
+model CampaignInfluencer {
+  id              String      @id @default(cuid())
+  
+  campaignId      String
+  campaign        Campaign    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  
+  influencerId    String
+  influencer      Influencer  @relation(fields: [influencerId], references: [id], onDelete: Cascade)
+  
+  // Terms
+  agreedFee       Float?
+  commissionRate  Float?      // Percentage
+  deliverables    String?     // Expected posts/videos
+  
+  // Status
+  status          String      @default("pending") // pending, confirmed, completed
+  
+  // Metadata
+  joinedAt        DateTime    @default(now())
+  
+  @@unique([campaignId, influencerId])
+  @@map("campaign_influencers")
+}
+
+// ============================================
+// VIDEOS / POSTS
+// ============================================
+
+model Video {
+  id              String      @id @default(cuid())
+  
+  // Basic Info
+  title           String?
+  description     String?
+  url             String      // TikTok/Instagram link
+  platform        Platform
+  
+  // Relations
+  campaignId      String?
+  campaign        Campaign?   @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  
+  influencerId    String
+  influencer      Influencer  @relation(fields: [influencerId], references: [id], onDelete: Cascade)
+  
+  // Metrics
+  views           Int?
+  likes           Int?
+  comments        Int?
+  shares          Int?
+  saves           Int?
+  
+  // Dates
+  publishedAt     DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  @@map("videos")
+}
+
+enum Platform {
+  TIKTOK
+  INSTAGRAM
+  YOUTUBE
+  OTHER
+}
+
+// ============================================
+// COUPONS / DISCOUNT CODES
+// ============================================
+
+model Coupon {
+  id              String      @id @default(cuid())
+  code            String      @unique
+  
+  // Relations
+  influencerId    String
+  influencer      Influencer  @relation(fields: [influencerId], references: [id], onDelete: Cascade)
+  
+  campaignId      String?
+  campaign        Campaign?   @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  
+  // Discount
+  discountType    DiscountType @default(PERCENTAGE)
+  discountValue   Float       // 10 for 10% or 10 for 10€
+  
+  // Usage
+  usageCount      Int         @default(0)
+  usageLimit      Int?        // Max uses (null = unlimited)
+  
+  // Tracking (manual for now, Shopify later)
+  totalSales      Float       @default(0)
+  totalOrders     Int         @default(0)
+  
+  // Dates
+  validFrom       DateTime?
+  validUntil      DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  // Shopify (when ready)
+  shopifyId       String?     @unique
+  
+  @@map("coupons")
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+  FREE_SHIPPING
+}
+
+// ============================================
+// PAYMENTS
+// ============================================
+
+model Payment {
+  id              String        @id @default(cuid())
+  
+  influencerId    String
+  influencer      Influencer    @relation(fields: [influencerId], references: [id], onDelete: Cascade)
+  
+  // Amount
+  amount          Float
+  currency        String        @default("EUR")
+  
+  // Details
+  description     String?
+  invoiceNumber   String?
+  
+  // Status
+  status          PaymentStatus @default(PENDING)
+  paidAt          DateTime?
+  
+  // Method
+  method          PaymentMethod @default(BANK_TRANSFER)
+  reference       String?       // Transaction ID, etc.
+  
+  // Metadata
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  @@map("payments")
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  PAID
+  FAILED
+  CANCELLED
+}
+
+// ============================================
+// FILES / MEDIA
+// ============================================
+
+model File {
+  id              String      @id @default(cuid())
+  
+  // File Info
+  filename        String
+  originalName    String
+  mimeType        String
+  size            Int         // bytes
+  url             String      // S3/R2 URL
+  
+  // Type
+  type            FileType    @default(OTHER)
+  
+  // Relations (optional - can belong to multiple entities)
+  influencerId    String?
+  influencer      Influencer? @relation(fields: [influencerId], references: [id], onDelete: Cascade)
+  
+  campaignId      String?
+  campaign        Campaign?   @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  
+  // Metadata
+  uploadedAt      DateTime    @default(now())
+  
+  @@map("files")
+}
+
+enum FileType {
+  CONTRACT
+  INVOICE
+  MEDIA
+  AVATAR
+  OTHER
+}
