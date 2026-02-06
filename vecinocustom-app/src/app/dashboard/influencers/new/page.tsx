@@ -116,15 +116,56 @@ export default function NewInfluencerPage() {
       </div>
 
       {/* AI Import Callout */}
-      <div className="rounded-xl bg-gradient-to-r from-purple-50 to-pink-50 p-6 border border-purple-100 flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold text-purple-900 mb-1 flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-purple-600" />
-            Queres preenchimento automático?
-          </h3>
-          <p className="text-sm text-purple-700">
-            Pede ao Agente no chat: <span className="font-mono bg-white/50 px-2 py-0.5 rounded">importa @username</span>
-          </p>
+      <div className="rounded-xl bg-gradient-to-r from-purple-900 to-indigo-900 p-6 border border-purple-800 shadow-lg text-white">
+        <div className="flex flex-col md:flex-row items-center gap-6">
+          <div className="flex-1">
+            <h3 className="text-xl font-bold mb-2 flex items-center gap-2">
+              <Sparkles className="h-6 w-6 text-yellow-400" />
+              Importação Inteligente
+            </h3>
+            <p className="text-purple-200 text-sm mb-4">
+              Escreve o @handle e a IA vai pesquisar métricas, biografia e dados automaticamente.
+            </p>
+            
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium">@</span>
+                <input
+                  type="text"
+                  value={importHandle}
+                  onChange={(e) => setImportHandle(e.target.value)}
+                  placeholder="tiktok_handle"
+                  className="w-full rounded-lg border-0 bg-white/10 text-white placeholder:text-gray-400 py-3 pl-8 pr-4 text-sm focus:ring-2 focus:ring-purple-400 focus:outline-none backdrop-blur-sm"
+                />
+              </div>
+              <select
+                value={importPlatform}
+                onChange={(e) => setImportPlatform(e.target.value)}
+                className="rounded-lg border-0 bg-white/10 text-white py-3 px-4 text-sm focus:ring-2 focus:ring-purple-400 focus:outline-none backdrop-blur-sm [&>option]:text-black"
+              >
+                <option value="tiktok">TikTok</option>
+                <option value="instagram">Instagram</option>
+              </select>
+              <button
+                type="button"
+                onClick={handleImport}
+                disabled={importing || !importHandle}
+                className="flex items-center justify-center gap-2 px-6 py-3 bg-white text-purple-900 rounded-lg text-sm font-bold hover:bg-purple-50 transition disabled:opacity-50 shadow-md whitespace-nowrap"
+              >
+                {importing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    A Analisar...
+                  </>
+                ) : (
+                  <>
+                    <Search className="h-4 w-4" />
+                    Analisar e Importar
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
