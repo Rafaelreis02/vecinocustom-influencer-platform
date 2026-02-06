@@ -96,6 +96,7 @@ export async function POST(request: Request) {
       data: {
         name: body.name,
         description: body.description || null,
+        hashtag: body.hashtag || null,
         startDate: body.startDate ? new Date(body.startDate) : null,
         endDate: body.endDate ? new Date(body.endDate) : null,
         budget: body.budget ? parseFloat(body.budget) : null,

@@ -126,6 +126,7 @@ model Campaign {
   id                String              @id @default(cuid())
   name              String
   description       String?
+  hashtag           String?             // Hashtag de tracking (#vecinodiadosnamorados)
   
   // Dates
   startDate         DateTime?
