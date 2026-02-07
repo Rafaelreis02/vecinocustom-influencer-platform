@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+// Updated: 2026-02-07 - Added PATCH support for auto-import
+
 // GET /api/influencers/[id] - Ver detalhes de um influencer
 export async function GET(
   request: Request,
