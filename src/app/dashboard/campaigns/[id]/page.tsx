@@ -24,6 +24,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import AddVideoModal from '@/components/AddVideoModal';
+import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog';
 
 interface Campaign {
   id: string;
@@ -75,6 +76,7 @@ function extractTikTokVideoId(url: string): string {
 export default function CampaignDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { dialog, confirm } = useConfirm();
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -105,7 +107,15 @@ export default function CampaignDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (!confirm('Tens a certeza que queres eliminar esta campanha?')) return;
+    const confirmed = await confirm({
+      title: 'Eliminar Campanha',
+      message: `Tens a certeza que queres eliminar a campanha "${campaign?.name}"? Esta ação não pode ser desfeita.`,
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      isDangerous: true,
+    });
+
+    if (!confirmed) return;
 
     try {
       const res = await fetch(`/api/campaigns/${params.id}`, {
@@ -432,6 +442,9 @@ export default function CampaignDetailPage() {
         onClose={() => setShowAddVideoModal(false)}
         onSuccess={fetchCampaign}
       />
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog {...dialog} />
     </div>
   );
 }

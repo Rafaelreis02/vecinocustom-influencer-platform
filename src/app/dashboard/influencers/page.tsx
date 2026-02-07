@@ -19,6 +19,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { ToastContainer, useToast } from '@/components/ui/Toast';
+import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog';
 
 type Influencer = {
   id: string;
@@ -44,6 +45,7 @@ export default function InfluencersPage() {
   const [allInfluencers, setAllInfluencers] = useState<Influencer[]>([]);
   const [loading, setLoading] = useState(true);
   const { toasts, addToast, removeToast } = useToast();
+  const { dialog, confirm: showConfirm } = useConfirm();
 
   useEffect(() => {
     fetchInfluencers();
@@ -64,7 +66,15 @@ export default function InfluencersPage() {
   };
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Tens a certeza que queres apagar ${name}?`)) return;
+    const confirmed = await showConfirm({
+      title: 'Apagar Influencer',
+      message: `Tens a certeza que queres apagar ${name}? Esta ação não pode ser desfeita.`,
+      confirmText: 'Apagar',
+      cancelText: 'Cancelar',
+      isDangerous: true,
+    });
+
+    if (!confirmed) return;
 
     try {
       const res = await fetch(`/api/influencers/${id}`, {
@@ -375,6 +385,9 @@ export default function InfluencersPage() {
           </Link>
         </div>
       )}
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog {...dialog} />
     </div>
   );
 }

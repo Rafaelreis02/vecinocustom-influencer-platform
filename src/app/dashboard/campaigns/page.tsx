@@ -22,6 +22,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { ToastContainer, useToast } from '@/components/ui/Toast';
+import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog';
 
 interface Campaign {
   id: string;
@@ -51,6 +52,7 @@ export default function CampaignsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const { toasts, addToast, removeToast } = useToast();
+  const { dialog, confirm: showConfirm } = useConfirm();
 
   useEffect(() => {
     fetchCampaigns();
@@ -72,7 +74,15 @@ export default function CampaignsPage() {
   };
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Tens a certeza que queres eliminar a campanha "${name}"?`)) return;
+    const confirmed = await showConfirm({
+      title: 'Eliminar Campanha',
+      message: `Tens a certeza que queres eliminar a campanha "${name}"? Esta ação não pode ser desfeita.`,
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      isDangerous: true,
+    });
+
+    if (!confirmed) return;
 
     try {
       const res = await fetch(`/api/campaigns/${id}`, {
@@ -323,6 +333,9 @@ export default function CampaignsPage() {
           )}
         </div>
       )}
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog {...dialog} />
     </div>
   );
 }

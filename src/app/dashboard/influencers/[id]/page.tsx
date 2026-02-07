@@ -27,11 +27,13 @@ import {
   Award,
   Video
 } from 'lucide-react';
+import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog';
 
 export default function InfluencerDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
+  const { dialog, confirm: showConfirm } = useConfirm();
 
   const [loading, setLoading] = useState(true);
   const [influencer, setInfluencer] = useState<any>(null);
@@ -54,7 +56,15 @@ export default function InfluencerDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (!confirm(`Tens a certeza que queres apagar ${influencer.name}?`)) return;
+    const confirmed = await showConfirm({
+      title: 'Apagar Influencer',
+      message: `Tens a certeza que queres apagar ${influencer.name}? Esta ação não pode ser desfeita.`,
+      confirmText: 'Apagar',
+      cancelText: 'Cancelar',
+      isDangerous: true,
+    });
+
+    if (!confirmed) return;
 
     try {
       const res = await fetch(`/api/influencers/${id}`, {
@@ -507,6 +517,9 @@ export default function InfluencerDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog {...dialog} />
     </div>
   );
 }
