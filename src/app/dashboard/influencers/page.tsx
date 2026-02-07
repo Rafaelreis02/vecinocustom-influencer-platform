@@ -187,9 +187,10 @@ export default function InfluencersPage() {
       {!loading && (
         <div className="space-y-3">
           {filteredInfluencers.map((influencer) => (
-            <div
+            <Link
               key={influencer.id}
-              className="rounded-lg bg-white p-3 sm:p-5 border border-gray-200 hover:border-gray-900 transition-colors"
+              href={`/dashboard/influencers/${influencer.id}`}
+              className="rounded-lg bg-white p-3 sm:p-5 border border-gray-200 hover:border-gray-900 transition-colors block"
             >
               <div className="flex items-center justify-between gap-3">
                 {/* Left: Profile */}
@@ -302,39 +303,47 @@ export default function InfluencersPage() {
                 </div>
 
                 {/* Right: Actions */}
-                <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                <div className="flex items-center gap-1 sm:gap-2 shrink-0" onClick={(e) => e.preventDefault()}>
                   {activeTab === 'suggestion' && (
-                    <button className="hidden sm:flex px-3 py-1.5 bg-black text-white rounded-md text-sm font-medium hover:bg-gray-800 transition-colors active:scale-95">
+                    <button 
+                      onClick={(e) => {
+                        e.preventDefault();
+                      }}
+                      className="hidden sm:flex px-3 py-1.5 bg-black text-white rounded-md text-sm font-medium hover:bg-gray-800 transition-colors active:scale-95"
+                    >
                       Contactar
                     </button>
                   )}
                   {activeTab === 'negotiating' && (
-                    <button className="hidden sm:flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-900 rounded-md text-sm font-medium hover:bg-gray-200 transition-colors active:scale-95">
+                    <button 
+                      onClick={(e) => {
+                        e.preventDefault();
+                      }}
+                      className="hidden sm:flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-900 rounded-md text-sm font-medium hover:bg-gray-200 transition-colors active:scale-95"
+                    >
                       <MessageCircle className="h-4 w-4" />
                       Mensagem
                     </button>
                   )}
                   <Link
-                    href={`/dashboard/influencers/${influencer.id}`}
-                    className="p-1.5 sm:p-2 rounded-md hover:bg-gray-100 text-gray-600 hover:text-gray-900 transition-colors active:scale-95"
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Link>
-                  <Link
                     href={`/dashboard/influencers/${influencer.id}/edit`}
                     className="p-1.5 sm:p-2 rounded-md hover:bg-gray-100 text-gray-600 hover:text-gray-900 transition-colors active:scale-95"
+                    onClick={(e) => e.preventDefault()}
                   >
                     <Edit className="h-4 w-4" />
                   </Link>
                   <button 
-                    onClick={() => handleDelete(influencer.id, influencer.name)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleDelete(influencer.id, influencer.name);
+                    }}
                     className="p-1.5 sm:p-2 rounded-md hover:bg-gray-100 text-gray-600 hover:text-red-600 transition-colors active:scale-95"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       )}
