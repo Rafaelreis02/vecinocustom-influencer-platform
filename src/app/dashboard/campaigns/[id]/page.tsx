@@ -245,44 +245,33 @@ export default function CampaignDetailPage() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
         {/* Budget */}
         <div className="rounded-lg bg-white p-3 sm:p-4 border border-gray-200">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-3">
             <p className="text-xs sm:text-sm text-gray-600">Budget</p>
             <DollarSign className="h-4 w-4 text-gray-400" />
           </div>
-          <p className="text-lg sm:text-2xl font-semibold text-gray-900">
-            €{campaign.budget?.toLocaleString() || '0'}
-          </p>
-          {campaign.budget && (
-            <div className="mt-2">
-              <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-                <span>Gasto</span>
-                <span>€{campaign.spent.toLocaleString()}</span>
+          {campaign.budget && campaign.budget > 0 ? (
+            <>
+              <div className="flex items-baseline gap-2 mb-3">
+                <p className="text-lg sm:text-2xl font-semibold text-gray-900">
+                  €{campaign.spent.toLocaleString()}
+                </p>
+                <p className="text-xs sm:text-sm text-gray-500">
+                  / €{campaign.budget.toLocaleString()}
+                </p>
               </div>
-              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-gray-900 rounded-full transition-all"
                   style={{ width: `${Math.min(budgetPercent, 100)}%` }}
                 />
               </div>
-            </div>
-          )}
-        </div>
-
-        {/* Total Views */}
-        <div className="rounded-lg bg-white p-3 sm:p-4 border border-gray-200">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs sm:text-sm text-gray-600">Views</p>
-            <Eye className="h-4 w-4 text-gray-400" />
-          </div>
-          <p className="text-lg sm:text-2xl font-semibold text-gray-900">
-            {(campaign.totalViews / 1000).toFixed(0)}K
-          </p>
-          {campaign.targetViews && (
-            <p className="text-xs text-gray-500 mt-1">
-              Meta: {(campaign.targetViews / 1000).toFixed(0)}K
+            </>
+          ) : (
+            <p className="text-lg sm:text-2xl font-semibold text-gray-900">
+              €{campaign.videos.reduce((sum, v) => sum + (v.cost || 0), 0).toFixed(2)}
             </p>
           )}
         </div>
@@ -299,20 +288,6 @@ export default function CampaignDetailPage() {
             </p>
           </div>
         )}
-
-        {/* Videos Count */}
-        <div className="rounded-lg bg-white p-3 sm:p-4 border border-gray-200">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs sm:text-sm text-gray-600">Vídeos</p>
-            <Video className="h-4 w-4 text-gray-400" />
-          </div>
-          <p className="text-lg sm:text-2xl font-semibold text-gray-900">
-            {campaign.videos.length}
-          </p>
-          <p className="text-xs text-gray-500 mt-1">
-            {campaign.totalViews.toLocaleString()} views totais
-          </p>
-        </div>
       </div>
 
       {/* Videos Section */}
