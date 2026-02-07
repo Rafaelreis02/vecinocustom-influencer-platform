@@ -18,8 +18,10 @@ import {
   DollarSign,
   Star,
   Globe,
-  Tag
+  Tag,
+  CheckCircle
 } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 export default function NewInfluencerPage() {
   const router = useRouter();
@@ -62,6 +64,7 @@ export default function NewInfluencerPage() {
   const [importing, setImporting] = useState(false);
   const [importHandle, setImportHandle] = useState('');
   const [importPlatform, setImportPlatform] = useState('tiktok');
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
   const handleImport = async () => {
     if (!importHandle) return;
@@ -82,8 +85,11 @@ export default function NewInfluencerPage() {
       });
 
       if (res.ok) {
-        alert('✅ Pedido enviado! O Agente vai processar este perfil em breve (aprox 30s). Podes ver o progresso na lista de influencers.');
-        router.push('/dashboard/influencers');
+        setShowSuccessDialog(true);
+        // Redirect after a short delay so user can read the dialog
+        setTimeout(() => {
+          router.push('/dashboard/influencers');
+        }, 2000);
       } else {
         alert('Erro ao agendar importação.');
       }
@@ -604,6 +610,34 @@ export default function NewInfluencerPage() {
           </button>
         </div>
       </form>
+
+      {/* Success Dialog */}
+      {showSuccessDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 animate-in fade-in duration-200">
+          <div className="relative w-full max-w-sm rounded-lg bg-white p-6 shadow-lg animate-in zoom-in-95 duration-200">
+            <div className="flex items-start gap-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+              </div>
+              <div className="flex-1">
+                <h2 className="text-lg font-semibold text-gray-900">Pedido Enviado!</h2>
+                <p className="mt-1 text-sm text-gray-600">
+                  O Agente vai processar este perfil em breve (aprox 30s). Podes ver o progresso na lista de influencers.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setShowSuccessDialog(false)}
+                className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition-colors"
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
