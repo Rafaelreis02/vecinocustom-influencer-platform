@@ -151,7 +151,6 @@ model Campaign {
   // Relations
   influencers       CampaignInfluencer[]
   videos            Video[]
-  coupons           Coupon[]
   files             File[]
   
   @@map("campaigns")
@@ -249,9 +248,6 @@ model Coupon {
   // Relations
   influencerId    String
   influencer      Influencer  @relation(fields: [influencerId], references: [id], onDelete: Cascade)
-  
-  campaignId      String?
-  campaign        Campaign?   @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   
   // Discount
   discountType    DiscountType @default(PERCENTAGE)
