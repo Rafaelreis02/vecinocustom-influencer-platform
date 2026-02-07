@@ -44,23 +44,6 @@ export async function GET(
             publishedAt: 'desc',
           },
         },
-        coupons: {
-          select: {
-            id: true,
-            code: true,
-            discountType: true,
-            discountValue: true,
-            usageCount: true,
-            usageLimit: true,
-            totalSales: true,
-            totalOrders: true,
-            validFrom: true,
-            validUntil: true,
-          },
-          orderBy: {
-            createdAt: 'desc',
-          },
-        },
         createdBy: {
           select: {
             id: true,
@@ -80,13 +63,11 @@ export async function GET(
 
     // Calculate stats
     const totalViews = campaign.videos.reduce((sum, v) => sum + (v.views || 0), 0);
-    const totalRevenue = campaign.coupons.reduce((sum, c) => sum + (c.totalSales || 0), 0);
     const spent = campaign.influencers.reduce((sum, ci) => sum + (ci.agreedFee || 0), 0);
 
     return NextResponse.json({
       ...campaign,
       totalViews,
-      totalRevenue,
       spent,
     });
   } catch (err: any) {

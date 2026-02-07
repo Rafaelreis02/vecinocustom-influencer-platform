@@ -34,30 +34,19 @@ export async function GET(request: Request) {
             views: true,
           },
         },
-        coupons: {
-          select: {
-            id: true,
-            code: true,
-            totalSales: true,
-            usageCount: true,
-          },
-        },
       },
     });
 
     // Calculate stats for each campaign
     const campaignsWithStats = campaigns.map(camp => {
       const totalViews = camp.videos.reduce((sum, v) => sum + (v.views || 0), 0);
-      const totalRevenue = camp.coupons.reduce((sum, c) => sum + (c.totalSales || 0), 0);
       const spent = camp.influencers.reduce((sum, ci) => sum + (ci.agreedFee || 0), 0);
 
       return {
         ...camp,
         influencersCount: camp.influencers.length,
         videosCount: camp.videos.length,
-        couponsCount: camp.coupons.length,
         totalViews,
-        totalRevenue,
         spent,
       };
     });
