@@ -64,6 +64,12 @@ const statusConfig = {
   CANCELLED: { label: 'Cancelada', color: 'text-red-700 bg-red-50 border-red-200', icon: Trash2 },
 };
 
+// Extrair video ID do TikTok URL
+function extractTikTokVideoId(url: string): string {
+  const match = url.match(/\/video\/(\d+)/);
+  return match ? match[1] : '';
+}
+
 export default function CampaignDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -338,29 +344,48 @@ export default function CampaignDetailPage() {
                 key={video.id}
                 className="p-4 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors"
               >
+                {/* Video Preview */}
+                <div className="mb-4 max-w-sm">
+                  {video.platform === 'TIKTOK' && video.url && (
+                    <div className="rounded-lg overflow-hidden bg-gray-50 aspect-[9/16] flex items-center justify-center">
+                      <iframe
+                        src={`https://www.tiktok.com/embed/v2/${extractTikTokVideoId(video.url)}`}
+                        width="100%"
+                        height="600"
+                        frameBorder="0"
+                        allow="autoplay; encrypted-media"
+                        allowFullScreen
+                        className="rounded-lg"
+                        title="TikTok Video"
+                      />
+                    </div>
+                  )}
+                  {video.platform === 'INSTAGRAM' && video.url && (
+                    <div className="rounded-lg overflow-hidden bg-gray-50">
+                      <iframe
+                        src={`${video.url}embed/captioned/`}
+                        width="100%"
+                        height="500"
+                        frameBorder="0"
+                        allow="autoplay; encrypted-media"
+                        allowFullScreen
+                        className="rounded-lg"
+                        title="Instagram Video"
+                      />
+                    </div>
+                  )}
+                </div>
+
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start gap-3">
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">
-                          {video.title || 'Sem título'}
+                        <p className="text-sm font-medium text-gray-900">
+                          {video.influencer.name} • {video.platform}
                         </p>
                         <p className="text-xs text-gray-500 mt-1">
-                          {video.influencer.name} • {video.platform} • {video.publishedAt ? new Date(video.publishedAt).toLocaleDateString('pt') : 'Não publicado'}
+                          {video.publishedAt ? new Date(video.publishedAt).toLocaleDateString('pt') : 'Data desconhecida'}
                         </p>
-                        <div className="flex items-center gap-4 text-xs text-gray-500 mt-2">
-                          {video.views && (
-                            <span className="flex items-center gap-1">
-                              <Eye className="h-3 w-3" />
-                              {(video.views / 1000).toFixed(1)}K
-                            </span>
-                          )}
-                          {video.likes && (
-                            <span className="flex items-center gap-1">
-                              ❤️ {(video.likes / 1000).toFixed(1)}K
-                            </span>
-                          )}
-                        </div>
                       </div>
                       <a
                         href={video.url}

@@ -18,29 +18,24 @@ export async function POST(request: Request) {
       );
     }
 
-    // 1. Usar Claude Haiku para extrair vídeos
+    // 1. Usar Claude Haiku para extrair vídeos (APENAS URLs e username)
     const message = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 2000,
       messages: [
         {
           role: 'user',
-          content: `Analisa esta página de hashtag ${platform} e extrai informações dos vídeos:
+          content: `Analisa esta página de hashtag ${platform} e extrai URLs dos vídeos:
 
 SNAPSHOT:
 ${snapshotText}
-
-Extrai APENAS vídeos que contenham a hashtag ${hashtag}.
 
 Para cada vídeo encontrado, retorna JSON:
 {
   "videos": [
     {
-      "url": "URL completo do vídeo",
-      "author": "username do criador",
-      "title": "título/descrição (se disponível)",
-      "views": número de views (se disponível, senão null),
-      "likes": número de likes (se disponível, senão null)
+      "url": "URL completo do vídeo (https://...)",
+      "author": "username do criador"
     }
   ]
 }
@@ -48,8 +43,8 @@ Para cada vídeo encontrado, retorna JSON:
 IMPORTANTE:
 - Retorna APENAS JSON válido, sem explicações
 - Se não encontrares vídeos, retorna {"videos": []}
-- URLs devem estar completos (https://...)
-- Números sem formatação (1000000, não "1M")`
+- URLs devem estar completos (https://www.tiktok.com/video/... ou https://www.instagram.com/...)
+- Se a URL estiver truncada, completa-a`
         }
       ]
     });
@@ -124,14 +119,11 @@ IMPORTANTE:
           });
         }
 
-        // Criar vídeo
+        // Criar vídeo (apenas URL + autor)
         await prisma.video.create({
           data: {
             url: videoData.url,
-            title: videoData.title || null,
             platform: platform as any,
-            views: videoData.views || null,
-            likes: videoData.likes || null,
             campaignId: campaignId,
             influencerId: influencer.id,
             publishedAt: new Date()
