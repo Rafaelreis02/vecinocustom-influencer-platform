@@ -249,18 +249,18 @@ export default function CampaignsPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.preventDefault()}>
+                <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                   <Link
                     href={`/dashboard/campaigns/${campaign.id}/edit`}
                     className="p-2 rounded-md hover:bg-gray-100 text-gray-600 hover:text-gray-900 transition-colors"
                     title="Editar"
-                    onClick={(e) => e.preventDefault()}
+                    onClick={(e) => e.stopPropagation()}
                   >
                     <Edit className="h-4 w-4" />
                   </Link>
                   <button
                     onClick={(e) => {
-                      e.preventDefault();
+                      e.stopPropagation();
                       handleDelete(campaign.id, campaign.name);
                     }}
                     className="p-2 rounded-md hover:bg-gray-100 text-gray-600 hover:text-red-600 transition-colors"

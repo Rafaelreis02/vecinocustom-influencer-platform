@@ -318,11 +318,11 @@ export default function InfluencersPage() {
                 </div>
 
                 {/* Right: Actions */}
-                <div className="flex items-center gap-1 sm:gap-2 shrink-0" onClick={(e) => e.preventDefault()}>
+                <div className="flex items-center gap-1 sm:gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
                   {activeTab === 'suggestion' && (
                     <button 
                       onClick={(e) => {
-                        e.preventDefault();
+                        e.stopPropagation();
                       }}
                       className="hidden sm:flex px-3 py-1.5 bg-black text-white rounded-md text-sm font-medium hover:bg-gray-800 transition-colors active:scale-95"
                     >
@@ -332,7 +332,7 @@ export default function InfluencersPage() {
                   {activeTab === 'negotiating' && (
                     <button 
                       onClick={(e) => {
-                        e.preventDefault();
+                        e.stopPropagation();
                       }}
                       className="hidden sm:flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-900 rounded-md text-sm font-medium hover:bg-gray-200 transition-colors active:scale-95"
                     >
@@ -343,13 +343,13 @@ export default function InfluencersPage() {
                   <Link
                     href={`/dashboard/influencers/${influencer.id}/edit`}
                     className="p-1.5 sm:p-2 rounded-md hover:bg-gray-100 text-gray-600 hover:text-gray-900 transition-colors active:scale-95"
-                    onClick={(e) => e.preventDefault()}
+                    onClick={(e) => e.stopPropagation()}
                   >
                     <Edit className="h-4 w-4" />
                   </Link>
                   <button 
                     onClick={(e) => {
-                      e.preventDefault();
+                      e.stopPropagation();
                       handleDelete(influencer.id, influencer.name);
                     }}
                     className="p-1.5 sm:p-2 rounded-md hover:bg-gray-100 text-gray-600 hover:text-red-600 transition-colors active:scale-95"
