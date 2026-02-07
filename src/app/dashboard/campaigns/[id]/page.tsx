@@ -47,6 +47,7 @@ interface Campaign {
     likes: number | null;
     cost: number | null;
     publishedAt: string | null;
+    influencerId: string;
     influencer: {
       id: string;
       name: string;
@@ -54,6 +55,7 @@ interface Campaign {
   }>;
   spent: number;
   totalViews: number;
+  influencersCount?: number;
 }
 
 const statusConfig = {
@@ -173,6 +175,9 @@ export default function CampaignDetailPage() {
   const statusInfo = statusConfig[campaign.status as keyof typeof statusConfig];
   const StatusIcon = statusInfo.icon;
   const budgetPercent = campaign.budget ? (campaign.spent / campaign.budget) * 100 : 0;
+  
+  // Calculate unique influencers from videos
+  const uniqueInfluencers = new Set(campaign.videos.map(v => v.influencerId)).size;
 
   return (
     <div className="space-y-6">
@@ -245,7 +250,7 @@ export default function CampaignDetailPage() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
         {/* Budget */}
         <div className="rounded-lg bg-white p-3 sm:p-4 border border-gray-200">
           <div className="flex items-center justify-between mb-3">
@@ -274,6 +279,17 @@ export default function CampaignDetailPage() {
               €{campaign.videos.reduce((sum, v) => sum + (v.cost || 0), 0).toFixed(2)}
             </p>
           )}
+        </div>
+
+        {/* Influencers */}
+        <div className="rounded-lg bg-white p-3 sm:p-4 border border-gray-200">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs sm:text-sm text-gray-600">Influencers</p>
+            <Tag className="h-4 w-4 text-gray-400" />
+          </div>
+          <p className="text-lg sm:text-2xl font-semibold text-gray-900">
+            {uniqueInfluencers}
+          </p>
         </div>
 
         {/* Sales Target */}
