@@ -12,22 +12,6 @@ export async function GET(
     const campaign = await prisma.campaign.findUnique({
       where: { id },
       include: {
-        influencers: {
-          include: {
-            influencer: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                instagramHandle: true,
-                tiktokHandle: true,
-                instagramFollowers: true,
-                tiktokFollowers: true,
-                status: true,
-              },
-            },
-          },
-        },
         videos: {
           select: {
             id: true,
@@ -40,6 +24,7 @@ export async function GET(
             shares: true,
             cost: true,
             publishedAt: true,
+            influencerId: true,
             influencer: {
               select: {
                 id: true,
@@ -71,11 +56,13 @@ export async function GET(
     // Calculate stats
     const totalViews = campaign.videos.reduce((sum, v) => sum + (v.views || 0), 0);
     const spent = campaign.videos.reduce((sum, v) => sum + (v.cost || 0), 0);
+    const uniqueInfluencers = new Set(campaign.videos.map(v => v.influencerId)).size;
 
     return NextResponse.json({
       ...campaign,
       totalViews,
       spent,
+      influencersCount: uniqueInfluencers,
     });
   } catch (err: any) {
     console.error('[API ERROR] Fetching campaign:', err);

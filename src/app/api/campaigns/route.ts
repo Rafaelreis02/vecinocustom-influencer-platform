@@ -16,23 +16,12 @@ export async function GET(request: Request) {
       where,
       orderBy: { createdAt: 'desc' },
       include: {
-        influencers: {
-          include: {
-            influencer: {
-              select: {
-                id: true,
-                name: true,
-                instagramHandle: true,
-                tiktokHandle: true,
-              },
-            },
-          },
-        },
         videos: {
           select: {
             id: true,
             views: true,
             cost: true,
+            influencerId: true,
           },
         },
       },
@@ -42,10 +31,13 @@ export async function GET(request: Request) {
     const campaignsWithStats = campaigns.map(camp => {
       const totalViews = camp.videos.reduce((sum, v) => sum + (v.views || 0), 0);
       const spent = camp.videos.reduce((sum, v) => sum + (v.cost || 0), 0);
+      
+      // Count unique influencers from videos
+      const uniqueInfluencers = new Set(camp.videos.map(v => v.influencerId)).size;
 
       return {
         ...camp,
-        influencersCount: camp.influencers.length,
+        influencersCount: uniqueInfluencers,
         videosCount: camp.videos.length,
         totalViews,
         spent,
