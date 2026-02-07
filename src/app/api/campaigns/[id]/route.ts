@@ -38,7 +38,14 @@ export async function GET(
             likes: true,
             comments: true,
             shares: true,
+            cost: true,
             publishedAt: true,
+            influencer: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
           orderBy: {
             publishedAt: 'desc',
@@ -63,7 +70,7 @@ export async function GET(
 
     // Calculate stats
     const totalViews = campaign.videos.reduce((sum, v) => sum + (v.views || 0), 0);
-    const spent = campaign.influencers.reduce((sum, ci) => sum + (ci.agreedFee || 0), 0);
+    const spent = campaign.videos.reduce((sum, v) => sum + (v.cost || 0), 0);
 
     return NextResponse.json({
       ...campaign,
@@ -93,6 +100,7 @@ export async function PUT(
       data: {
         name: body.name,
         description: body.description || null,
+        platform: body.platform || null,
         hashtag: body.hashtag || null,
         startDate: body.startDate ? new Date(body.startDate) : null,
         endDate: body.endDate ? new Date(body.endDate) : null,

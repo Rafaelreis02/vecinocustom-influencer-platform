@@ -32,6 +32,7 @@ export async function GET(request: Request) {
           select: {
             id: true,
             views: true,
+            cost: true,
           },
         },
       },
@@ -40,7 +41,7 @@ export async function GET(request: Request) {
     // Calculate stats for each campaign
     const campaignsWithStats = campaigns.map(camp => {
       const totalViews = camp.videos.reduce((sum, v) => sum + (v.views || 0), 0);
-      const spent = camp.influencers.reduce((sum, ci) => sum + (ci.agreedFee || 0), 0);
+      const spent = camp.videos.reduce((sum, v) => sum + (v.cost || 0), 0);
 
       return {
         ...camp,
@@ -85,6 +86,7 @@ export async function POST(request: Request) {
       data: {
         name: body.name,
         description: body.description || null,
+        platform: body.platform || null,
         hashtag: body.hashtag || null,
         startDate: body.startDate ? new Date(body.startDate) : null,
         endDate: body.endDate ? new Date(body.endDate) : null,

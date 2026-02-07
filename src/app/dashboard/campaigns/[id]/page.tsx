@@ -30,6 +30,7 @@ interface Campaign {
   name: string;
   description: string | null;
   hashtag: string | null;
+  platform: string | null;
   startDate: string | null;
   endDate: string | null;
   budget: number | null;
@@ -44,7 +45,12 @@ interface Campaign {
     platform: string;
     views: number | null;
     likes: number | null;
+    cost: number | null;
     publishedAt: string | null;
+    influencer: {
+      id: string;
+      name: string;
+    };
   }>;
   spent: number;
   totalViews: number;
@@ -65,6 +71,8 @@ export default function CampaignDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAddVideoModal, setShowAddVideoModal] = useState(false);
+  const [editingCost, setEditingCost] = useState<string | null>(null);
+  const [costValue, setCostValue] = useState<string>('');
 
   useEffect(() => {
     fetchCampaign();
@@ -104,6 +112,31 @@ export default function CampaignDetailPage() {
     } catch (error) {
       alert('Erro ao eliminar campanha');
     }
+  };
+
+  const handleUpdateCost = async (videoId: string) => {
+    try {
+      const res = await fetch(`/api/videos/${videoId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cost: parseFloat(costValue) || 0 }),
+      });
+
+      if (res.ok) {
+        setEditingCost(null);
+        setCostValue('');
+        fetchCampaign(); // Refresh data
+      } else {
+        alert('Erro ao atualizar custo');
+      }
+    } catch (error) {
+      alert('Erro ao atualizar custo');
+    }
+  };
+
+  const startEditingCost = (videoId: string, currentCost: number | null) => {
+    setEditingCost(videoId);
+    setCostValue(currentCost?.toString() || '');
   };
 
   if (loading) {
@@ -171,6 +204,12 @@ export default function CampaignDetailPage() {
                   <span className="truncate">
                     {new Date(campaign.startDate).toLocaleDateString('pt')} - {new Date(campaign.endDate).toLocaleDateString('pt')}
                   </span>
+                </span>
+              )}
+              {campaign.platform && (
+                <span className="flex items-center gap-1.5 font-medium">
+                  <Tag className="h-4 w-4" />
+                  {campaign.platform}
                 </span>
               )}
               {campaign.hashtag && (
@@ -293,42 +332,89 @@ export default function CampaignDetailPage() {
             <p className="text-sm text-gray-500">Nenhum vídeo publicado</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+          <div className="space-y-3">
             {campaign.videos.map((video) => (
               <div
                 key={video.id}
-                className="p-3 sm:p-4 rounded-lg border border-gray-100 hover:border-gray-900 transition-colors"
+                className="p-4 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors"
               >
-                <div className="flex items-start justify-between gap-3 mb-2">
+                <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      {video.title || 'Sem título'}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {video.platform} • {video.publishedAt ? new Date(video.publishedAt).toLocaleDateString('pt') : 'Não publicado'}
-                    </p>
+                    <div className="flex items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {video.title || 'Sem título'}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {video.influencer.name} • {video.platform} • {video.publishedAt ? new Date(video.publishedAt).toLocaleDateString('pt') : 'Não publicado'}
+                        </p>
+                        <div className="flex items-center gap-4 text-xs text-gray-500 mt-2">
+                          {video.views && (
+                            <span className="flex items-center gap-1">
+                              <Eye className="h-3 w-3" />
+                              {(video.views / 1000).toFixed(1)}K
+                            </span>
+                          )}
+                          {video.likes && (
+                            <span className="flex items-center gap-1">
+                              ❤️ {(video.likes / 1000).toFixed(1)}K
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <a
+                        href={video.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-purple-600 hover:text-purple-700 flex-shrink-0"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    </div>
                   </div>
-                  <a
-                    href={video.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-purple-600 hover:text-purple-700 flex-shrink-0"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                  </a>
-                </div>
-                <div className="flex items-center gap-4 text-xs text-gray-500">
-                  {video.views && (
-                    <span className="flex items-center gap-1">
-                      <Eye className="h-3 w-3" />
-                      {(video.views / 1000).toFixed(1)}K
-                    </span>
-                  )}
-                  {video.likes && (
-                    <span className="flex items-center gap-1">
-                      ❤️ {(video.likes / 1000).toFixed(1)}K
-                    </span>
-                  )}
+
+                  {/* Cost Input */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {editingCost === video.id ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          value={costValue}
+                          onChange={(e) => setCostValue(e.target.value)}
+                          placeholder="0.00"
+                          step="0.01"
+                          min="0"
+                          className="w-24 px-2 py-1 text-sm border border-gray-300 rounded focus:border-purple-600 focus:outline-none"
+                          autoFocus
+                        />
+                        <button
+                          onClick={() => handleUpdateCost(video.id)}
+                          className="px-2 py-1 text-xs bg-black text-white rounded hover:bg-gray-800"
+                        >
+                          ✓
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingCost(null);
+                            setCostValue('');
+                          }}
+                          className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => startEditingCost(video.id, video.cost)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-200 rounded hover:border-gray-900 transition-colors"
+                      >
+                        <DollarSign className="h-3.5 w-3.5" />
+                        <span className="font-medium">
+                          {video.cost ? `€${video.cost.toFixed(2)}` : 'Adicionar'}
+                        </span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
