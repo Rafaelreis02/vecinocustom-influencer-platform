@@ -25,26 +25,39 @@ export async function POST(request: Request) {
       messages: [
         {
           role: 'user',
-          content: `Analisa esta página de hashtag ${platform} e extrai URLs dos vídeos:
+          content: `Analisa este snapshot da página de hashtag ${platform} e EXTRAI AGGRESSIVAMENTE URLs de vídeos:
 
 SNAPSHOT:
 ${snapshotText}
 
-Para cada vídeo encontrado, retorna JSON:
+INSTRUÇÕES CRÍTICAS:
+1. Procura por QUALQUER padrão que possa indicar vídeos:
+   - Usernames (@username ou texto que parece ser username)
+   - IDs de vídeo (números longos)
+   - Links incompletos que contenham "/video/" ou números
+   - Referências a vídeos mesmo que truncadas
+
+2. Se encontrares padrões que pareçam ser vídeos, RECONSTRÓI as URLs:
+   - TikTok: https://www.tiktok.com/video/[ID_DO_VIDEO]
+   - Instagram: https://www.instagram.com/reel/[ID_DO_VIDEO]/
+
+3. Retorna JSON:
 {
   "videos": [
     {
-      "url": "URL completo do vídeo (https://...)",
-      "author": "username do criador"
+      "url": "URL reconstruída ou completa",
+      "author": "username do criador (pode ser estimado)"
     }
   ]
 }
 
+EXEMPLO - se vires "usuario123" perto de "12345678901", retorna:
+{"videos": [{"url": "https://www.tiktok.com/video/12345678901", "author": "usuario123"}]}
+
 IMPORTANTE:
-- Retorna APENAS JSON válido, sem explicações
-- Se não encontrares vídeos, retorna {"videos": []}
-- URLs devem estar completos (https://www.tiktok.com/video/... ou https://www.instagram.com/...)
-- Se a URL estiver truncada, completa-a`
+- Retorna APENAS JSON válido
+- Se não tiver informação suficiente, retorna {"videos": []}
+- TENTA MAXIMIZAR de forma agressiva - não ser conservador`
         }
       ]
     });
