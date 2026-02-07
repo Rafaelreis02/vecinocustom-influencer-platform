@@ -51,8 +51,15 @@ export async function GET(request: Request) {
 
     console.log(`[CRON] Found pending: ${checkData.task.name}`);
 
-    // 2. Processar
-    const processRes = await fetch(`${baseUrl}/api/worker/process`, {
+    // 2. Processar com browser real (se disponível) ou fallback para IA
+    const useRealScraping = process.env.USE_REAL_SCRAPING !== 'false'; // Default: true
+    const processEndpoint = useRealScraping 
+      ? `${baseUrl}/api/worker/process-real`
+      : `${baseUrl}/api/worker/process`;
+    
+    console.log(`[CRON] Using endpoint: ${processEndpoint}`);
+    
+    const processRes = await fetch(processEndpoint, {
       method: 'POST',
       cache: 'no-store'
     });
