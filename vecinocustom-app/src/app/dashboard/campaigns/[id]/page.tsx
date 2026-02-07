@@ -7,7 +7,6 @@ import {
   ArrowLeft,
   Edit,
   Trash2,
-  Users,
   Video,
   Tag,
   DollarSign,
@@ -19,17 +18,12 @@ import {
   Pause,
   CheckCircle,
   Clock,
-  Instagram,
-  Music2,
-  UserPlus,
-  FileText,
   Loader2,
   ExternalLink,
   Plus,
   AlertCircle,
 } from 'lucide-react';
 import AddVideoModal from '@/components/AddVideoModal';
-import AddInfluencerToCampaignModal from '@/components/AddInfluencerToCampaignModal';
 
 interface Campaign {
   id: string;
@@ -43,19 +37,6 @@ interface Campaign {
   targetSales: number | null;
   status: string;
   createdAt: string;
-  influencers: Array<{
-    id: string;
-    influencer: {
-      id: string;
-      name: string;
-      instagramHandle: string | null;
-      tiktokHandle: string | null;
-      instagramFollowers: number | null;
-      tiktokFollowers: number | null;
-    };
-    agreedFee: number | null;
-    status: string;
-  }>;
   videos: Array<{
     id: string;
     title: string | null;
@@ -94,7 +75,6 @@ export default function CampaignDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAddVideoModal, setShowAddVideoModal] = useState(false);
-  const [showAddInfluencerModal, setShowAddInfluencerModal] = useState(false);
 
   useEffect(() => {
     fetchCampaign();
@@ -304,78 +284,6 @@ export default function CampaignDetailPage() {
         </div>
       </div>
 
-      {/* Influencers Section */}
-      <div className="rounded-xl bg-white p-4 sm:p-6 border border-gray-200">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 flex items-center gap-2">
-            <Users className="h-5 w-5 text-purple-600" />
-            Influencers ({campaign.influencers.length})
-          </h2>
-          <button
-            onClick={() => setShowAddInfluencerModal(true)}
-            className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-black text-white rounded-md text-xs sm:text-sm font-medium hover:bg-gray-800 transition-colors"
-          >
-            <UserPlus className="h-4 w-4" />
-            <span className="hidden sm:inline">Adicionar</span>
-          </button>
-        </div>
-
-        {campaign.influencers.length === 0 ? (
-          <div className="text-center py-12">
-            <Users className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-sm text-gray-500">Nenhum influencer associado</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {campaign.influencers.map((ci) => (
-              <div
-                key={ci.id}
-                className="flex items-center justify-between p-3 sm:p-4 rounded-lg border border-gray-100 hover:border-gray-900 transition-colors"
-              >
-                <div className="flex-1 min-w-0">
-                  <Link
-                    href={`/dashboard/influencers/${ci.influencer.id}`}
-                    className="text-sm sm:text-base font-medium text-gray-900 hover:text-purple-600 transition-colors truncate block"
-                  >
-                    {ci.influencer.name}
-                  </Link>
-                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1 text-xs text-gray-500">
-                    {ci.influencer.instagramHandle && (
-                      <span className="flex items-center gap-1 truncate">
-                        <Instagram className="h-3 w-3 flex-shrink-0" />
-                        <span className="truncate">{ci.influencer.instagramHandle}</span>
-                        {ci.influencer.instagramFollowers && (
-                          <span className="text-gray-400 flex-shrink-0">
-                            ({(ci.influencer.instagramFollowers / 1000).toFixed(0)}K)
-                          </span>
-                        )}
-                      </span>
-                    )}
-                    {ci.influencer.tiktokHandle && (
-                      <span className="flex items-center gap-1 truncate">
-                        <Music2 className="h-3 w-3 flex-shrink-0" />
-                        <span className="truncate">{ci.influencer.tiktokHandle}</span>
-                        {ci.influencer.tiktokFollowers && (
-                          <span className="text-gray-400 flex-shrink-0">
-                            ({(ci.influencer.tiktokFollowers / 1000).toFixed(0)}K)
-                          </span>
-                        )}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                {ci.agreedFee && (
-                  <div className="ml-4 text-right flex-shrink-0">
-                    <p className="text-sm font-semibold text-gray-900">€{ci.agreedFee}</p>
-                    <p className="text-xs text-gray-500">Fee</p>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
       {/* Videos Section */}
       <div className="rounded-xl bg-white p-4 sm:p-6 border border-gray-200">
         <div className="flex items-center justify-between mb-4">
@@ -496,16 +404,6 @@ export default function CampaignDetailPage() {
         campaignHashtag={campaign.hashtag}
         isOpen={showAddVideoModal}
         onClose={() => setShowAddVideoModal(false)}
-        onSuccess={fetchCampaign}
-      />
-
-      {/* Add Influencer Modal */}
-      <AddInfluencerToCampaignModal
-        campaignId={campaign.id}
-        campaignName={campaign.name}
-        existingInfluencerIds={campaign.influencers.map(ci => ci.influencer.id)}
-        isOpen={showAddInfluencerModal}
-        onClose={() => setShowAddInfluencerModal(false)}
         onSuccess={fetchCampaign}
       />
     </div>
