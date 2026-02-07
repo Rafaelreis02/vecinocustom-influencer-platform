@@ -128,6 +128,7 @@ model Campaign {
   name              String
   description       String?
   hashtag           String?             // Hashtag de tracking (#vecinodiadosnamorados)
+  platform          Platform?           // Plataforma principal (TikTok, Instagram, etc.)
   
   // Dates
   startDate         DateTime?
