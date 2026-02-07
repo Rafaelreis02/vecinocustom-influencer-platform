@@ -332,26 +332,36 @@ export default function CampaignDetailPage() {
           </button>
         </div>
 
+        {/* Total Videos Cost */}
+        <div className="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-purple-900">Total gasto em vídeos:</span>
+            <span className="text-lg font-semibold text-purple-700">
+              €{campaign.videos.reduce((sum, v) => sum + (v.cost || 0), 0).toFixed(2)}
+            </span>
+          </div>
+        </div>
+
         {campaign.videos.length === 0 ? (
           <div className="text-center py-12">
             <Video className="h-12 w-12 text-gray-300 mx-auto mb-3" />
             <p className="text-sm text-gray-500">Nenhum vídeo publicado</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {campaign.videos.map((video) => (
               <div
                 key={video.id}
-                className="p-4 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors"
+                className="p-2 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors flex flex-col"
               >
                 {/* Video Preview */}
-                <div className="mb-4 max-w-sm">
+                <div className="mb-2 max-w-full flex-shrink-0">
                   {video.platform === 'TIKTOK' && video.url && (
-                    <div className="rounded-lg overflow-hidden bg-gray-50 aspect-[9/16] flex items-center justify-center">
+                    <div className="rounded-lg overflow-hidden bg-gray-50 aspect-[9/16] flex items-center justify-center max-h-64">
                       <iframe
                         src={`https://www.tiktok.com/embed/v2/${extractTikTokVideoId(video.url)}`}
                         width="100%"
-                        height="600"
+                        height="400"
                         frameBorder="0"
                         allow="autoplay; encrypted-media"
                         allowFullScreen
@@ -361,11 +371,11 @@ export default function CampaignDetailPage() {
                     </div>
                   )}
                   {video.platform === 'INSTAGRAM' && video.url && (
-                    <div className="rounded-lg overflow-hidden bg-gray-50">
+                    <div className="rounded-lg overflow-hidden bg-gray-50 max-h-64">
                       <iframe
                         src={`${video.url}embed/captioned/`}
                         width="100%"
-                        height="500"
+                        height="300"
                         frameBorder="0"
                         allow="autoplay; encrypted-media"
                         allowFullScreen
@@ -376,70 +386,54 @@ export default function CampaignDetailPage() {
                   )}
                 </div>
 
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start gap-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900">
-                          {video.influencer.name} • {video.platform}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {video.publishedAt ? new Date(video.publishedAt).toLocaleDateString('pt') : 'Data desconhecida'}
-                        </p>
-                      </div>
-                      <a
-                        href={video.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-purple-600 hover:text-purple-700 flex-shrink-0"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                      </a>
+                <div className="flex-1 flex flex-col gap-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-gray-900 truncate">
+                        {video.influencer.name}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {video.publishedAt ? new Date(video.publishedAt).toLocaleDateString('pt') : 'Data'}
+                      </p>
                     </div>
+                    <a
+                      href={video.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-purple-600 hover:text-purple-700 flex-shrink-0"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
                   </div>
 
                   {/* Cost Input */}
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    {editingCost === video.id ? (
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          value={costValue}
-                          onChange={(e) => setCostValue(e.target.value)}
-                          placeholder="0.00"
-                          step="0.01"
-                          min="0"
-                          className="w-24 px-2 py-1 text-sm border border-gray-300 rounded focus:border-purple-600 focus:outline-none"
-                          autoFocus
-                        />
-                        <button
-                          onClick={() => handleUpdateCost(video.id)}
-                          className="px-2 py-1 text-xs bg-black text-white rounded hover:bg-gray-800"
-                        >
-                          ✓
-                        </button>
-                        <button
-                          onClick={() => {
-                            setEditingCost(null);
-                            setCostValue('');
-                          }}
-                          className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ) : (
+                  {editingCost === video.id ? (
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        value={costValue}
+                        onChange={(e) => setCostValue(e.target.value)}
+                        placeholder="0.00"
+                        step="0.01"
+                        min="0"
+                        className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:border-purple-600 focus:outline-none"
+                        autoFocus
+                      />
                       <button
-                        onClick={() => startEditingCost(video.id, video.cost)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-200 rounded hover:border-gray-900 transition-colors"
+                        onClick={() => handleUpdateCost(video.id)}
+                        className="px-2 py-1 text-xs bg-black text-white rounded hover:bg-gray-800"
                       >
-                        <DollarSign className="h-3.5 w-3.5" />
-                        <span className="font-medium">
-                          {video.cost ? `€${video.cost.toFixed(2)}` : 'Adicionar'}
-                        </span>
+                        ✓
                       </button>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => startEditingCost(video.id, video.cost)}
+                      className="px-2 py-1 text-xs font-medium text-purple-600 hover:text-purple-700 border border-purple-200 rounded hover:bg-purple-50 w-full text-center"
+                    >
+                      €{(video.cost || 0).toFixed(2)}
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
