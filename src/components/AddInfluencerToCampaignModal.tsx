@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { X, Users, DollarSign, Loader2, Search } from 'lucide-react';
+import { useGlobalToast } from '@/contexts/ToastContext';
 
 interface AddInfluencerToCampaignModalProps {
   campaignId: string;
@@ -31,6 +32,7 @@ export default function AddInfluencerToCampaignModal({
   onClose,
   onSuccess,
 }: AddInfluencerToCampaignModalProps) {
+  const { addToast } = useGlobalToast();
   const [loading, setLoading] = useState(false);
   const [influencers, setInfluencers] = useState<Influencer[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -62,7 +64,7 @@ export default function AddInfluencerToCampaignModal({
     e.preventDefault();
     
     if (!selectedInfluencerId) {
-      alert('Seleciona um influencer');
+      addToast('Seleciona um influencer', 'info');
       return;
     }
 
@@ -81,6 +83,7 @@ export default function AddInfluencerToCampaignModal({
       });
 
       if (res.ok) {
+        addToast('Influencer adicionado com sucesso', 'success');
         setSelectedInfluencerId('');
         setAgreedFee('');
         setCommissionRate('');
@@ -89,11 +92,11 @@ export default function AddInfluencerToCampaignModal({
         onClose();
       } else {
         const data = await res.json();
-        alert(data.error || 'Erro ao adicionar influencer');
+        addToast(data.error || 'Erro ao adicionar influencer', 'error');
       }
     } catch (error) {
       console.error('Error adding influencer:', error);
-      alert('Erro ao adicionar influencer');
+      addToast('Erro ao adicionar influencer', 'error');
     } finally {
       setLoading(false);
     }

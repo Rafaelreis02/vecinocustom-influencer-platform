@@ -1,4 +1,5 @@
 'use client';
+import { useGlobalToast } from '@/contexts/ToastContext';
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
@@ -19,6 +20,7 @@ export default function EditInfluencerPage() {
   const params = useParams();
   const id = params.id as string;
 
+  const { addToast } = useGlobalToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
@@ -61,7 +63,7 @@ export default function EditInfluencerPage() {
       });
     } catch (error) {
       console.error('Error fetching influencer:', error);
-      alert('Erro ao carregar influencer');
+      addToast('Erro ao carregar influencer', 'error');
     } finally {
       setLoading(false);
     }
@@ -86,7 +88,7 @@ export default function EditInfluencerPage() {
       }
     } catch (error) {
       console.error('Error updating influencer:', error);
-      alert('Erro ao atualizar influencer');
+      addToast('Erro ao atualizar influencer', 'error');
     } finally {
       setSaving(false);
     }

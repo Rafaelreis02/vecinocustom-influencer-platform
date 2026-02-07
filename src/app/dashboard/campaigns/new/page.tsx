@@ -1,4 +1,5 @@
 'use client';
+import { useGlobalToast } from '@/contexts/ToastContext';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -16,6 +17,7 @@ import {
 
 export default function NewCampaignPage() {
   const router = useRouter();
+  const { addToast } = useGlobalToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -45,14 +47,15 @@ export default function NewCampaignPage() {
 
       if (res.ok) {
         const campaign = await res.json();
+        addToast('Campanha criada com sucesso', 'success');
         router.push(`/dashboard/campaigns/${campaign.id}`);
       } else {
         const data = await res.json();
-        alert(data.error || 'Erro ao criar campanha');
+        addToast(data.error || 'Erro ao criar campanha', 'error');
       }
     } catch (error) {
       console.error('Error creating campaign:', error);
-      alert('Erro ao criar campanha');
+      addToast('Erro ao criar campanha', 'error');
     } finally {
       setLoading(false);
     }

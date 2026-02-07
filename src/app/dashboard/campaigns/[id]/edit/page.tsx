@@ -1,4 +1,5 @@
 'use client';
+import { useGlobalToast } from '@/contexts/ToastContext';
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -32,6 +33,7 @@ interface Campaign {
 export default function EditCampaignPage() {
   const params = useParams();
   const router = useRouter();
+  const { addToast } = useGlobalToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -101,7 +103,7 @@ export default function EditCampaignPage() {
       }
     } catch (error) {
       console.error('Error updating campaign:', error);
-      alert('Erro ao atualizar campanha');
+      addToast('Erro ao atualizar campanha', 'error');
     } finally {
       setSaving(false);
     }

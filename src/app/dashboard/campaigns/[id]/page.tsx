@@ -1,4 +1,5 @@
 'use client';
+import { useGlobalToast } from '@/contexts/ToastContext';
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -25,6 +26,7 @@ import {
 } from 'lucide-react';
 import AddVideoModal from '@/components/AddVideoModal';
 import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog';
+import { useGlobalToast } from '@/contexts/ToastContext';
 
 interface Campaign {
   id: string;
@@ -77,6 +79,7 @@ export default function CampaignDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { dialog, confirm } = useConfirm();
+  const { addToast } = useGlobalToast();
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -141,14 +144,15 @@ export default function CampaignDetailPage() {
       });
 
       if (res.ok) {
+        addToast('Custo atualizado com sucesso', 'success');
         setEditingCost(null);
         setCostValue('');
         fetchCampaign(); // Refresh data
       } else {
-        alert('Erro ao atualizar custo');
+        addToast('Erro ao atualizar custo', 'error');
       }
     } catch (error) {
-      alert('Erro ao atualizar custo');
+      addToast('Erro ao atualizar custo', 'error');
     }
   };
 

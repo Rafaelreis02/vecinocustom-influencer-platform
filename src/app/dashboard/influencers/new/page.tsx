@@ -1,4 +1,5 @@
 'use client';
+import { useGlobalToast } from '@/contexts/ToastContext';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -25,6 +26,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 export default function NewInfluencerPage() {
   const router = useRouter();
+  const { addToast } = useGlobalToast();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -91,11 +93,11 @@ export default function NewInfluencerPage() {
           router.push('/dashboard/influencers');
         }, 2000);
       } else {
-        alert('Erro ao agendar importação.');
+        addToast('Erro ao agendar importação.', 'error');
       }
     } catch (error) {
       console.error('Import error:', error);
-      alert('Erro ao agendar importação.');
+      addToast('Erro ao agendar importação.', 'error');
     } finally {
       setImporting(false);
     }
@@ -120,7 +122,7 @@ export default function NewInfluencerPage() {
       }
     } catch (error) {
       console.error('Error creating influencer:', error);
-      alert('Erro ao criar influencer');
+      addToast('Erro ao criar influencer', 'error');
     } finally {
       setSaving(false);
     }

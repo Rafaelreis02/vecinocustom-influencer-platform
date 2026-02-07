@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { X, Link as LinkIcon, User, Eye, Heart, MessageCircle, Share2, Loader2, Plus, DollarSign } from 'lucide-react';
+import { useGlobalToast } from '@/contexts/ToastContext';
 
 interface AddVideoModalProps {
   campaignId: string;
@@ -18,6 +19,7 @@ interface Influencer {
 }
 
 export default function AddVideoModal({ campaignId, campaignHashtag, isOpen, onClose, onSuccess }: AddVideoModalProps) {
+  const { addToast } = useGlobalToast();
   const [loading, setLoading] = useState(false);
   const [influencers, setInfluencers] = useState<Influencer[]>([]);
   const [formData, setFormData] = useState({
@@ -60,13 +62,13 @@ export default function AddVideoModal({ campaignId, campaignHashtag, isOpen, onC
     try {
       // Validate: must have either influencerId OR tiktokHandle
       if (!useExisting && !formData.tiktokHandle) {
-        alert('Preenche o @ do TikTok');
+        addToast('Preenche o @ do TikTok', 'info');
         setLoading(false);
         return;
       }
 
       if (useExisting && !formData.influencerId) {
-        alert('Seleciona um influencer');
+        addToast('Seleciona um influencer', 'info');
         setLoading(false);
         return;
       }
@@ -99,6 +101,7 @@ export default function AddVideoModal({ campaignId, campaignHashtag, isOpen, onC
       });
 
       if (resVideo.ok) {
+        addToast('Vídeo adicionado com sucesso', 'success');
         // Reset form
         setFormData({
           url: '',
@@ -118,11 +121,11 @@ export default function AddVideoModal({ campaignId, campaignHashtag, isOpen, onC
         onClose();
       } else {
         const data = await resVideo.json();
-        alert(data.error || 'Erro ao adicionar vídeo');
+        addToast(data.error || 'Erro ao adicionar vídeo', 'error');
       }
     } catch (error) {
       console.error('Error adding video:', error);
-      alert('Erro ao adicionar vídeo');
+      addToast('Erro ao adicionar vídeo', 'error');
     } finally {
       setLoading(false);
     }
