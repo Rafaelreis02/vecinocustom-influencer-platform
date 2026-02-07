@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Vercel Import</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px 5px;
+            cursor: pointer;
+            background: #000;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        button:hover { background: #333; }
+        #log {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 5px;
+            margin-top: 20px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Vercel Auto-Import</h1>
+    
+    <p><strong>URL Base:</strong> <input id="baseUrl" type="text" value="https://vecinocustom-influencer-platform.vercel.app" style="width: 400px;"></p>
+    
+    <button onclick="testPending()">1. Check Pending</button>
+    <button onclick="createInfluencer()">2. Create Test Influencer</button>
+    <button onclick="processInfluencer()">3. Process with AI</button>
+    <button onclick="clearLog()">Clear Log</button>
+    
+    <div id="log"></div>
+    
+    <script>
+        const log = document.getElementById('log');
+        const getBaseUrl = () => document.getElementById('baseUrl').value;
+        
+        function addLog(msg, type = '') {
+            const timestamp = new Date().toLocaleTimeString();
+            log.innerHTML += `<span class="${type}">[${timestamp}] ${msg}</span>\n`;
+            log.scrollTop = log.scrollHeight;
+        }
+        
+        function clearLog() {
+            log.innerHTML = '';
+        }
+        
+        async function testPending() {
+            addLog('🔍 Checking for pending influencers...');
+            try {
+                const res = await fetch(`${getBaseUrl()}/api/worker/pending`);
+                const data = await res.json();
+                
+                if (data.found) {
+                    addLog(`✅ Found pending: ${data.task.name} (@${data.task.tiktokHandle || data.task.instagramHandle})`, 'success');
+                } else {
+                    addLog('ℹ️ No pending influencers');
+                }
+                addLog(JSON.stringify(data, null, 2));
+            } catch (err) {
+                addLog(`❌ Error: ${err.message}`, 'error');
+            }
+        }
+        
+        async function createInfluencer() {
+            const handle = prompt('TikTok handle (sem @):', 'test_' + Date.now());
+            if (!handle) return;
+            
+            addLog(`📝 Creating influencer: @${handle}...`);
+            try {
+                const res = await fetch(`${getBaseUrl()}/api/influencers`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: handle,
+                        tiktokHandle: handle,
+                        status: 'IMPORT_PENDING',
+                        notes: 'Test via script'
+                    })
+                });
+                
+                const data = await res.json();
+                
+                if (res.ok) {
+                    addLog(`✅ Created! ID: ${data.id}`, 'success');
+                    addLog('⏳ Now wait 2 minutes for cron, or click "Process with AI"');
+                } else {
+                    addLog(`❌ Error: ${data.error}`, 'error');
+                }
+                addLog(JSON.stringify(data, null, 2));
+            } catch (err) {
+                addLog(`❌ Error: ${err.message}`, 'error');
+            }
+        }
+        
+        async function processInfluencer() {
+            addLog('🤖 Processing with Claude...');
+            try {
+                const res = await fetch(`${getBaseUrl()}/api/worker/process`, {
+                    method: 'POST'
+                });
+                
+                const data = await res.json();
+                
+                if (data.success) {
+                    addLog(`✅ Processed: ${data.influencer.name}`, 'success');
+                    addLog(`   Followers: ${data.influencer.tiktokFollowers || data.influencer.instagramFollowers}`);
+                    addLog(`   Engagement: ${data.influencer.engagementRate}%`);
+                    addLog(`   Price: €${data.influencer.estimatedPrice}`);
+                    addLog(`   Fit Score: ${data.influencer.fitScore}/5`);
+                } else {
+                    addLog(`ℹ️ ${data.message || data.error}`);
+                }
+                addLog(JSON.stringify(data, null, 2));
+            } catch (err) {
+                addLog(`❌ Error: ${err.message}`, 'error');
+            }
+        }
+        
+        addLog('✅ Ready! Click buttons to test.');
+    </script>
+</body>
+</html>

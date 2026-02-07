@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      width: 400px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    
+    .header {
+      padding: 20px;
+      text-align: center;
+      border-bottom: 1px solid rgba(255,255,255,0.2);
+    }
+    
+    .header h1 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    
+    .header p {
+      font-size: 12px;
+      opacity: 0.9;
+    }
+    
+    .content {
+      padding: 20px;
+      max-height: 500px;
+      overflow-y: auto;
+    }
+    
+    .section {
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    
+    .section-title {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      opacity: 0.8;
+      margin-bottom: 12px;
+      letter-spacing: 0.5px;
+    }
+    
+    .data-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      font-size: 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .data-row:last-child {
+      border-bottom: none;
+    }
+    
+    .data-label {
+      opacity: 0.8;
+    }
+    
+    .data-value {
+      font-weight: 600;
+    }
+    
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      opacity: 0.9;
+    }
+    
+    select, input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 8px;
+      background: rgba(255,255,255,0.2);
+      color: white;
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+    
+    select option {
+      background: #764ba2;
+      color: white;
+    }
+    
+    input::placeholder {
+      color: rgba(255,255,255,0.6);
+    }
+    
+    button {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn-primary {
+      background: white;
+      color: #764ba2;
+      margin-bottom: 8px;
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .btn-secondary {
+      background: rgba(255,255,255,0.2);
+      color: white;
+      font-size: 12px;
+    }
+    
+    .status {
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 12px;
+      font-size: 13px;
+      text-align: center;
+    }
+    
+    .status.success {
+      background: rgba(52, 211, 153, 0.3);
+      border: 1px solid rgba(52, 211, 153, 0.5);
+    }
+    
+    .status.error {
+      background: rgba(239, 68, 68, 0.3);
+      border: 1px solid rgba(239, 68, 68, 0.5);
+    }
+    
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 20px;
+    }
+    
+    .spinner {
+      border: 3px solid rgba(255,255,255,0.3);
+      border-top: 3px solid white;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 10px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .no-data {
+      text-align: center;
+      padding: 40px 20px;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🎬 VecinoCustom</h1>
+    <p>TikTok Helper</p>
+  </div>
+  
+  <div class="content">
+    <div id="no-data" class="no-data">
+      <p>📱 Vai a um vídeo TikTok</p>
+      <p style="font-size: 12px; margin-top: 8px; opacity: 0.7;">Clica no botão roxo que aparece no canto</p>
+    </div>
+    
+    <div id="main-content" style="display: none;">
+      <!-- Video Data -->
+      <div class="section">
+        <div class="section-title">📹 Vídeo Detectado</div>
+        <div class="data-row">
+          <span class="data-label">Influencer</span>
+          <span class="data-value" id="handle">-</span>
+        </div>
+        <div class="data-row">
+          <span class="data-label">👁️ Views</span>
+          <span class="data-value" id="views">-</span>
+        </div>
+        <div class="data-row">
+          <span class="data-label">❤️ Likes</span>
+          <span class="data-value" id="likes">-</span>
+        </div>
+        <div class="data-row">
+          <span class="data-label">💬 Comments</span>
+          <span class="data-value" id="comments">-</span>
+        </div>
+      </div>
+      
+      <!-- Form -->
+      <div class="section">
+        <div class="section-title">➕ Adicionar à Campanha</div>
+        
+        <label>Campanha</label>
+        <select id="campaign-select">
+          <option value="">A carregar...</option>
+        </select>
+        
+        <label>Custo Pago (€)</label>
+        <input type="number" id="cost-input" placeholder="150.00" step="0.01" min="0">
+        
+        <label>Título (opcional)</label>
+        <input type="text" id="title-input" placeholder="Descrição do vídeo...">
+      </div>
+      
+      <button class="btn-primary" id="submit-btn">
+        Adicionar Vídeo
+      </button>
+      
+      <button class="btn-secondary" id="config-btn">
+        ⚙️ Configurações
+      </button>
+      
+      <div id="status"></div>
+    </div>
+    
+    <div id="loading" class="loading">
+      <div class="spinner"></div>
+      <p>A enviar...</p>
+    </div>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>

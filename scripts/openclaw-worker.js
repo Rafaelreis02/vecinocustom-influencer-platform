@@ -10,7 +10,7 @@
  *   node scripts/openclaw-worker.js
  * 
  * Cron (a cada 5 minutos):
- *   */5 * * * * cd /path/to/workspace && node scripts/openclaw-worker.js
+ *   (cron expression) cd /path/to/workspace && node scripts/openclaw-worker.js
  * 
  * Windows Task Scheduler:
  *   Trigger: Every 5 minutes
