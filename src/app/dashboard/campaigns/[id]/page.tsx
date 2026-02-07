@@ -307,16 +307,6 @@ export default function CampaignDetailPage() {
           </button>
         </div>
 
-        {/* Total Videos Cost */}
-        <div className="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-lg">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-purple-900">Total gasto em vídeos:</span>
-            <span className="text-lg font-semibold text-purple-700">
-              €{campaign.videos.reduce((sum, v) => sum + (v.cost || 0), 0).toFixed(2)}
-            </span>
-          </div>
-        </div>
-
         {campaign.videos.length === 0 ? (
           <div className="text-center py-12">
             <Video className="h-12 w-12 text-gray-300 mx-auto mb-3" />
