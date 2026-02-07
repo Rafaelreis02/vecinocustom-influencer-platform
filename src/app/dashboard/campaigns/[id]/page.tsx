@@ -46,18 +46,8 @@ interface Campaign {
     likes: number | null;
     publishedAt: string | null;
   }>;
-  coupons: Array<{
-    id: string;
-    code: string;
-    discountType: string;
-    discountValue: number;
-    usageCount: number;
-    totalSales: number;
-    totalOrders: number;
-  }>;
   spent: number;
   totalViews: number;
-  totalRevenue: number;
 }
 
 const statusConfig = {
@@ -144,7 +134,6 @@ export default function CampaignDetailPage() {
   const statusInfo = statusConfig[campaign.status as keyof typeof statusConfig];
   const StatusIcon = statusInfo.icon;
   const budgetPercent = campaign.budget ? (campaign.spent / campaign.budget) * 100 : 0;
-  const roi = campaign.spent > 0 ? ((campaign.totalRevenue / campaign.spent - 1) * 100) : 0;
 
   return (
     <div className="space-y-6">
@@ -253,33 +242,30 @@ export default function CampaignDetailPage() {
           )}
         </div>
 
-        {/* Revenue */}
+        {/* Sales Target */}
+        {campaign.targetSales && (
+          <div className="rounded-lg bg-white p-3 sm:p-4 border border-gray-200">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs sm:text-sm text-gray-600">Meta de Vendas</p>
+              <TrendingUp className="h-4 w-4 text-gray-400" />
+            </div>
+            <p className="text-lg sm:text-2xl font-semibold text-gray-900">
+              {campaign.targetSales.toLocaleString()} vendas
+            </p>
+          </div>
+        )}
+
+        {/* Videos Count */}
         <div className="rounded-lg bg-white p-3 sm:p-4 border border-gray-200">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-xs sm:text-sm text-gray-600">Revenue</p>
-            <TrendingUp className="h-4 w-4 text-gray-400" />
+            <p className="text-xs sm:text-sm text-gray-600">Vídeos</p>
+            <Video className="h-4 w-4 text-gray-400" />
           </div>
           <p className="text-lg sm:text-2xl font-semibold text-gray-900">
-            €{campaign.totalRevenue.toLocaleString()}
-          </p>
-          {campaign.targetSales && (
-            <p className="text-xs text-gray-500 mt-1">
-              Meta: {campaign.targetSales} vendas
-            </p>
-          )}
-        </div>
-
-        {/* ROI */}
-        <div className="rounded-lg bg-white p-3 sm:p-4 border border-gray-200">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs sm:text-sm text-gray-600">ROI</p>
-            <TrendingUp className="h-4 w-4 text-gray-400" />
-          </div>
-          <p className={`text-lg sm:text-2xl font-semibold ${roi > 0 ? 'text-green-600' : 'text-gray-900'}`}>
-            {roi > 0 ? '+' : ''}{roi.toFixed(0)}%
+            {campaign.videos.length}
           </p>
           <p className="text-xs text-gray-500 mt-1">
-            {campaign.spent > 0 ? 'Return on Investment' : 'Sem gastos'}
+            {campaign.totalViews.toLocaleString()} views totais
           </p>
         </div>
       </div>
@@ -350,53 +336,7 @@ export default function CampaignDetailPage() {
         )}
       </div>
 
-      {/* Coupons Section */}
-      <div className="rounded-xl bg-white p-4 sm:p-6 border border-gray-200">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 flex items-center gap-2">
-            <Tag className="h-5 w-5 text-purple-600" />
-            Cupões ({campaign.coupons.length})
-          </h2>
-        </div>
-
-        {campaign.coupons.length === 0 ? (
-          <div className="text-center py-12">
-            <Tag className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-sm text-gray-500">Nenhum cupão criado</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto -mx-4 sm:mx-0">
-            <div className="inline-block min-w-full align-middle">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead>
-                  <tr className="bg-gray-50">
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Código</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Desconto</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase hidden sm:table-cell">Usos</th>
-                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Vendas</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {campaign.coupons.map((coupon) => (
-                    <tr key={coupon.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{coupon.code}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">
-                        {coupon.discountType === 'PERCENTAGE' ? `${coupon.discountValue}%` : `€${coupon.discountValue}`}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600 hidden sm:table-cell">
-                        {coupon.usageCount} {coupon.totalOrders > 0 && `(${coupon.totalOrders} pedidos)`}
-                      </td>
-                      <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">
-                        €{coupon.totalSales.toLocaleString()}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </div>
+      {/* Coupons feature removed - influencers have their own coupons */}
 
       {/* Add Video Modal */}
       <AddVideoModal

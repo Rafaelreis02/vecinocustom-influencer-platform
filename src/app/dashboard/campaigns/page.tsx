@@ -32,9 +32,7 @@ interface Campaign {
   budget: number | null;
   influencersCount: number;
   videosCount: number;
-  couponsCount: number;
   totalViews: number;
-  totalRevenue: number;
   spent: number;
 }
 
@@ -101,7 +99,6 @@ export default function CampaignsPage() {
     total: campaigns.length,
     active: campaigns.filter(c => c.status === 'ACTIVE').length,
     totalBudget: campaigns.reduce((sum, c) => sum + (c.budget || 0), 0),
-    totalRevenue: campaigns.reduce((sum, c) => sum + (c.totalRevenue || 0), 0),
   };
 
   if (loading) {
@@ -156,10 +153,10 @@ export default function CampaignsPage() {
         </div>
         <div className="rounded-lg bg-white p-5 border border-gray-200">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-sm text-gray-600">Revenue</p>
-            <TrendingUp className="h-5 w-5 text-gray-400" />
+            <p className="text-sm text-gray-600">Total Views</p>
+            <Eye className="h-5 w-5 text-gray-400" />
           </div>
-          <p className="text-3xl font-semibold text-gray-900">€{stats.totalRevenue.toLocaleString()}</p>
+          <p className="text-3xl font-semibold text-gray-900">{campaigns.reduce((sum, c) => sum + (c.totalViews || 0), 0).toLocaleString()}</p>
         </div>
       </div>
 
@@ -284,17 +281,17 @@ export default function CampaignsPage() {
                   </div>
                 )}
 
-                {/* Revenue */}
+                {/* Views */}
                 <div className="text-center">
-                  <p className="text-sm text-gray-600 mb-1">Revenue</p>
-                  <p className="text-xl font-semibold text-gray-900">€{campaign.totalRevenue.toLocaleString()}</p>
+                  <p className="text-sm text-gray-600 mb-1">Views</p>
+                  <p className="text-xl font-semibold text-gray-900">{campaign.totalViews.toLocaleString()}</p>
                 </div>
 
-                {/* ROI */}
+                {/* Gasto */}
                 <div className="text-center">
-                  <p className="text-sm text-gray-600 mb-1">ROI</p>
+                  <p className="text-sm text-gray-600 mb-1">Gasto</p>
                   <p className="text-xl font-semibold text-gray-900">
-                    {campaign.spent > 0 ? `${((campaign.totalRevenue / campaign.spent - 1) * 100).toFixed(0)}%` : '-'}
+                    €{campaign.spent.toLocaleString()}
                   </p>
                 </div>
               </div>
