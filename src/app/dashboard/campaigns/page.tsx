@@ -21,6 +21,7 @@ import {
   AlertCircle,
   Loader2,
 } from 'lucide-react';
+import { ToastContainer, useToast } from '@/components/ui/Toast';
 
 interface Campaign {
   id: string;
@@ -49,6 +50,7 @@ export default function CampaignsPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const { toasts, addToast, removeToast } = useToast();
 
   useEffect(() => {
     fetchCampaigns();
@@ -78,13 +80,14 @@ export default function CampaignsPage() {
       });
 
       if (res.ok) {
+        addToast(`${name} foi eliminada com sucesso`, 'success');
         setCampaigns(campaigns.filter(c => c.id !== id));
       } else {
-        alert('Erro ao eliminar campanha');
+        addToast('Erro ao eliminar campanha', 'error');
       }
     } catch (error) {
       console.error('Error deleting campaign:', error);
-      alert('Erro ao eliminar campanha');
+      addToast('Erro ao eliminar campanha', 'error');
     }
   };
 
@@ -111,6 +114,8 @@ export default function CampaignsPage() {
 
   return (
     <div className="space-y-6">
+      <ToastContainer toasts={toasts} onClose={removeToast} />
+      
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

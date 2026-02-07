@@ -18,6 +18,7 @@ import {
   Check,
   Loader2
 } from 'lucide-react';
+import { ToastContainer, useToast } from '@/components/ui/Toast';
 
 type Influencer = {
   id: string;
@@ -42,6 +43,7 @@ export default function InfluencersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [allInfluencers, setAllInfluencers] = useState<Influencer[]>([]);
   const [loading, setLoading] = useState(true);
+  const { toasts, addToast, removeToast } = useToast();
 
   useEffect(() => {
     fetchInfluencers();
@@ -70,14 +72,15 @@ export default function InfluencersPage() {
       });
 
       if (res.ok) {
+        addToast(`${name} foi eliminado com sucesso`, 'success');
         fetchInfluencers();
       } else {
         const data = await res.json();
-        alert(data.error || 'Erro ao apagar influencer');
+        addToast(data.error || 'Erro ao apagar influencer', 'error');
       }
     } catch (error) {
       console.error('Error deleting influencer:', error);
-      alert('Erro ao apagar influencer');
+      addToast('Erro ao apagar influencer', 'error');
     }
   };
 
@@ -109,6 +112,8 @@ export default function InfluencersPage() {
 
   return (
     <div className="space-y-6 max-w-full overflow-x-hidden">
+      <ToastContainer toasts={toasts} onClose={removeToast} />
+      
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="min-w-0 flex-1">
