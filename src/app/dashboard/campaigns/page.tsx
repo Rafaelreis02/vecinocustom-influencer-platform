@@ -143,38 +143,6 @@ export default function CampaignsPage() {
         </Link>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
-        <div className="rounded-lg bg-white p-5 border border-gray-200">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm text-gray-600">Total Campanhas</p>
-            <Target className="h-5 w-5 text-gray-400" />
-          </div>
-          <p className="text-3xl font-semibold text-gray-900">{stats.total}</p>
-        </div>
-        <div className="rounded-lg bg-white p-5 border border-gray-200">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm text-gray-600">Ativas</p>
-            <Play className="h-5 w-5 text-gray-400" />
-          </div>
-          <p className="text-3xl font-semibold text-gray-900">{stats.active}</p>
-        </div>
-        <div className="rounded-lg bg-white p-5 border border-gray-200">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm text-gray-600">Budget Total</p>
-            <DollarSign className="h-5 w-5 text-gray-400" />
-          </div>
-          <p className="text-3xl font-semibold text-gray-900">€{stats.totalBudget.toLocaleString()}</p>
-        </div>
-        <div className="rounded-lg bg-white p-5 border border-gray-200">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm text-gray-600">Total Views</p>
-            <Eye className="h-5 w-5 text-gray-400" />
-          </div>
-          <p className="text-3xl font-semibold text-gray-900">{campaigns.reduce((sum, c) => sum + (c.totalViews || 0), 0).toLocaleString()}</p>
-        </div>
-      </div>
-
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
         <div className="relative flex-1">
