@@ -395,35 +395,25 @@ export default function CampaignDetailPage() {
                   <Trash2 className="h-3 w-3" />
                 </button>
 
-                {/* Video Preview - Fixed Height */}
-                <div className="mb-2 w-full flex-shrink-0">
+                {/* Video Preview - Fixed Height & Centered */}
+                <div className="mb-2 w-full flex-shrink-0 flex items-center justify-center bg-black rounded-lg overflow-hidden" style={{ height: '280px' }}>
                   {video.platform === 'TIKTOK' && video.url && (
-                    <div className="rounded-lg overflow-hidden bg-gray-50 w-full" style={{ height: '280px' }}>
-                      <iframe
-                        src={`https://www.tiktok.com/embed/v2/${extractTikTokVideoId(video.url)}`}
-                        width="100%"
-                        height="280"
-                        frameBorder="0"
-                        allow="autoplay; encrypted-media"
-                        allowFullScreen
-                        className="rounded-lg"
-                        title="TikTok Video"
-                      />
-                    </div>
+                    <iframe
+                      src={`https://www.tiktok.com/embed/v2/${extractTikTokVideoId(video.url)}?lang=en-US`}
+                      style={{ width: '100%', height: '100%', border: 'none' }}
+                      allow="autoplay; encrypted-media"
+                      allowFullScreen
+                      title="TikTok Video"
+                    />
                   )}
                   {video.platform === 'INSTAGRAM' && video.url && (
-                    <div className="rounded-lg overflow-hidden bg-gray-50 w-full" style={{ height: '280px' }}>
-                      <iframe
-                        src={`${video.url}embed/captioned/`}
-                        width="100%"
-                        height="280"
-                        frameBorder="0"
-                        allow="autoplay; encrypted-media"
-                        allowFullScreen
-                        className="rounded-lg"
-                        title="Instagram Video"
-                      />
-                    </div>
+                    <iframe
+                      src={`${video.url}embed/captioned/`}
+                      style={{ width: '100%', height: '100%', border: 'none' }}
+                      allow="autoplay; encrypted-media"
+                      allowFullScreen
+                      title="Instagram Video"
+                    />
                   )}
                 </div>
 
