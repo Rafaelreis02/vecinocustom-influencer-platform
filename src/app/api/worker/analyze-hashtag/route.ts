@@ -9,7 +9,7 @@ const anthropic = new Anthropic({
 // POST /api/worker/analyze-hashtag - Extrai vídeos de hashtag com Claude Haiku
 export async function POST(request: Request) {
   try {
-    const { campaignId, hashtag, platform, snapshotText } = await request.json();
+    const { campaignId, hashtag, platform, snapshotText, excludeAccounts } = await request.json();
 
     if (!campaignId || !snapshotText) {
       return NextResponse.json(
@@ -79,12 +79,21 @@ IMPORTANTE:
       }
     }
 
-    const videos = parsed.videos || [];
+    let videos = parsed.videos || [];
+    
+    // Filter out brand's own account videos
+    const brandAccountsLower = (excludeAccounts || []).map((a: string) => a.toLowerCase());
+    const filteredVideos = videos.filter((v: any) => 
+      !brandAccountsLower.includes((v.author || '').toLowerCase())
+    );
+    const brandExcludedCount = videos.length - filteredVideos.length;
+    videos = filteredVideos;
     
     if (videos.length === 0) {
       return NextResponse.json({
         newVideos: 0,
         skipped: 0,
+        excludedBrand: brandExcludedCount,
         message: 'No videos found in snapshot'
       });
     }
@@ -154,6 +163,7 @@ IMPORTANTE:
     return NextResponse.json({
       newVideos: newCount,
       skipped: skippedCount,
+      excludedBrand: brandExcludedCount,
       total: videos.length
     });
 
