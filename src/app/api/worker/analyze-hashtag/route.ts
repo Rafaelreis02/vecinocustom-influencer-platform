@@ -18,9 +18,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // 1. Usar Claude Haiku para extrair vídeos (APENAS URLs e username)
+    // 1. Usar Claude Sonnet para extrair vídeos (APENAS URLs e username)
     const message = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: 'claude-sonnet-4-5',
       max_tokens: 2000,
       messages: [
         {
