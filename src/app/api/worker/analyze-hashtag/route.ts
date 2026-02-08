@@ -1,112 +1,69 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import Anthropic from '@anthropic-ai/sdk';
+import { scrapeHashtagVideos } from '@/lib/apify';
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
-
-// POST /api/worker/analyze-hashtag - Extrai vídeos de hashtag com Claude Haiku
+// POST /api/worker/analyze-hashtag - Extrai vídeos de hashtag com Apify
 export async function POST(request: Request) {
   try {
-    const { campaignId, hashtag, platform, snapshotText, excludeAccounts } = await request.json();
+    const { campaignId, hashtag, platform, excludeAccounts } = await request.json();
 
-    if (!campaignId || !snapshotText) {
+    if (!campaignId || !hashtag) {
       return NextResponse.json(
-        { error: 'Missing campaignId or snapshotText' },
+        { error: 'Missing campaignId or hashtag' },
         { status: 400 }
       );
     }
 
-    // 1. Usar Claude Sonnet para extrair vídeos (APENAS URLs e username)
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5',
-      max_tokens: 2000,
-      messages: [
-        {
-          role: 'user',
-          content: `Analisa este snapshot da página de hashtag ${platform} e EXTRAI AGGRESSIVAMENTE URLs de vídeos:
-
-SNAPSHOT:
-${snapshotText}
-
-INSTRUÇÕES CRÍTICAS:
-1. Procura por QUALQUER padrão que possa indicar vídeos:
-   - Usernames (@username ou texto que parece ser username)
-   - IDs de vídeo (números longos)
-   - Links incompletos que contenham "/video/" ou números
-   - Referências a vídeos mesmo que truncadas
-
-2. Se encontrares padrões que pareçam ser vídeos, RECONSTRÓI as URLs:
-   - TikTok: https://www.tiktok.com/video/[ID_DO_VIDEO]
-   - Instagram: https://www.instagram.com/reel/[ID_DO_VIDEO]/
-
-3. Retorna JSON:
-{
-  "videos": [
-    {
-      "url": "URL reconstruída ou completa",
-      "author": "username do criador (pode ser estimado)"
+    // Only support TikTok for now (Apify hashtag scraper is TikTok-only)
+    if (platform !== 'TIKTOK') {
+      return NextResponse.json(
+        { error: 'Only TikTok hashtag scraping is supported' },
+        { status: 400 }
+      );
     }
-  ]
-}
 
-EXEMPLO - se vires "usuario123" perto de "12345678901", retorna:
-{"videos": [{"url": "https://www.tiktok.com/video/12345678901", "author": "usuario123"}]}
+    console.log(`[ANALYZE HASHTAG] Starting scrape: #${hashtag} for campaign ${campaignId}`);
 
-IMPORTANTE:
-- Retorna APENAS JSON válido
-- Se não tiver informação suficiente, retorna {"videos": []}
-- TENTA MAXIMIZAR de forma agressiva - não ser conservador`
-        }
-      ]
-    });
-
-    const responseText = message.content[0].type === 'text' 
-      ? message.content[0].text 
-      : '';
-
-    let parsed;
+    // 1. Scrape hashtag videos using Apify
+    let videos;
     try {
-      parsed = JSON.parse(responseText);
-    } catch {
-      // Tentar extrair JSON de markdown code block
-      const jsonMatch = responseText.match(/```json\n([\s\S]*?)\n```/);
-      if (jsonMatch) {
-        parsed = JSON.parse(jsonMatch[1]);
-      } else {
-        throw new Error('Invalid JSON response from Claude');
-      }
+      videos = await scrapeHashtagVideos(hashtag, 30);
+      console.log(`[ANALYZE HASHTAG] Found ${videos.length} videos from Apify`);
+    } catch (error: any) {
+      console.error('[APIFY ERROR]', error.message);
+      return NextResponse.json(
+        { error: 'Failed to scrape hashtag', details: error.message },
+        { status: 500 }
+      );
     }
 
-    let videos = parsed.videos || [];
-    
-    // Filter out brand's own account videos
-    const brandAccountsLower = (excludeAccounts || []).map((a: string) => a.toLowerCase());
-    const filteredVideos = videos.filter((v: any) => 
-      !brandAccountsLower.includes((v.author || '').toLowerCase())
-    );
-    const brandExcludedCount = videos.length - filteredVideos.length;
-    videos = filteredVideos;
-    
     if (videos.length === 0) {
       return NextResponse.json({
         newVideos: 0,
         skipped: 0,
-        excludedBrand: brandExcludedCount,
-        message: 'No videos found in snapshot'
+        excludedBrand: 0,
+        message: 'No videos found for hashtag'
       });
     }
 
-    // 2. Para cada vídeo, verificar se já existe (por URL)
+    // Filter out brand's own account videos
+    const brandAccountsLower = (excludeAccounts || []).map((a: string) => a.toLowerCase());
+    const filteredVideos = videos.filter((v) => 
+      !brandAccountsLower.includes(v.authorUsername.toLowerCase())
+    );
+    const brandExcludedCount = videos.length - filteredVideos.length;
+    
+    console.log(`[ANALYZE HASHTAG] After brand filter: ${filteredVideos.length} videos (excluded ${brandExcludedCount})`);
+
+    // 2. Process each video
     let newCount = 0;
     let skippedCount = 0;
 
-    for (const videoData of videos) {
+    for (const videoData of filteredVideos) {
       try {
-        // Verificar se vídeo já existe
+        // Check if video already exists (by URL)
         const existing = await prisma.video.findFirst({
-          where: { url: videoData.url }
+          where: { url: videoData.videoUrl }
         });
 
         if (existing) {
@@ -114,57 +71,65 @@ IMPORTANTE:
           continue;
         }
 
-        // Procurar influencer pelo username
+        // Find or create influencer
         let influencer = await prisma.influencer.findFirst({
           where: {
             OR: [
-              { tiktokHandle: videoData.author },
-              { instagramHandle: videoData.author },
-              { name: videoData.author }
+              { tiktokHandle: videoData.authorUsername },
+              { name: videoData.authorUsername }
             ]
           }
         });
 
-        // Se não existir, criar placeholder
         if (!influencer) {
+          // Create placeholder influencer
           influencer = await prisma.influencer.create({
             data: {
-              name: videoData.author,
-              tiktokHandle: platform === 'TIKTOK' ? videoData.author : null,
-              instagramHandle: platform === 'INSTAGRAM' ? videoData.author : null,
+              name: videoData.authorUsername,
+              tiktokHandle: videoData.authorUsername,
               status: 'suggestion',
               tier: 'micro',
-              primaryPlatform: platform,
-              notes: `Auto-discovered via hashtag ${hashtag}`,
+              primaryPlatform: 'TIKTOK',
+              notes: `Auto-discovered via hashtag #${hashtag}`,
               createdById: 'cmlasiv0w0000dovsp7nnmgi0' // AI user ID
             }
           });
+          console.log(`[ANALYZE HASHTAG] Created influencer: @${videoData.authorUsername}`);
         }
 
-        // Criar vídeo (apenas URL + autor)
+        // Create video with metrics
         await prisma.video.create({
           data: {
-            url: videoData.url,
-            platform: platform as any,
+            url: videoData.videoUrl,
+            platform: 'TIKTOK',
             campaignId: campaignId,
             influencerId: influencer.id,
-            publishedAt: new Date()
+            views: videoData.viewCount,
+            likes: videoData.likeCount,
+            comments: videoData.commentCount,
+            shares: videoData.shareCount,
+            description: videoData.description,
+            publishedAt: videoData.publishedAt || new Date()
           }
         });
 
         newCount++;
+        console.log(`[ANALYZE HASHTAG] Created video: ${videoData.videoUrl} by @${videoData.authorUsername}`);
 
       } catch (err: any) {
         console.error('[VIDEO CREATE ERROR]', err.message);
-        // Continue processando os outros
+        // Continue processing others
       }
     }
+
+    console.log(`[ANALYZE HASHTAG] Complete: ${newCount} new, ${skippedCount} skipped, ${brandExcludedCount} brand excluded`);
 
     return NextResponse.json({
       newVideos: newCount,
       skipped: skippedCount,
       excludedBrand: brandExcludedCount,
-      total: videos.length
+      total: filteredVideos.length,
+      source: 'apify'
     });
 
   } catch (err: any) {

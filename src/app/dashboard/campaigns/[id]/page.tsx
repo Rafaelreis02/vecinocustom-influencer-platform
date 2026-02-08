@@ -26,7 +26,6 @@ import {
 } from 'lucide-react';
 import AddVideoModal from '@/components/AddVideoModal';
 import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog';
-import { useGlobalToast } from '@/contexts/ToastContext';
 
 interface Campaign {
   id: string;
@@ -159,6 +158,33 @@ export default function CampaignDetailPage() {
   const startEditingCost = (videoId: string, currentCost: number | null) => {
     setEditingCost(videoId);
     setCostValue(currentCost?.toString() || '');
+  };
+
+  const handleDeleteVideo = async (videoId: string, videoTitle: string) => {
+    const confirmed = await confirm({
+      title: 'Eliminar Vídeo',
+      message: `Tens a certeza que queres eliminar este vídeo${videoTitle ? ` "${videoTitle}"` : ''}?`,
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      isDangerous: true,
+    });
+
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(`/api/videos/${videoId}`, {
+        method: 'DELETE',
+      });
+
+      if (res.ok) {
+        addToast('Vídeo eliminado com sucesso', 'success');
+        fetchCampaign(); // Refresh data
+      } else {
+        addToast('Erro ao eliminar vídeo', 'error');
+      }
+    } catch (error) {
+      addToast('Erro ao eliminar vídeo', 'error');
+    }
   };
 
   if (loading) {
@@ -306,6 +332,17 @@ export default function CampaignDetailPage() {
           </p>
         </div>
 
+        {/* Total Views */}
+        <div className="rounded-lg bg-white p-3 sm:p-4 border border-gray-200">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs sm:text-sm text-gray-600">Views Totais</p>
+            <Eye className="h-4 w-4 text-gray-400" />
+          </div>
+          <p className="text-lg sm:text-2xl font-semibold text-gray-900">
+            {campaign.totalViews?.toLocaleString() || '0'}
+          </p>
+        </div>
+
         {/* Sales Target */}
         {campaign.targetSales && (
           <div className="rounded-lg bg-white p-3 sm:p-4 border border-gray-200">
@@ -347,16 +384,25 @@ export default function CampaignDetailPage() {
             {campaign.videos.map((video) => (
               <div
                 key={video.id}
-                className="p-2 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors flex flex-col"
+                className="p-2 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors flex flex-col relative"
               >
-                {/* Video Preview */}
-                <div className="mb-2 max-w-full flex-shrink-0">
+                {/* Delete Button */}
+                <button
+                  onClick={() => handleDeleteVideo(video.id, video.title || '')}
+                  className="absolute top-1 right-1 p-1 bg-red-500 hover:bg-red-600 text-white rounded-md z-10 transition-colors"
+                  title="Eliminar vídeo"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+
+                {/* Video Preview - Fixed Height */}
+                <div className="mb-2 w-full flex-shrink-0">
                   {video.platform === 'TIKTOK' && video.url && (
-                    <div className="rounded-lg overflow-hidden bg-gray-50 aspect-[9/16] flex items-center justify-center max-h-64">
+                    <div className="rounded-lg overflow-hidden bg-gray-50 w-full" style={{ height: '280px' }}>
                       <iframe
                         src={`https://www.tiktok.com/embed/v2/${extractTikTokVideoId(video.url)}`}
                         width="100%"
-                        height="400"
+                        height="280"
                         frameBorder="0"
                         allow="autoplay; encrypted-media"
                         allowFullScreen
@@ -366,11 +412,11 @@ export default function CampaignDetailPage() {
                     </div>
                   )}
                   {video.platform === 'INSTAGRAM' && video.url && (
-                    <div className="rounded-lg overflow-hidden bg-gray-50 max-h-64">
+                    <div className="rounded-lg overflow-hidden bg-gray-50 w-full" style={{ height: '280px' }}>
                       <iframe
                         src={`${video.url}embed/captioned/`}
                         width="100%"
-                        height="300"
+                        height="280"
                         frameBorder="0"
                         allow="autoplay; encrypted-media"
                         allowFullScreen
