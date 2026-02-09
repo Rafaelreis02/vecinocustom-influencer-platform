@@ -69,10 +69,11 @@ async function retryWithBackoff<T>(
 async function scrapeTikTokProfile(handle: string): Promise<ParsedProfile> {
   const cleanHandle = handle.replace('@', '');
   
-  // Try with full URL format
   const run = await client.actor('GdWCkxBtKWOsKjdch').call({
-    searchUrls: [`https://www.tiktok.com/@${cleanHandle}`],
+    profiles: [`https://www.tiktok.com/@${cleanHandle}`],
     resultsPerPage: 100,
+    shouldDownloadVideos: false,
+    shouldDownloadCovers: false,
   });
 
   const { items } = await client.dataset(run.defaultDatasetId).listItems();
