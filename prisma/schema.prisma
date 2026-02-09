@@ -75,7 +75,7 @@ model Influencer {
   fitScore          Int?                // 1-5 score para joias
   
   // Status
-  status            InfluencerStatus    @default(suggestion)
+  status            InfluencerStatus    @default(NEW)
   tier              String?             // Micro, Macro, Mega, etc.
   notes             String?
   tags              String[]            // Array of tags
@@ -102,14 +102,25 @@ model Influencer {
 }
 
 enum InfluencerStatus {
-  ACTIVE           // Manter temporariamente
-  PENDING          // Manter temporariamente
-  working          // A Trabalhar (ativo)
-  negotiating      // Em Negociação
-  suggestion       // Sugestão da IA
+  // Estados do workflow (novos)
+  NEW              // 🔵 Novo (recém adicionado)
+  NEGOTIATING      // 💬 Em negociação
+  AWAITING_PRODUCT // ⏳ À espera do produto
+  PRODUCT_SENT     // 📦 Produto enviado
+  COMPLETED        // ✅ Concluído
+  CANCELLED        // ❌ Cancelado
+  
+  // Estados técnicos
   IMPORT_PENDING   // ⏳ Aguardando importação pelo Agente
+  BLACKLISTED      // 🚫 Bloqueado
+  
+  // DEPRECATED - Manter temporariamente para migração
+  ACTIVE
   INACTIVE
-  BLACKLISTED
+  PENDING
+  working
+  negotiating
+  suggestion
 }
 
 enum PaymentMethod {
