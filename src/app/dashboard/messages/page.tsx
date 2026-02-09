@@ -552,29 +552,26 @@ export default function MessagesPage() {
               <p className="text-sm md:text-base text-gray-700 whitespace-pre-wrap">{selectedEmail.body}</p>
             )}
 
-            {/* Attachments Grid */}
+            {/* Attachments - Gmail Style */}
             {selectedEmail.attachments && selectedEmail.attachments.length > 0 && (
-              <div className="mt-6 pt-6 border-t border-gray-200 pb-20">
-                <h3 className="text-sm md:text-base font-semibold text-gray-900 mb-3">
-                  Anexos ({selectedEmail.attachments.length})
-                </h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+              <div className="mt-4 pt-4 border-t border-gray-200 pb-20">
+                <div className="space-y-2">
                   {selectedEmail.attachments.map((att, idx) => (
                     <div
                       key={idx}
-                      className="p-2 bg-gray-50 rounded border border-gray-200 hover:bg-gray-100 transition cursor-pointer flex flex-col items-center justify-center group"
+                      className="flex items-center gap-3 p-2 rounded hover:bg-gray-50 transition cursor-pointer group"
                       title={`Baixar ${att.filename}`}
                     >
-                      <div className="text-2xl mb-1">{getFileIcon(att.mimeType)}</div>
-                      <p className="text-xs text-gray-700 text-center truncate group-hover:text-blue-600 font-medium">
-                        {att.filename.length > 12
-                          ? att.filename.substring(0, 12) + '...'
-                          : att.filename}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {(att.size / 1024 / 1024).toFixed(1)} MB
-                      </p>
-                      <Download className="h-3 w-3 text-gray-400 group-hover:text-blue-600 mt-1 opacity-0 group-hover:opacity-100 transition" />
+                      <span className="text-lg flex-shrink-0">{getFileIcon(att.mimeType)}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs md:text-sm text-gray-700 truncate group-hover:text-blue-600 font-medium">
+                          {att.filename}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {att.size ? `${(att.size / 1024).toFixed(0)} KB` : 'Anexo'}
+                        </p>
+                      </div>
+                      <Download className="h-4 w-4 text-gray-400 group-hover:text-blue-600 flex-shrink-0 opacity-0 group-hover:opacity-100 transition" />
                     </div>
                   ))}
                 </div>
@@ -583,17 +580,17 @@ export default function MessagesPage() {
           </div>
 
           {/* Sticky Reply Button at Bottom */}
-          <div className="p-4 border-t border-gray-200 bg-white flex gap-2 flex-shrink-0">
+          <div className="p-3 md:p-4 border-t border-gray-200 bg-white flex gap-2 flex-shrink-0">
             <button
               onClick={() => setShowReplyModal(true)}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition text-sm md:text-base"
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-lg font-medium transition text-sm"
             >
-              <Reply className="h-5 w-5" />
+              <Reply className="h-4 w-4" />
               Responder
             </button>
             <button
               onClick={handleDelete}
-              className="p-3 hover:bg-red-100 rounded-lg transition text-red-600 flex-shrink-0"
+              className="p-2 hover:bg-gray-100 rounded-lg transition text-gray-600 flex-shrink-0"
               title="Eliminar"
             >
               <Trash2 className="h-5 w-5" />
