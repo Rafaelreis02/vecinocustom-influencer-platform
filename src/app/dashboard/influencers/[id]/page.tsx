@@ -48,23 +48,23 @@ function CollapsibleSection({
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div className="rounded-xl bg-white border border-gray-100 overflow-hidden">
+    <div className="rounded-lg bg-white border border-gray-200 overflow-hidden">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between p-4 hover:bg-gray-50/50 transition"
+        className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition"
       >
         <div className="flex items-center gap-2">
-          <Icon className="h-4 w-4 text-purple-600" />
-          <h3 className="text-base font-semibold text-gray-900">{title}</h3>
+          <Icon className="h-4 w-4 text-slate-900" />
+          <h3 className="text-base font-semibold text-slate-900">{title}</h3>
         </div>
         {isOpen ? (
-          <ChevronUp className="h-4 w-4 text-gray-400" />
+          <ChevronUp className="h-4 w-4 text-gray-500" />
         ) : (
-          <ChevronDown className="h-4 w-4 text-gray-400" />
+          <ChevronDown className="h-4 w-4 text-gray-500" />
         )}
       </button>
       {isOpen && (
-        <div className="px-4 pb-4 border-t border-gray-100">
+        <div className="px-4 pb-4 border-t border-gray-200">
           {children}
         </div>
       )}
@@ -180,7 +180,7 @@ export default function InfluencerDetailPage() {
     return (
       <div className="text-center py-16">
         <h3 className="text-lg font-semibold text-gray-900 mb-2">Influencer não encontrado</h3>
-        <Link href="/dashboard/influencers" className="text-purple-600 hover:underline">
+        <Link href="/dashboard/influencers" className="text-slate-700 hover:text-slate-900 underline">
           Voltar aos Influencers
         </Link>
       </div>
@@ -192,32 +192,32 @@ export default function InfluencerDetailPage() {
       {/* Back Button */}
       <Link
         href="/dashboard/influencers"
-        className="inline-flex items-center gap-2 text-gray-600 hover:text-purple-600 transition"
+        className="inline-flex items-center gap-2 text-gray-600 hover:text-slate-900 transition"
       >
         <ArrowLeft className="h-4 w-4" />
         Voltar aos Influencers
       </Link>
 
       {/* Header Card */}
-      <div className="rounded-2xl bg-gradient-to-br from-purple-600 via-pink-600 to-blue-600 p-4 sm:p-6 md:p-8 text-white shadow-xl overflow-hidden">
+      <div className="rounded-lg bg-slate-900 p-6 text-white overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4 sm:mb-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 flex-1">
-            <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl bg-white/20 backdrop-blur-xl border-2 border-white/40 flex items-center justify-center text-3xl sm:text-4xl font-bold shadow-2xl shrink-0">
+            <div className="h-16 w-16 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center text-2xl font-bold shrink-0">
               {influencer.name[0]}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
                 <h1 className="text-2xl sm:text-3xl font-bold truncate">{influencer.name}</h1>
                 {influencer.fitScore && (
-                  <span className="px-3 py-1 rounded-full text-xs sm:text-sm font-semibold bg-yellow-400/90 text-yellow-900 flex items-center gap-1 w-fit">
-                    <Award className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="px-2 py-1 rounded text-xs font-semibold bg-white/10 text-white flex items-center gap-1 w-fit">
+                    <Award className="h-3 w-3" />
                     <span className="whitespace-nowrap">Fit {influencer.fitScore}/5</span>
                   </span>
                 )}
               </div>
               <div className="flex flex-wrap items-center gap-2 mb-3 max-w-full">
                 {influencer.tier && (
-                  <span className="px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-semibold bg-white/20 backdrop-blur-xl border border-white/40">
+                  <span className="px-2 py-1 rounded text-xs font-medium bg-white/10 border border-white/20">
                     {influencer.tier}
                   </span>
                 )}
@@ -230,8 +230,8 @@ export default function InfluencerDetailPage() {
                   />
                 </div>
                 {influencer.primaryPlatform && (
-                  <span className="px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-semibold bg-white/20 backdrop-blur-xl border border-white/40 whitespace-nowrap">
-                    📱 {influencer.primaryPlatform}
+                  <span className="px-2 py-1 rounded text-xs font-medium bg-white/10 border border-white/20">
+                    {influencer.primaryPlatform}
                   </span>
                 )}
               </div>
@@ -243,7 +243,7 @@ export default function InfluencerDetailPage() {
                   </span>
                 )}
                 {influencer.language && (
-                  <span className="px-2 py-0.5 rounded bg-white/20 font-medium">
+                  <span className="px-2 py-0.5 rounded bg-white/10 font-medium text-xs">
                     {influencer.language}
                   </span>
                 )}
@@ -259,15 +259,15 @@ export default function InfluencerDetailPage() {
           <div className="flex gap-2 self-end sm:self-auto">
             <Link
               href={`/dashboard/influencers/${id}/edit`}
-              className="p-2 sm:p-3 rounded-xl bg-white/20 backdrop-blur-xl border border-white/40 hover:bg-white/30 transition active:scale-95"
+              className="p-2 rounded bg-white/10 border border-white/20 hover:bg-white/20 transition active:scale-95"
             >
-              <Edit className="h-4 w-4 sm:h-5 sm:w-5" />
+              <Edit className="h-4 w-4 text-white" />
             </Link>
             <button
               onClick={handleDelete}
-              className="p-2 sm:p-3 rounded-xl bg-white/20 backdrop-blur-xl border border-white/40 hover:bg-red-500 transition active:scale-95"
+              className="p-2 rounded bg-white/10 border border-white/20 hover:bg-red-900/50 transition active:scale-95"
             >
-              <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
+              <Trash2 className="h-4 w-4 text-white" />
             </button>
           </div>
         </div>
@@ -301,16 +301,16 @@ export default function InfluencerDetailPage() {
               href={`https://instagram.com/${influencer.instagramHandle.replace('@', '')}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl bg-white/20 backdrop-blur-xl border border-white/40 hover:bg-white/30 transition active:scale-95 min-w-0 max-w-full"
+              className="flex items-center gap-2 px-3 py-2 rounded border border-white/20 bg-white/5 hover:bg-white/10 transition active:scale-95 min-w-0 max-w-full"
             >
-              <Instagram className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
-              <span className="font-medium text-xs sm:text-sm truncate flex-1 min-w-0">{influencer.instagramHandle}</span>
+              <Instagram className="h-4 w-4 text-white shrink-0" />
+              <span className="font-medium text-xs truncate flex-1 min-w-0 text-white">{influencer.instagramHandle}</span>
               {influencer.instagramFollowers && (
-                <span className="text-xs opacity-80 whitespace-nowrap shrink-0">
+                <span className="text-xs opacity-70 whitespace-nowrap shrink-0">
                   ({(influencer.instagramFollowers / 1000).toFixed(1)}K)
                 </span>
               )}
-              <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
+              <ExternalLink className="h-3 w-3 shrink-0 text-white" />
             </a>
           )}
           {influencer.tiktokHandle && (
@@ -318,16 +318,16 @@ export default function InfluencerDetailPage() {
               href={`https://tiktok.com/@${influencer.tiktokHandle.replace('@', '')}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl bg-white/20 backdrop-blur-xl border border-white/40 hover:bg-white/30 transition active:scale-95 min-w-0 max-w-full"
+              className="flex items-center gap-2 px-3 py-2 rounded border border-white/20 bg-white/5 hover:bg-white/10 transition active:scale-95 min-w-0 max-w-full"
             >
-              <Video className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
-              <span className="font-medium text-xs sm:text-sm truncate flex-1 min-w-0">{influencer.tiktokHandle}</span>
+              <Video className="h-4 w-4 text-white shrink-0" />
+              <span className="font-medium text-xs truncate flex-1 min-w-0 text-white">{influencer.tiktokHandle}</span>
               {influencer.tiktokFollowers && (
-                <span className="text-xs opacity-80 whitespace-nowrap shrink-0">
+                <span className="text-xs opacity-70 whitespace-nowrap shrink-0">
                   ({(influencer.tiktokFollowers / 1000).toFixed(1)}K)
                 </span>
               )}
-              <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
+              <ExternalLink className="h-3 w-3 shrink-0 text-white" />
             </a>
           )}
         </div>
@@ -341,44 +341,44 @@ export default function InfluencerDetailPage() {
             {/* Key Metrics Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
               {influencer.totalLikes && (
-                <div className="p-3 rounded-lg border border-gray-100 bg-gray-50/30">
+                <div className="p-3 rounded-lg border border-gray-200 bg-white">
                   <div className="flex items-center justify-between mb-1">
                     <p className="text-xs text-gray-600">Total Likes</p>
-                    <Heart className="h-3 w-3 text-pink-500" />
+                    <Heart className="h-3 w-3 text-slate-700" />
                   </div>
-                  <p className="text-lg font-bold text-gray-900">
+                  <p className="text-lg font-bold text-slate-900">
                     {(Number(influencer.totalLikes) / 1000000).toFixed(1)}M
                   </p>
                 </div>
               )}
 
               {influencer.engagementRate !== null && influencer.engagementRate !== undefined && (
-                <div className="p-3 rounded-lg border border-gray-100 bg-gray-50/30">
+                <div className="p-3 rounded-lg border border-gray-200 bg-white">
                   <div className="flex items-center justify-between mb-1">
                     <p className="text-xs text-gray-600">Engagement</p>
-                    <TrendingUp className="h-3 w-3 text-purple-500" />
+                    <TrendingUp className="h-3 w-3 text-slate-700" />
                   </div>
-                  <p className="text-lg font-bold text-purple-600">{influencer.engagementRate.toFixed(1)}%</p>
+                  <p className="text-lg font-bold text-slate-900">{influencer.engagementRate.toFixed(1)}%</p>
                 </div>
               )}
 
               {influencer.averageViews && (
-                <div className="p-3 rounded-lg border border-gray-100 bg-gray-50/30">
+                <div className="p-3 rounded-lg border border-gray-200 bg-white">
                   <div className="flex items-center justify-between mb-1">
                     <p className="text-xs text-gray-600">Avg. Views</p>
-                    <Eye className="h-3 w-3 text-blue-500" />
+                    <Eye className="h-3 w-3 text-slate-700" />
                   </div>
-                  <p className="text-lg font-bold text-gray-900">{influencer.averageViews}</p>
+                  <p className="text-lg font-bold text-slate-900">{influencer.averageViews}</p>
                 </div>
               )}
 
               {influencer.estimatedPrice && (
-                <div className="p-3 rounded-lg border border-gray-100 bg-gray-50/30">
+                <div className="p-3 rounded-lg border border-gray-200 bg-white">
                   <div className="flex items-center justify-between mb-1">
                     <p className="text-xs text-gray-600">Preço Est.</p>
-                    <DollarSign className="h-3 w-3 text-green-500" />
+                    <DollarSign className="h-3 w-3 text-slate-700" />
                   </div>
-                  <p className="text-lg font-bold text-green-600">€{influencer.estimatedPrice}</p>
+                  <p className="text-lg font-bold text-slate-900">€{influencer.estimatedPrice}</p>
                 </div>
               )}
             </div>
@@ -391,7 +391,7 @@ export default function InfluencerDetailPage() {
                   {influencer.tags.map((tag: string) => (
                     <span
                       key={tag}
-                      className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700"
+                      className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700"
                     >
                       #{tag}
                     </span>
@@ -402,11 +402,11 @@ export default function InfluencerDetailPage() {
 
             {/* Discovery Info */}
             {(influencer.discoveryMethod || influencer.discoveryDate) && (
-              <div className="p-3 rounded-lg border border-gray-100 bg-gray-50/30">
+              <div className="p-3 rounded-lg border border-gray-200 bg-white">
                 <h4 className="text-xs font-semibold text-gray-600 mb-2 uppercase">Descoberta</h4>
                 <div className="space-y-1 text-xs">
                   {influencer.discoveryMethod && (
-                    <div className="text-gray-700">{influencer.discoveryMethod}</div>
+                    <div className="text-slate-700">{influencer.discoveryMethod}</div>
                   )}
                   {influencer.discoveryDate && (
                     <div className="text-gray-600">
@@ -425,17 +425,17 @@ export default function InfluencerDetailPage() {
           icon={Video}
           defaultOpen={false}
         >
-          <div className="pt-6">
+          <div className="pt-4">
             {influencer.videos && influencer.videos.length > 0 ? (
               <div className="space-y-2">
                 {influencer.videos.map((video: any) => (
-                  <div key={video.id} className="p-3 rounded-lg border border-gray-100 hover:bg-gray-50/50 transition">
+                  <div key={video.id} className="p-3 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${
-                            video.platform === 'TIKTOK' ? 'bg-black text-white' : 
-                            video.platform === 'INSTAGRAM' ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white' : 
+                            video.platform === 'TIKTOK' ? 'bg-slate-900 text-white' : 
+                            video.platform === 'INSTAGRAM' ? 'bg-slate-700 text-white' : 
                             'bg-gray-200 text-gray-700'
                           }`}>
                             {video.platform}
@@ -444,7 +444,7 @@ export default function InfluencerDetailPage() {
                             {new Date(video.publishedAt).toLocaleDateString('pt-PT')}
                           </span>
                         </div>
-                        <a href={video.url} target="_blank" rel="noopener noreferrer" className="font-medium text-gray-900 hover:text-purple-600 text-sm truncate block mb-1">
+                        <a href={video.url} target="_blank" rel="noopener noreferrer" className="font-medium text-slate-900 hover:text-slate-700 text-sm truncate block mb-1">
                           {video.title || 'Sem título'}
                         </a>
                         <div className="flex items-center gap-3 text-xs text-gray-500">
@@ -459,7 +459,7 @@ export default function InfluencerDetailPage() {
                       <div className="text-right shrink-0">
                         {video.cost ? (
                           <div>
-                            <p className="text-sm font-bold text-gray-900">€{video.cost}</p>
+                            <p className="text-sm font-bold text-slate-900">€{video.cost}</p>
                             <p className="text-[10px] text-gray-500">Custo</p>
                           </div>
                         ) : (
@@ -481,30 +481,30 @@ export default function InfluencerDetailPage() {
 
         {/* 💰 Cupão Associado */}
         <CollapsibleSection title="Cupão Associado" icon={DollarSign} defaultOpen={true}>
-          <div className="pt-6 space-y-6">
+          <div className="pt-4 space-y-4">
             {/* Current Coupon Display */}
             {influencer.coupon && (
-              <div className="p-4 rounded-lg border border-purple-100 bg-purple-50/50">
-                <h4 className="text-xs text-gray-600 font-semibold mb-3">CUPOM ATUAL</h4>
-                <div className="grid grid-cols-3 gap-4">
+              <div className="p-3 rounded-lg border border-gray-200 bg-gray-50">
+                <h4 className="text-xs text-gray-600 font-semibold mb-2">CUPOM ATUAL</h4>
+                <div className="grid grid-cols-3 gap-3">
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Código</p>
-                    <p className="text-sm font-mono font-bold text-gray-900">{influencer.coupon.code}</p>
+                    <p className="text-sm font-mono font-bold text-slate-900">{influencer.coupon.code}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Desconto</p>
-                    <p className="text-lg font-bold text-purple-600">{influencer.coupon.discountValue}%</p>
+                    <p className="text-lg font-bold text-slate-900">{influencer.coupon.discountValue}%</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Status</p>
-                    <p className="text-sm font-semibold text-green-600">✅ Ativo</p>
+                    <p className="text-sm font-semibold text-slate-700">✓ Ativo</p>
                   </div>
                 </div>
               </div>
             )}
 
             {/* Create/Edit Coupon Form */}
-            <form onSubmit={handleCreateCoupon} className="space-y-4 p-4 rounded-lg border border-gray-100 bg-gray-50/50">
+            <form onSubmit={handleCreateCoupon} className="space-y-3 p-3 rounded-lg border border-gray-200 bg-white">
               <h4 className="text-xs text-gray-600 font-semibold">ATRIBUIR CUPOM</h4>
               
               <div>
@@ -515,11 +515,11 @@ export default function InfluencerDetailPage() {
                   value={couponCode}
                   onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                   disabled={creatingCoupon}
-                  className="w-full mt-1 px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
+                  className="w-full mt-1 px-3 py-2 text-sm rounded border border-gray-200 bg-white text-slate-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 disabled:opacity-50"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="text-xs font-semibold text-gray-600">Desconto (%)</label>
                   <input
@@ -529,7 +529,7 @@ export default function InfluencerDetailPage() {
                     value={couponDiscount}
                     onChange={(e) => setCouponDiscount(e.target.value)}
                     disabled={creatingCoupon}
-                    className="w-full mt-1 px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
+                    className="w-full mt-1 px-3 py-2 text-sm rounded border border-gray-200 bg-white text-slate-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 disabled:opacity-50"
                   />
                 </div>
                 <div>
@@ -541,7 +541,7 @@ export default function InfluencerDetailPage() {
                     value={couponCommission}
                     onChange={(e) => setCouponCommission(e.target.value)}
                     disabled={creatingCoupon}
-                    className="w-full mt-1 px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
+                    className="w-full mt-1 px-3 py-2 text-sm rounded border border-gray-200 bg-white text-slate-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 disabled:opacity-50"
                   />
                 </div>
               </div>
@@ -549,7 +549,7 @@ export default function InfluencerDetailPage() {
               <button
                 type="submit"
                 disabled={creatingCoupon}
-                className="w-full px-3 py-2 rounded-lg bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                className="w-full px-3 py-2 rounded bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
               >
                 {creatingCoupon ? '⏳ Criando...' : '✅ Atribuir Cupom'}
               </button>
@@ -559,11 +559,10 @@ export default function InfluencerDetailPage() {
 
         {/* 💵 Histórico de Comissões */}
         <CollapsibleSection title="Histórico de Comissões" icon={Receipt} defaultOpen={false}>
-          <div className="pt-6">
-            <div className="text-center py-8 text-gray-400">
-              <Receipt className="h-12 w-12 mx-auto mb-3 opacity-50" />
+          <div className="pt-4">
+            <div className="text-center py-6 text-gray-400">
+              <Receipt className="h-8 w-8 mx-auto mb-2 opacity-40" />
               <p className="text-sm">Nenhuma comissão registada ainda</p>
-              <p className="text-xs mt-1">As comissões aparecerão aqui quando houver vendas com o cupom</p>
             </div>
           </div>
         </CollapsibleSection>
