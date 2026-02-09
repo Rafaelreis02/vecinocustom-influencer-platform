@@ -191,6 +191,34 @@ export default function MessagesPage() {
     }
   }
 
+  async function handleQuickToggleRead(e: React.MouseEvent, emailId: string, isRead: boolean) {
+    e.stopPropagation();
+    try {
+      await fetch(`/api/emails/${emailId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isRead: !isRead }),
+      });
+      fetchEmails();
+    } catch (error: any) {
+      addToast('Erro: ' + error.message, 'error');
+    }
+  }
+
+  async function handleQuickToggleFlag(e: React.MouseEvent, emailId: string, isFlagged: boolean) {
+    e.stopPropagation();
+    try {
+      await fetch(`/api/emails/${emailId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isFlagged: !isFlagged }),
+      });
+      fetchEmails();
+    } catch (error: any) {
+      addToast('Erro: ' + error.message, 'error');
+    }
+  }
+
   async function handleSyncNow() {
     try {
       setSyncing(true);
@@ -343,21 +371,49 @@ export default function MessagesPage() {
           ) : (
             <div className="divide-y divide-gray-200">
               {filteredEmails.map((email) => (
-                <button
+                <div
                   key={email.id}
                   onClick={() => handleEmailClick(email)}
-                  className={`w-full text-left p-3 md:p-4 hover:bg-gray-50 transition border-l-4 ${
+                  className={`w-full text-left p-3 md:p-4 hover:bg-gray-50 transition border-l-4 cursor-pointer group ${
                     selectedEmail?.id === email.id
                       ? 'bg-blue-50 border-blue-500'
                       : 'border-transparent'
                   } ${!email.isRead ? 'bg-blue-50/30 font-semibold' : ''}`}
                 >
                   <div className="flex items-start justify-between mb-1">
-                    <span className="text-xs md:text-sm font-medium text-gray-900 truncate">
+                    <span className="text-xs md:text-sm font-medium text-gray-900 truncate flex-1">
                       {email.from.split('@')[0]}
                     </span>
-                    <div className="flex gap-1 flex-shrink-0">
-                      {email.isFlagged && <Flag className="h-3 w-3 md:h-4 md:w-4 text-yellow-500 fill-yellow-500" />}
+                    <div className="flex gap-1 flex-shrink-0 items-center">
+                      {/* Quick Action: Toggle Read */}
+                      <button
+                        onClick={(e) => handleQuickToggleRead(e, email.id, email.isRead)}
+                        className="p-1 hover:bg-gray-200 rounded transition opacity-0 group-hover:opacity-100 md:opacity-100"
+                        title={email.isRead ? 'Marcar como por ler' : 'Marcar como lido'}
+                      >
+                        {email.isRead ? (
+                          <EyeOff className="h-3 w-3 md:h-4 md:w-4 text-gray-600" />
+                        ) : (
+                          <Eye className="h-3 w-3 md:h-4 md:w-4 text-blue-600" />
+                        )}
+                      </button>
+
+                      {/* Quick Action: Toggle Flag */}
+                      <button
+                        onClick={(e) => handleQuickToggleFlag(e, email.id, email.isFlagged)}
+                        className="p-1 hover:bg-gray-200 rounded transition opacity-0 group-hover:opacity-100 md:opacity-100"
+                        title="Marcar com flag"
+                      >
+                        <Flag
+                          className={`h-3 w-3 md:h-4 md:w-4 ${
+                            email.isFlagged
+                              ? 'text-yellow-500 fill-yellow-500'
+                              : 'text-gray-400'
+                          }`}
+                        />
+                      </button>
+
+                      {/* Status Icons */}
                       {email.influencer ? (
                         <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-600" />
                       ) : (
@@ -369,7 +425,7 @@ export default function MessagesPage() {
                   <p className="text-xs text-gray-500">
                     {new Date(email.receivedAt).toLocaleDateString('pt-PT')}
                   </p>
-                </button>
+                </div>
               ))}
             </div>
           )}
@@ -515,7 +571,7 @@ export default function MessagesPage() {
           </div>
         </div>
       ) : (
-        <div className="flex-1 flex items-center justify-center">
+        <div className="hidden md:flex flex-1 items-center justify-center">
           <div className="text-center text-gray-500">
             <Mail className="h-16 w-16 mx-auto mb-4 opacity-50" />
             <p className="text-lg">Seleciona um email para ver detalhes</p>
