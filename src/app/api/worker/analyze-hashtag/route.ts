@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { scrapeHashtagVideos } from '@/lib/apify';
+import { scrapeHashtagVideos } from '@/lib/apify-fetch';
 
 // POST /api/worker/analyze-hashtag - Extrai vídeos de hashtag com Apify
 export async function POST(request: Request) {

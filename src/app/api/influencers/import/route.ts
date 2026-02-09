@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { parseProfile } from '@/lib/apify';
+import { parseProfile } from '@/lib/apify-fetch';
 import Anthropic from '@anthropic-ai/sdk';
 
 const anthropic = new Anthropic({
