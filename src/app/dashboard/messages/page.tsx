@@ -54,6 +54,7 @@ export default function MessagesPage() {
   const [replyText, setReplyText] = useState('');
   const [sendingReply, setSendingReply] = useState(false);
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const [showSidebar, setShowSidebar] = useState(false);
 
   useEffect(() => {
     fetchEmails();
@@ -228,15 +229,25 @@ export default function MessagesPage() {
   const flaggedCount = emails.filter((e) => e.isFlagged).length;
 
   return (
-    <div className="flex h-screen bg-white">
+    <div className="flex h-screen bg-white overflow-hidden">
+      {/* Sidebar - Mobile Drawer */}
+      {showSidebar && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setShowSidebar(false)}
+        />
+      )}
+      
       {/* Sidebar */}
-      <div className="w-64 border-r border-gray-200 bg-white flex flex-col">
+      <div className={`fixed md:static inset-y-0 left-0 z-40 w-64 border-r border-gray-200 bg-white flex flex-col transition-transform duration-300 ${
+        showSidebar ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+      }`}>
         {/* Header */}
         <div className="p-4 border-b border-gray-200">
           <button
             onClick={handleSyncNow}
             disabled={syncing}
-            className="w-full flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition"
+            className="w-full flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition text-sm"
           >
             <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
             {syncing ? 'Sincronizando...' : 'Sincronizar'}
@@ -287,15 +298,30 @@ export default function MessagesPage() {
       </div>
 
       {/* Email List */}
-      <div className="w-96 border-r border-gray-200 flex flex-col bg-white">
+      <div className={`w-full md:w-96 border-r border-gray-200 flex flex-col bg-white transition-all duration-300 ${
+        selectedEmail ? 'hidden md:flex' : 'flex'
+      }`}>
+        {/* Header with Menu */}
+        <div className="p-4 border-b border-gray-200 flex items-center gap-2 md:hidden">
+          <button
+            onClick={() => setShowSidebar(true)}
+            className="p-2 hover:bg-gray-100 rounded-lg transition"
+          >
+            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <h2 className="text-lg font-semibold flex-1">Mensagens</h2>
+        </div>
+
         {/* Search */}
         <div className="p-4 border-b border-gray-200">
           <div className="relative">
             <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Pesquisar assunto, remetente, texto..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Pesquisar..."
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -320,26 +346,26 @@ export default function MessagesPage() {
                 <button
                   key={email.id}
                   onClick={() => handleEmailClick(email)}
-                  className={`w-full text-left p-4 hover:bg-gray-50 transition border-l-4 ${
+                  className={`w-full text-left p-3 md:p-4 hover:bg-gray-50 transition border-l-4 ${
                     selectedEmail?.id === email.id
                       ? 'bg-blue-50 border-blue-500'
                       : 'border-transparent'
                   } ${!email.isRead ? 'bg-blue-50/30 font-semibold' : ''}`}
                 >
                   <div className="flex items-start justify-between mb-1">
-                    <span className="text-sm font-medium text-gray-900 truncate">
-                      {email.from}
+                    <span className="text-xs md:text-sm font-medium text-gray-900 truncate">
+                      {email.from.split('@')[0]}
                     </span>
                     <div className="flex gap-1 flex-shrink-0">
-                      {email.isFlagged && <Flag className="h-4 w-4 text-yellow-500 fill-yellow-500" />}
+                      {email.isFlagged && <Flag className="h-3 w-3 md:h-4 md:w-4 text-yellow-500 fill-yellow-500" />}
                       {email.influencer ? (
-                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-600" />
                       ) : (
-                        <AlertCircle className="h-4 w-4 text-amber-600" />
+                        <AlertCircle className="h-3 w-3 md:h-4 md:w-4 text-amber-600" />
                       )}
                     </div>
                   </div>
-                  <p className="text-sm text-gray-700 truncate mb-1">{email.subject}</p>
+                  <p className="text-xs md:text-sm text-gray-700 truncate mb-1 line-clamp-1">{email.subject}</p>
                   <p className="text-xs text-gray-500">
                     {new Date(email.receivedAt).toLocaleDateString('pt-PT')}
                   </p>
@@ -352,22 +378,22 @@ export default function MessagesPage() {
 
       {/* Email Detail */}
       {selectedEmail ? (
-        <div className="flex-1 flex flex-col bg-white">
+        <div className="fixed inset-0 md:static md:flex-1 md:flex md:flex-col bg-white z-30 overflow-y-auto">
           {/* Header */}
-          <div className="p-6 border-b border-gray-200">
+          <div className="p-4 md:p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
             <button
               onClick={() => setSelectedEmail(null)}
-              className="text-blue-600 hover:text-blue-700 text-sm mb-4"
+              className="text-blue-600 hover:text-blue-700 text-sm mb-4 flex items-center gap-1"
             >
               ← Voltar
             </button>
 
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">{selectedEmail.subject}</h2>
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 break-words">{selectedEmail.subject}</h2>
 
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <p className="text-sm font-medium text-gray-900">De: {selectedEmail.from}</p>
-                <p className="text-sm text-gray-500">
+            <div className="flex flex-col md:flex-row md:items-start md:justify-between mb-4 gap-4">
+              <div className="min-w-0">
+                <p className="text-xs md:text-sm font-medium text-gray-900 truncate">De: {selectedEmail.from}</p>
+                <p className="text-xs md:text-sm text-gray-500 truncate">
                   Para: {selectedEmail.to}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">
@@ -382,10 +408,10 @@ export default function MessagesPage() {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-2">
+              <div className="flex flex-wrap md:flex-nowrap gap-2">
                 <button
                   onClick={handleToggleRead}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition"
+                  className="p-2 hover:bg-gray-100 rounded-lg transition flex-shrink-0"
                   title={selectedEmail.isRead ? 'Marcar como por ler' : 'Marcar como lido'}
                 >
                   {selectedEmail.isRead ? (
@@ -396,7 +422,7 @@ export default function MessagesPage() {
                 </button>
                 <button
                   onClick={handleToggleFlag}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition"
+                  className="p-2 hover:bg-gray-100 rounded-lg transition flex-shrink-0"
                   title="Marcar com flag"
                 >
                   <Flag
@@ -409,14 +435,14 @@ export default function MessagesPage() {
                 </button>
                 <button
                   onClick={() => setShowReplyModal(true)}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition"
+                  className="p-2 hover:bg-gray-100 rounded-lg transition flex-shrink-0"
                   title="Responder"
                 >
                   <Reply className="h-5 w-5 text-gray-600" />
                 </button>
                 <button
                   onClick={handleDelete}
-                  className="p-2 hover:bg-red-100 rounded-lg transition"
+                  className="p-2 hover:bg-red-100 rounded-lg transition flex-shrink-0"
                   title="Eliminar"
                 >
                   <Trash2 className="h-5 w-5 text-red-600" />
@@ -427,13 +453,13 @@ export default function MessagesPage() {
 
           {/* Influencer Info or Auto-Detect */}
           {selectedEmail.influencer ? (
-            <div className="p-6 bg-green-50 border-b border-green-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-green-700 mb-1">✅ Ligado a Influenciador</p>
-                  <p className="text-lg font-bold text-gray-900">{selectedEmail.influencer.name}</p>
+            <div className="p-4 md:p-6 bg-green-50 border-b border-green-200">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-xs md:text-sm text-green-700 mb-1">✅ Ligado a Influenciador</p>
+                  <p className="text-base md:text-lg font-bold text-gray-900 truncate">{selectedEmail.influencer.name}</p>
                   {selectedEmail.influencer.fitScore && (
-                    <p className="text-sm text-gray-600 mt-1">
+                    <p className="text-xs md:text-sm text-gray-600 mt-1">
                       Fit Score: {selectedEmail.influencer.fitScore}/5
                     </p>
                   )}
@@ -442,20 +468,20 @@ export default function MessagesPage() {
                   onClick={() =>
                     window.location.href = `/dashboard/influencers/${selectedEmail.influencer?.id}`
                   }
-                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition"
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs md:text-sm font-medium transition flex-shrink-0 whitespace-nowrap"
                 >
                   Ver Perfil
                 </button>
               </div>
             </div>
           ) : (
-            <div className="p-6 bg-amber-50 border-b border-amber-200">
-              <p className="text-sm text-amber-700 mb-4">
+            <div className="p-4 md:p-6 bg-amber-50 border-b border-amber-200">
+              <p className="text-xs md:text-sm text-amber-700 mb-4">
                 ⚠️ Remetente não está registado como influenciador
               </p>
               <button
                 onClick={handleAutoDetect}
-                className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition"
+                className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition text-sm"
               >
                 🔍 Detectar/Adicionar Influenciador
               </button>
@@ -463,24 +489,24 @@ export default function MessagesPage() {
           )}
 
           {/* Email Body */}
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex-1 overflow-y-auto p-4 md:p-6">
             {selectedEmail.htmlBody ? (
               <div
-                className="prose max-w-none"
+                className="prose prose-sm max-w-none"
                 dangerouslySetInnerHTML={{ __html: selectedEmail.htmlBody }}
               />
             ) : (
-              <p className="text-gray-700 whitespace-pre-wrap">{selectedEmail.body}</p>
+              <p className="text-sm md:text-base text-gray-700 whitespace-pre-wrap">{selectedEmail.body}</p>
             )}
 
             {/* Attachments */}
             {selectedEmail.attachments && selectedEmail.attachments.length > 0 && (
               <div className="mt-6 pt-6 border-t border-gray-200">
-                <h3 className="font-semibold text-gray-900 mb-3">Anexos ({selectedEmail.attachments.length})</h3>
+                <h3 className="text-sm md:text-base font-semibold text-gray-900 mb-3">Anexos ({selectedEmail.attachments.length})</h3>
                 <ul className="space-y-2">
                   {selectedEmail.attachments.map((att, idx) => (
                     <li key={idx} className="flex items-center p-2 bg-gray-50 rounded border border-gray-200">
-                      <span className="text-sm text-gray-700">📎 {att.filename}</span>
+                      <span className="text-xs md:text-sm text-gray-700 truncate">📎 {att.filename}</span>
                     </li>
                   ))}
                 </ul>
@@ -499,18 +525,18 @@ export default function MessagesPage() {
 
       {/* Reply Modal */}
       {showReplyModal && selectedEmail && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end">
-          <div className="bg-white w-full h-96 rounded-t-2xl flex flex-col">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end md:items-center md:justify-center">
+          <div className="bg-white w-full md:w-2xl h-screen md:h-auto rounded-t-2xl md:rounded-2xl flex flex-col md:max-h-96">
             {/* Modal Header */}
-            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-              <h3 className="font-semibold text-gray-900">Responder a {selectedEmail.from}</h3>
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+              <h3 className="font-semibold text-gray-900 text-sm md:text-base truncate">Responder a {selectedEmail.from.split('@')[0]}</h3>
               <button
                 onClick={() => {
                   setShowReplyModal(false);
                   setReplyText('');
                   setAttachmentFile(null);
                 }}
-                className="p-2 hover:bg-gray-100 rounded-lg transition"
+                className="p-2 hover:bg-gray-100 rounded-lg transition flex-shrink-0"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -522,23 +548,21 @@ export default function MessagesPage() {
                 value={replyText}
                 onChange={(e) => setReplyText(e.target.value)}
                 placeholder="Escreve a tua resposta aqui..."
-                className="w-full h-full p-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                className="w-full h-full p-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm"
               />
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 border-t border-gray-200 flex items-center justify-between">
-              <div className="flex gap-2">
-                <label className="cursor-pointer flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition border border-gray-300">
-                  <Paperclip className="h-5 w-5" />
-                  {attachmentFile ? `1 anexo` : 'Anexo'}
-                  <input
-                    type="file"
-                    className="hidden"
-                    onChange={(e) => setAttachmentFile(e.target.files?.[0] || null)}
-                  />
-                </label>
-              </div>
+            <div className="p-4 border-t border-gray-200 flex flex-col md:flex-row gap-2 md:gap-4 md:items-center md:justify-between flex-shrink-0">
+              <label className="cursor-pointer flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition border border-gray-300 text-sm">
+                <Paperclip className="h-5 w-5 flex-shrink-0" />
+                {attachmentFile ? `1 anexo` : 'Anexo'}
+                <input
+                  type="file"
+                  className="hidden"
+                  onChange={(e) => setAttachmentFile(e.target.files?.[0] || null)}
+                />
+              </label>
 
               <div className="flex gap-2">
                 <button
@@ -547,14 +571,14 @@ export default function MessagesPage() {
                     setReplyText('');
                     setAttachmentFile(null);
                   }}
-                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition border border-gray-300"
+                  className="flex-1 md:flex-none px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition border border-gray-300 text-sm font-medium"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={handleSendReply}
                   disabled={sendingReply || !replyText.trim()}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition"
+                  className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition text-sm"
                 >
                   <Send className="h-4 w-4" />
                   {sendingReply ? 'Enviando...' : 'Enviar'}
