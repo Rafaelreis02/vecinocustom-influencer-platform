@@ -14,11 +14,9 @@ import {
   Eye,
   Heart,
   MessageCircle,
-  Share2,
   Edit,
   Trash2,
   ExternalLink,
-  Target,
   DollarSign,
   Sparkles,
   Loader2,
@@ -27,9 +25,52 @@ import {
   Tag,
   Calendar,
   Award,
-  Video
+  Video,
+  ChevronDown,
+  ChevronUp,
+  BarChart3,
+  Receipt
 } from 'lucide-react';
 import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog';
+
+// Collapsible Section Component
+function CollapsibleSection({ 
+  title, 
+  icon: Icon, 
+  children,
+  defaultOpen = true 
+}: { 
+  title: string; 
+  icon: any; 
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  return (
+    <div className="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between p-6 hover:bg-gray-50 transition"
+      >
+        <div className="flex items-center gap-3">
+          <Icon className="h-5 w-5 text-purple-600" />
+          <h3 className="text-lg font-bold text-gray-900">{title}</h3>
+        </div>
+        {isOpen ? (
+          <ChevronUp className="h-5 w-5 text-gray-400" />
+        ) : (
+          <ChevronDown className="h-5 w-5 text-gray-400" />
+        )}
+      </button>
+      {isOpen && (
+        <div className="px-6 pb-6 border-t border-gray-100">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function InfluencerDetailPage() {
   const params = useParams();
@@ -80,7 +121,7 @@ export default function InfluencerDetailPage() {
         router.push('/dashboard/influencers');
       } else {
         const data = await res.json();
-        alert(data.error || 'Erro ao apagar influencer');
+        addToast(data.error || 'Erro ao apagar influencer', 'error');
       }
     } catch (error) {
       console.error('Error deleting influencer:', error);
@@ -111,7 +152,6 @@ export default function InfluencerDetailPage() {
         throw new Error(data.error || 'Erro ao criar cupom');
       }
 
-      // Refresh influencer data
       fetchInfluencer();
       setCouponCode('');
       addToast(`✅ Cupom ${data.coupon.code} criado com sucesso!`, 'success');
@@ -291,332 +331,232 @@ export default function InfluencerDetailPage() {
         </div>
       </div>
 
-      {/* Key Metrics Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-        {influencer.totalLikes && (
-          <div className="rounded-xl bg-white p-3 sm:p-4 md:p-6 border border-gray-100 shadow-sm">
-            <div className="flex items-center justify-between mb-1 sm:mb-2">
-              <p className="text-xs sm:text-sm text-gray-600 truncate">Total Likes</p>
-              <Heart className="h-4 w-4 sm:h-5 sm:w-5 text-pink-500 shrink-0" />
-            </div>
-            <p className="text-xl sm:text-2xl font-bold text-gray-900">
-              {(Number(influencer.totalLikes) / 1000000).toFixed(1)}M
-            </p>
-          </div>
-        )}
-
-        {influencer.engagementRate !== null && influencer.engagementRate !== undefined && (
-          <div className="rounded-xl bg-white p-3 sm:p-4 md:p-6 border border-gray-100 shadow-sm">
-            <div className="flex items-center justify-between mb-1 sm:mb-2">
-              <p className="text-xs sm:text-sm text-gray-600 truncate">Engagement</p>
-              <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-purple-500 shrink-0" />
-            </div>
-            <p className="text-xl sm:text-2xl font-bold text-purple-600">{influencer.engagementRate}x</p>
-          </div>
-        )}
-
-        {influencer.averageViews && (
-          <div className="rounded-xl bg-white p-3 sm:p-4 md:p-6 border border-gray-100 shadow-sm">
-            <div className="flex items-center justify-between mb-1 sm:mb-2">
-              <p className="text-xs sm:text-sm text-gray-600 truncate">Avg. Views</p>
-              <Eye className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500 shrink-0" />
-            </div>
-            <p className="text-xl sm:text-2xl font-bold text-gray-900">{influencer.averageViews}</p>
-          </div>
-        )}
-
-        {influencer.contentStability && (
-          <div className="rounded-xl bg-white p-3 sm:p-4 md:p-6 border border-gray-100 shadow-sm">
-            <div className="flex items-center justify-between mb-1 sm:mb-2">
-              <p className="text-xs sm:text-sm text-gray-600 truncate">Estabilidade</p>
-              <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500 shrink-0" />
-            </div>
-            <p className={`text-lg sm:text-xl md:text-2xl font-bold ${
-              influencer.contentStability === 'HIGH' ? 'text-green-600' :
-              influencer.contentStability === 'MEDIUM' ? 'text-yellow-600' :
-              'text-red-600'
-            }`}>
-              {influencer.contentStability}
-            </p>
-          </div>
-        )}
-
-        {influencer.estimatedPrice && (
-          <div className="rounded-xl bg-white p-3 sm:p-4 md:p-6 border border-gray-100 shadow-sm">
-            <div className="flex items-center justify-between mb-1 sm:mb-2">
-              <p className="text-xs sm:text-sm text-gray-600 truncate">Preço Est.</p>
-              <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-green-500 shrink-0" />
-            </div>
-            <p className="text-xl sm:text-2xl font-bold text-green-600">€{influencer.estimatedPrice}</p>
-          </div>
-        )}
-      </div>
-
-      {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-full">
-        {/* Left Column */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Content Types */}
-          {influencer.contentTypes && influencer.contentTypes.length > 0 && (
-            <div className="rounded-2xl bg-white p-6 border border-gray-100 shadow-sm">
-              <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <Video className="h-5 w-5 text-purple-600" />
-                Tipos de Conteúdo
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {influencer.contentTypes.map((type: string) => (
-                  <span
-                    key={type}
-                    className="px-4 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 border border-purple-200"
-                  >
-                    {type}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Campaign History */}
-          {influencer.campaigns && influencer.campaigns.length > 0 && (
-            <div className="rounded-2xl bg-white p-6 border border-gray-100 shadow-sm">
-              <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <Target className="h-5 w-5 text-purple-600" />
-                Histórico de Campanhas
-              </h3>
-              <div className="space-y-2">
-                {influencer.campaigns.map((campInfluencer: any) => (
-                  <div
-                    key={campInfluencer.id}
-                    className="flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:border-purple-200 transition"
-                  >
-                    <div>
-                      <p className="font-semibold text-gray-900">{campInfluencer.campaign?.name || 'Campanha'}</p>
-                      {campInfluencer.agreedFee && (
-                        <p className="text-sm text-gray-500">Fee: €{campInfluencer.agreedFee}</p>
-                      )}
-                    </div>
-                    {campInfluencer.campaign?.status && (
-                      <span className={`text-xs px-3 py-1 rounded-full font-medium ${
-                        campInfluencer.campaign.status === 'ACTIVE' 
-                          ? 'bg-green-100 text-green-700' 
-                          : 'bg-gray-100 text-gray-600'
-                      }`}>
-                        {campInfluencer.campaign.status}
-                      </span>
-                    )}
+      {/* Collapsible Sections */}
+      <div className="space-y-6">
+        {/* 📊 Estatísticas Gerais */}
+        <CollapsibleSection title="Estatísticas Gerais" icon={BarChart3} defaultOpen={true}>
+          <div className="pt-6 space-y-6">
+            {/* Key Metrics Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+              {influencer.totalLikes && (
+                <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/50">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs text-gray-600">Total Likes</p>
+                    <Heart className="h-4 w-4 text-pink-500" />
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Videos History */}
-          {influencer.videos && influencer.videos.length > 0 && (
-            <div className="rounded-2xl bg-white p-6 border border-gray-100 shadow-sm">
-              <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <Video className="h-5 w-5 text-purple-600" />
-                Vídeos Publicados ({influencer.videos.length})
-              </h3>
-              <div className="space-y-3">
-                {influencer.videos.map((video: any) => (
-                  <div key={video.id} className="p-4 rounded-xl border border-gray-100 hover:border-purple-200 transition bg-gray-50/50">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${
-                            video.platform === 'TIKTOK' ? 'bg-black text-white' : 
-                            video.platform === 'INSTAGRAM' ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white' : 
-                            'bg-gray-200 text-gray-700'
-                          }`}>
-                            {video.platform}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            {new Date(video.publishedAt).toLocaleDateString('pt-PT')}
-                          </span>
-                        </div>
-                        <a href={video.url} target="_blank" rel="noopener noreferrer" className="font-medium text-gray-900 hover:text-purple-600 truncate block mb-1">
-                          {video.title || 'Sem título'}
-                        </a>
-                        <div className="flex items-center gap-4 text-xs text-gray-500">
-                          <span className="flex items-center gap-1">
-                            <Eye className="h-3 w-3" /> {(video.views || 0).toLocaleString()}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Heart className="h-3 w-3" /> {(video.likes || 0).toLocaleString()}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <MessageCircle className="h-3 w-3" /> {(video.comments || 0).toLocaleString()}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="text-right shrink-0">
-                        {video.cost ? (
-                          <>
-                            <p className="text-sm font-bold text-gray-900">€{video.cost}</p>
-                            <p className="text-[10px] text-gray-500 uppercase tracking-wide">Custo</p>
-                          </>
-                        ) : (
-                          <span className="text-xs text-gray-400 italic">Sem custo</span>
-                        )}
-                        <a href={video.url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center justify-center p-1.5 rounded-lg hover:bg-gray-200 text-gray-400 hover:text-gray-700 transition">
-                          <ExternalLink className="h-3 w-3" />
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Notes */}
-          {influencer.notes && (
-            <div className="rounded-2xl bg-white p-6 border border-gray-100 shadow-sm">
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Notas Internas</h3>
-              <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-line">
-                {influencer.notes}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Right Column - Info Cards */}
-        <div className="space-y-6">
-          {/* Tags */}
-          {influencer.tags && influencer.tags.length > 0 && (
-            <div className="rounded-2xl bg-white p-6 border border-gray-100 shadow-sm">
-              <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                <Tag className="h-5 w-5 text-purple-600" />
-                Tags
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {influencer.tags.map((tag: string) => (
-                  <span
-                    key={tag}
-                    className="px-3 py-1.5 rounded-full text-sm font-medium bg-purple-100 text-purple-700"
-                  >
-                    #{tag}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Discovery Info */}
-          {(influencer.discoveryMethod || influencer.discoveryDate) && (
-            <div className="rounded-2xl bg-white p-6 border border-gray-100 shadow-sm">
-              <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-purple-600" />
-                Descoberta
-              </h3>
-              <div className="space-y-2 text-sm">
-                {influencer.discoveryMethod && (
-                  <div>
-                    <span className="text-gray-600">Método:</span>
-                    <p className="font-medium text-gray-900 mt-1">{influencer.discoveryMethod}</p>
-                  </div>
-                )}
-                {influencer.discoveryDate && (
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <Calendar className="h-4 w-4" />
-                    {new Date(influencer.discoveryDate).toLocaleDateString('pt-PT')}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Business Info */}
-          <div className="rounded-2xl bg-white p-6 border border-gray-100 shadow-sm">
-            <h3 className="font-semibold text-gray-900 mb-3">Informação</h3>
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Total Followers</span>
-                <span className="font-medium text-gray-900">
-                  {((influencer.instagramFollowers || 0) + (influencer.tiktokFollowers || 0)) / 1000}K
-                </span>
-              </div>
-              {influencer.activeCoupons > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Cupões Ativos</span>
-                  <span className="font-medium text-purple-600">{influencer.activeCoupons}</span>
+                  <p className="text-xl font-bold text-gray-900">
+                    {(Number(influencer.totalLikes) / 1000000).toFixed(1)}M
+                  </p>
                 </div>
               )}
-              <div className="flex justify-between pt-3 border-t border-gray-100">
-                <span className="text-gray-600">Registado em</span>
-                <span className="font-medium text-gray-900">
-                  {new Date(influencer.createdAt).toLocaleDateString('pt-PT')}
-                </span>
+
+              {influencer.engagementRate !== null && influencer.engagementRate !== undefined && (
+                <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/50">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs text-gray-600">Engagement</p>
+                    <TrendingUp className="h-4 w-4 text-purple-500" />
+                  </div>
+                  <p className="text-xl font-bold text-purple-600">{influencer.engagementRate.toFixed(1)}%</p>
+                </div>
+              )}
+
+              {influencer.averageViews && (
+                <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/50">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs text-gray-600">Avg. Views</p>
+                    <Eye className="h-4 w-4 text-blue-500" />
+                  </div>
+                  <p className="text-xl font-bold text-gray-900">{influencer.averageViews}</p>
+                </div>
+              )}
+
+              {influencer.estimatedPrice && (
+                <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/50">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs text-gray-600">Preço Est.</p>
+                    <DollarSign className="h-4 w-4 text-green-500" />
+                  </div>
+                  <p className="text-xl font-bold text-green-600">€{influencer.estimatedPrice}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Tags */}
+            {influencer.tags && influencer.tags.length > 0 && (
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-3">Tags</h4>
+                <div className="flex flex-wrap gap-2">
+                  {influencer.tags.map((tag: string) => (
+                    <span
+                      key={tag}
+                      className="px-3 py-1.5 rounded-full text-sm font-medium bg-purple-100 text-purple-700"
+                    >
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
               </div>
+            )}
+
+            {/* Discovery Info */}
+            {(influencer.discoveryMethod || influencer.discoveryDate) && (
+              <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/50">
+                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-purple-600" />
+                  Descoberta
+                </h4>
+                <div className="space-y-2 text-sm">
+                  {influencer.discoveryMethod && (
+                    <div>
+                      <span className="text-gray-600">Método:</span>
+                      <p className="font-medium text-gray-900 mt-1">{influencer.discoveryMethod}</p>
+                    </div>
+                  )}
+                  {influencer.discoveryDate && (
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <Calendar className="h-4 w-4" />
+                      {new Date(influencer.discoveryDate).toLocaleDateString('pt-PT')}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </CollapsibleSection>
+
+        {/* 🎬 Histórico de Vídeos */}
+        {influencer.videos && influencer.videos.length > 0 && (
+          <CollapsibleSection 
+            title={`Histórico de Vídeos (${influencer.videos.length})`} 
+            icon={Video}
+            defaultOpen={false}
+          >
+            <div className="pt-6 space-y-3">
+              {influencer.videos.map((video: any) => (
+                <div key={video.id} className="p-4 rounded-xl border border-gray-100 hover:border-purple-200 transition bg-gray-50/50">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${
+                          video.platform === 'TIKTOK' ? 'bg-black text-white' : 
+                          video.platform === 'INSTAGRAM' ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white' : 
+                          'bg-gray-200 text-gray-700'
+                        }`}>
+                          {video.platform}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {new Date(video.publishedAt).toLocaleDateString('pt-PT')}
+                        </span>
+                      </div>
+                      <a href={video.url} target="_blank" rel="noopener noreferrer" className="font-medium text-gray-900 hover:text-purple-600 truncate block mb-1">
+                        {video.title || 'Sem título'}
+                      </a>
+                      <div className="flex items-center gap-4 text-xs text-gray-500">
+                        <span className="flex items-center gap-1">
+                          <Eye className="h-3 w-3" /> {(video.views || 0).toLocaleString()}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Heart className="h-3 w-3" /> {(video.likes || 0).toLocaleString()}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <MessageCircle className="h-3 w-3" /> {(video.comments || 0).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      {video.cost ? (
+                        <>
+                          <p className="text-sm font-bold text-gray-900">€{video.cost}</p>
+                          <p className="text-[10px] text-gray-500 uppercase tracking-wide">Custo</p>
+                        </>
+                      ) : (
+                        <span className="text-xs text-gray-400 italic">Sem custo</span>
+                      )}
+                      <a href={video.url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center justify-center p-1.5 rounded-lg hover:bg-gray-200 text-gray-400 hover:text-gray-700 transition">
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CollapsibleSection>
+        )}
+
+        {/* 💰 Cupão Associado */}
+        {(influencer.coupon || influencer.status === 'PRODUCT_SENT') && (
+          <CollapsibleSection title="Cupão Associado" icon={DollarSign} defaultOpen={true}>
+            <div className="pt-6">
+              {influencer.coupon ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide">Código</p>
+                      <p className="text-lg font-mono font-bold text-gray-900 mt-1">{influencer.coupon.code}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-gray-500 uppercase tracking-wide">Desconto</p>
+                      <p className="text-3xl font-bold text-purple-600 mt-1">{influencer.coupon.discountValue}%</p>
+                    </div>
+                  </div>
+                  
+                  <div className="pt-3 border-t border-gray-100 grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide">Comissão</p>
+                      <p className="font-semibold text-gray-900 mt-1">10%</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-gray-500 uppercase tracking-wide">Status</p>
+                      <p className="font-semibold text-green-600 mt-1">Ativo</p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleCreateCoupon} className="space-y-4">
+                  <div>
+                    <label className="text-sm text-gray-600">Código do Cupom</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: VECINO_JOAO_10"
+                      value={couponCode}
+                      onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                      disabled={creatingCoupon}
+                      className="w-full mt-2 px-4 py-2 rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
+                    />
+                  </div>
+                  
+                  <button
+                    type="submit"
+                    disabled={creatingCoupon}
+                    className="w-full px-4 py-2 rounded-lg bg-purple-600 text-white font-semibold hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  >
+                    {creatingCoupon ? '⏳ Criando...' : '✅ Criar Cupom'}
+                  </button>
+                </form>
+              )}
+            </div>
+          </CollapsibleSection>
+        )}
+
+        {/* 💵 Histórico de Comissões */}
+        <CollapsibleSection title="Histórico de Comissões" icon={Receipt} defaultOpen={false}>
+          <div className="pt-6">
+            <div className="text-center py-8 text-gray-400">
+              <Receipt className="h-12 w-12 mx-auto mb-3 opacity-50" />
+              <p className="text-sm">Nenhuma comissão registada ainda</p>
+              <p className="text-xs mt-1">As comissões aparecerão aqui quando houver vendas com o cupom</p>
             </div>
           </div>
+        </CollapsibleSection>
 
-          {/* Coupon Card - Always show if coupon exists */}
-          {influencer.coupon && (
-            <div className="rounded-2xl bg-white p-6 border border-gray-100 shadow-sm">
-              <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <DollarSign className="h-5 w-5 text-purple-600" />
-                Cupom
-              </h3>
-              
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wide">Código</p>
-                    <p className="text-lg font-mono font-bold text-gray-900 mt-1">{influencer.coupon.code}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-gray-500 uppercase tracking-wide">Desconto</p>
-                    <p className="text-3xl font-bold text-purple-600 mt-1">{influencer.coupon.discountValue}%</p>
-                  </div>
-                </div>
-                
-                <div className="pt-3 border-t border-gray-100 grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wide">Comissão</p>
-                    <p className="font-semibold text-gray-900 mt-1">10%</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-gray-500 uppercase tracking-wide">Status</p>
-                    <p className="font-semibold text-green-600 mt-1">Ativo</p>
-                  </div>
-                </div>
-              </div>
+        {/* 📝 Notas */}
+        {influencer.notes && (
+          <CollapsibleSection title="Notas Internas" icon={Sparkles} defaultOpen={false}>
+            <div className="pt-6 prose prose-sm max-w-none text-gray-700 whitespace-pre-line">
+              {influencer.notes}
             </div>
-          )}
-
-          {/* Create Coupon Form - Only show when status is PRODUCT_SENT and no coupon */}
-          {influencer.status === 'PRODUCT_SENT' && !influencer.coupon && (
-            <div className="rounded-2xl bg-white p-6 border border-gray-100 shadow-sm">
-              <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <DollarSign className="h-5 w-5 text-purple-600" />
-                Criar Cupom
-              </h3>
-              
-              <form onSubmit={handleCreateCoupon} className="space-y-4">
-                <div>
-                  <label className="text-sm text-gray-600">Código do Cupom</label>
-                  <input
-                    type="text"
-                    placeholder="Ex: VECINO_JOAO_10"
-                    value={couponCode}
-                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                    disabled={creatingCoupon}
-                    className="w-full mt-2 px-4 py-2 rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
-                  />
-                </div>
-                
-                <button
-                  type="submit"
-                  disabled={creatingCoupon}
-                  className="w-full px-4 py-2 rounded-lg bg-purple-600 text-white font-semibold hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                >
-                  {creatingCoupon ? '⏳ Criando...' : '✅ Criar Cupom'}
-                </button>
-              </form>
-            </div>
-          )}
-        </div>
+          </CollapsibleSection>
+        )}
       </div>
 
       {/* Confirm Dialog */}
