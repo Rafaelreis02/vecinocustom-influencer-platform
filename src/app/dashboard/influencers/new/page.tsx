@@ -73,31 +73,64 @@ export default function NewInfluencerPage() {
     setImporting(true);
 
     try {
-      // Cria registo pendente para o Agente processar
-      const res = await fetch('/api/influencers', {
+      // Step 1: Analyze profile immediately via Apify + Sonnet
+      console.log(`[IMPORT] Analyzing @${importHandle} (${importPlatform})...`);
+      const analyzeRes = await fetch('/api/worker/analyze-influencer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          name: importHandle, // Nome temporário
-          tiktokHandle: importPlatform === 'tiktok' ? importHandle : '',
-          instagramHandle: importPlatform === 'instagram' ? importHandle : '',
-          status: 'IMPORT_PENDING',
-          notes: 'Aguardando processamento automático pelo Agente...'
+        body: JSON.stringify({
+          handle: importHandle,
+          platform: importPlatform.toUpperCase(),
         }),
       });
 
-      if (res.ok) {
+      if (!analyzeRes.ok) {
+        const error = await analyzeRes.json();
+        addToast(error.error || 'Erro ao analisar perfil.', 'error');
+        setImporting(false);
+        return;
+      }
+
+      const analysisData = await analyzeRes.json();
+      console.log(`[IMPORT] Analysis complete:`, analysisData);
+
+      // Step 2: Create influencer with analyzed data
+      const createRes = await fetch('/api/influencers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: importHandle,
+          tiktokHandle: importPlatform === 'tiktok' ? importHandle : '',
+          instagramHandle: importPlatform === 'instagram' ? importHandle : '',
+          tiktokFollowers: importPlatform === 'tiktok' ? analysisData.followers : undefined,
+          instagramFollowers: importPlatform === 'instagram' ? analysisData.followers : undefined,
+          engagementRate: analysisData.engagement,
+          totalLikes: analysisData.likes,
+          fitScore: analysisData.fitScore,
+          tier: analysisData.tier,
+          niche: analysisData.niche,
+          estimatedPrice: analysisData.estimatedPrice,
+          status: 'suggestion',
+          notes: `✅ Análise automática realizada:\n\nFit: ${analysisData.fitScore}/5\nNível: ${analysisData.tier}\nNiche: ${analysisData.niche}\n\nPontos Fortes: ${analysisData.strengths?.join(', ') || 'N/A'}\n\nOportunidades: ${analysisData.opportunities?.join(', ') || 'N/A'}`,
+          country: analysisData.country || '',
+          language: 'PT',
+          primaryPlatform: importPlatform.toUpperCase(),
+        }),
+      });
+
+      if (createRes.ok) {
+        addToast(`✅ ${importHandle} analisado e importado com sucesso!`, 'success');
         setShowSuccessDialog(true);
-        // Redirect after a short delay so user can read the dialog
         setTimeout(() => {
           router.push('/dashboard/influencers');
         }, 2000);
       } else {
-        addToast('Erro ao agendar importação.', 'error');
+        const error = await createRes.json();
+        addToast(error.error || 'Erro ao criar influencer.', 'error');
       }
     } catch (error) {
       console.error('Import error:', error);
-      addToast('Erro ao agendar importação.', 'error');
+      addToast('Erro ao analisar perfil.', 'error');
     } finally {
       setImporting(false);
     }
