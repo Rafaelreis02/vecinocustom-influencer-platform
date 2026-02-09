@@ -70,7 +70,7 @@ async function scrapeTikTokProfile(handle: string): Promise<ParsedProfile> {
   const cleanHandle = handle.replace('@', '');
   
   const run = await client.actor('GdWCkxBtKWOsKjdch').call({
-    profiles: [`https://www.tiktok.com/@${cleanHandle}`],
+    usernames: [cleanHandle],
     resultsPerPage: 100,
   });
 
