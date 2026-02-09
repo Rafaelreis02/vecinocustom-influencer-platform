@@ -59,10 +59,6 @@ export default function MessagesPage() {
   const [showProfilePreview, setShowProfilePreview] = useState(false);
   const [fullInfluencer, setFullInfluencer] = useState<any>(null);
   const [loadingInfluencer, setLoadingInfluencer] = useState(false);
-  const [showAddInfluencerModal, setShowAddInfluencerModal] = useState(false);
-  const [influencerUsername, setInfluencerUsername] = useState('');
-  const [influencerPlatform, setInfluencerPlatform] = useState<'TikTok' | 'Instagram'>('TikTok');
-  const [addingInfluencer, setAddingInfluencer] = useState(false);
 
   useEffect(() => {
     fetchEmails();
@@ -273,70 +269,6 @@ export default function MessagesPage() {
       addToast('Erro ao sincronizar: ' + error.message, 'error');
     } finally {
       setSyncing(false);
-    }
-  }
-
-
-  async function handleAddInfluencerWithUsername() {
-    if (!selectedEmail || !influencerUsername.trim()) {
-      addToast('❌ Insere o @ do influenciador', 'error');
-      return;
-    }
-
-    try {
-      setAddingInfluencer(true);
-
-      // Remove @ if user included it
-      const cleanUsername = influencerUsername.replace(/^@/, '');
-
-      // Create influencer with IMPORT_PENDING status
-      const createRes = await fetch('/api/influencers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: cleanUsername,
-          tiktokHandle: influencerPlatform === 'TikTok' ? cleanUsername : null,
-          instagramHandle: influencerPlatform === 'Instagram' ? cleanUsername : null,
-          platform: influencerPlatform,
-          status: 'IMPORT_PENDING',
-          email: selectedEmail.from,
-        }),
-      });
-
-      if (!createRes.ok) {
-        const error = await createRes.json();
-        throw new Error(error.error || 'Failed to create influencer');
-      }
-
-      const newInfluencer = await createRes.json();
-
-      // Link email to influencer
-      await fetch(`/api/emails/${selectedEmail.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ influencerId: newInfluencer.id }),
-      });
-
-      addToast(`✅ Influenciador @${cleanUsername} adicionado! A analisar...`, 'success');
-
-      // Close modal and refresh
-      setShowAddInfluencerModal(false);
-      setInfluencerUsername('');
-      setInfluencerPlatform('TikTok');
-      setShowAddInfluencerModal(true);
-      fetchEmails();
-      
-      // Refresh the email detail to show updated influencer link
-      const emailRes = await fetch(`/api/emails/${selectedEmail.id}`);
-      if (emailRes.ok) {
-        const updatedEmail = await emailRes.json();
-        setSelectedEmail(updatedEmail);
-      }
-
-    } catch (error: any) {
-      addToast('❌ Erro ao adicionar influenciador: ' + error.message, 'error');
-    } finally {
-      setAddingInfluencer(false);
     }
   }
 
@@ -886,7 +818,7 @@ export default function MessagesPage() {
                   <p className="text-sm text-amber-700 font-semibold mb-3">⚠️ Não Registado</p>
                   <button
                     onClick={() => {
-                      setShowAddInfluencerModal(true);
+                      setShowProfilePreview(false);
                       handleAutoDetect();
                     }}
                     className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition"
@@ -965,122 +897,6 @@ export default function MessagesPage() {
           </div>
         </div>
       )}
-
-      {/* Add Influencer Modal */}
-      {showAddInfluencerModal && selectedEmail && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md">
-            {/* Header */}
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-xl font-bold text-gray-900">Adicionar Influenciador</h3>
-                <button
-                  onClick={() => {
-                    setShowAddInfluencerModal(false);
-                    setInfluencerUsername('');
-                    setInfluencerPlatform('TikTok');
-                  }}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-              <p className="text-sm text-gray-600">
-                Insere o @ do influenciador para analisar e adicionar automaticamente
-              </p>
-            </div>
-
-            {/* Body */}
-            <div className="p-6 space-y-4">
-              {/* Platform Selector */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Plataforma
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={() => setInfluencerPlatform('TikTok')}
-                    className={`px-4 py-3 rounded-lg border-2 font-medium transition ${
-                      influencerPlatform === 'TikTok'
-                        ? 'border-blue-600 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    TikTok
-                  </button>
-                  <button
-                    onClick={() => setInfluencerPlatform('Instagram')}
-                    className={`px-4 py-3 rounded-lg border-2 font-medium transition ${
-                      influencerPlatform === 'Instagram'
-                        ? 'border-blue-600 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    Instagram
-                  </button>
-                </div>
-              </div>
-
-              {/* Username Input */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Username (@)
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-3 text-gray-500 font-medium">@</span>
-                  <input
-                    type="text"
-                    value={influencerUsername}
-                    onChange={(e) => setInfluencerUsername(e.target.value)}
-                    placeholder="username"
-                    className="w-full pl-8 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && influencerUsername.trim()) {
-                        handleAddInfluencerWithUsername();
-                      }
-                    }}
-                  />
-                </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  Exemplo: {influencerPlatform === 'TikTok' ? 'username_tiktok' : 'username_instagram'}
-                </p>
-              </div>
-
-              {/* Info Box */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-xs text-blue-700 font-medium mb-1">
-                  🤖 Análise Automática
-                </p>
-                <p className="text-xs text-blue-600">
-                  O sistema vai buscar o perfil do influenciador, analisar métricas e calcular fit score automaticamente.
-                </p>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="p-6 border-t border-gray-200 flex gap-3">
-              <button
-                onClick={() => {
-                  setShowAddInfluencerModal(false);
-                  setInfluencerUsername('');
-                  setInfluencerPlatform('TikTok');
-                }}
-                className="flex-1 px-4 py-2.5 text-gray-700 hover:bg-gray-100 rounded-lg transition border border-gray-300 text-sm font-medium"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleAddInfluencerWithUsername}
-                disabled={addingInfluencer || !influencerUsername.trim()}
-                className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition text-sm"
-              >
-                {addingInfluencer ? 'A adicionar...' : 'Adicionar'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
     </div>
   );
 }
