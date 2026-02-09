@@ -12,8 +12,10 @@ import { getAuthClient, sendEmail } from '@/lib/gmail';
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const { params } = context;
+  const { id } = await params;
   try {
     const { text } = await request.json();
 
@@ -26,7 +28,7 @@ export async function POST(
 
     // Get email details
     const email = await prisma.email.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!email) {
