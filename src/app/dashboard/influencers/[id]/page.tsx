@@ -1,5 +1,6 @@
 'use client';
 import { useGlobalToast } from '@/contexts/ToastContext';
+import { StatusDropdown } from '@/components/StatusDropdown';
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -104,18 +105,6 @@ export default function InfluencerDetailPage() {
     );
   }
 
-  const statusLabels: any = {
-    working: 'A Trabalhar',
-    negotiating: 'Em Negociação',
-    suggestion: 'Sugestão',
-  };
-
-  const statusColors: any = {
-    working: 'bg-green-500/90',
-    negotiating: 'bg-yellow-500/90',
-    suggestion: 'bg-blue-500/90',
-  };
-
   return (
     <div className="space-y-6 animate-fade-in max-w-full overflow-x-hidden">
       {/* Back Button */}
@@ -150,10 +139,14 @@ export default function InfluencerDetailPage() {
                     {influencer.tier}
                   </span>
                 )}
-                <span className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-semibold ${statusColors[influencer.status] || 'bg-gray-500/90'} flex items-center gap-1.5 whitespace-nowrap`}>
-                  <span className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-white animate-pulse"></span>
-                  {statusLabels[influencer.status] || influencer.status}
-                </span>
+                <div className="flex items-center">
+                  <StatusDropdown
+                    influencerId={influencer.id}
+                    currentStatus={influencer.status}
+                    onStatusChange={fetchInfluencer}
+                    size="sm"
+                  />
+                </div>
                 {influencer.primaryPlatform && (
                   <span className="px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-semibold bg-white/20 backdrop-blur-xl border border-white/40 whitespace-nowrap">
                     📱 {influencer.primaryPlatform}
