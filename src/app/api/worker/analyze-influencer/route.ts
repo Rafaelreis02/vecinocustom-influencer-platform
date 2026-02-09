@@ -15,7 +15,7 @@
  * 3. Returns enriched profile data
  */
 
-import { parseProfile } from '@/lib/apify';
+import { parseProfile } from '@/lib/apify-direct';
 import { Anthropic } from '@anthropic-ai/sdk';
 
 const anthropic = new Anthropic({

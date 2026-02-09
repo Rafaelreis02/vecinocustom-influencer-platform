@@ -1,9 +1,9 @@
-import { ApifyClient } from 'apify-client';
+// Get token (trim to remove any whitespace)
+const APIFY_TOKEN = process.env.APIFY_TOKEN?.trim();
 
-// Initialize Apify client
-const client = new ApifyClient({
-  token: process.env.APIFY_TOKEN,
-});
+if (!APIFY_TOKEN) {
+  throw new Error('APIFY_TOKEN not configured');
+}
 
 // ============================================
 // TYPES
