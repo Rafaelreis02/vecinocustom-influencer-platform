@@ -61,6 +61,25 @@ async function runActorAndWait(actorId: string, input: any): Promise<any[]> {
 async function scrapeTikTokProfile(handle: string): Promise<ParsedProfile> {
   const cleanHandle = handle.replace('@', '');
   
+  // Try to get real profile data (followers, bio, etc.) from Profile Actor
+  let profileData: any = null;
+  try {
+    const profileResults = await runActorAndWait('iH5tKMhpc9Z8vL3m4', {
+      profiles: [`https://www.tiktok.com/@${cleanHandle}`],
+    });
+    if (profileResults && profileResults.length > 0) {
+      profileData = profileResults[0];
+      console.log(`[APIFY] Profile data extracted:`, {
+        followers: profileData.followerCount,
+        verified: profileData.verified,
+        bio: profileData.description,
+      });
+    }
+  } catch (e) {
+    console.log(`[APIFY] Profile actor failed, will estimate from video stats`);
+  }
+
+  // Get videos for engagement/views metrics
   const videos = await runActorAndWait('GdWCkxBtKWOsKjdch', {
     profiles: [`https://www.tiktok.com/@${cleanHandle}`],
     resultsPerPage: 100,
@@ -80,7 +99,9 @@ async function scrapeTikTokProfile(handle: string): Promise<ParsedProfile> {
 
   const avgViews = videos.length > 0 ? totalViews / videos.length : 0;
   const engagementRate = totalViews > 0 ? (totalLikes / totalViews) * 100 : null;
-  const estimatedFollowers = Math.round(avgViews / 0.1) || 5000;
+  
+  // Use real followers if available from profile, else estimate from average views
+  const followers = profileData?.followerCount || Math.round(avgViews / 0.1) || 5000;
 
   let estimatedPrice = 150;
   if (avgViews < 5000) estimatedPrice = 50;
@@ -94,14 +115,14 @@ async function scrapeTikTokProfile(handle: string): Promise<ParsedProfile> {
   return {
     handle: cleanHandle,
     platform: 'TIKTOK',
-    followers: estimatedFollowers,
+    followers: followers,
     totalLikes: totalLikes > 0 ? BigInt(totalLikes) : null,
     engagementRate,
-    biography: author.signature || null,
+    biography: profileData?.description || author.signature || null,
     estimatedPrice,
     averageViews: avgViews > 0 ? Math.round(avgViews).toString() : null,
-    verified: author.verified || false,
-    rawData: { videos, totalLikes, totalViews },
+    verified: profileData?.verified || author.verified || false,
+    rawData: { videos, totalLikes, totalViews, profileData },
   };
 }
 
