@@ -551,52 +551,69 @@ export default function InfluencerDetailPage() {
             </div>
           </div>
 
-          {/* Coupon Section - Only show when status is PRODUCT_SENT */}
-          {influencer.status === 'PRODUCT_SENT' && (
-            <div className="rounded-2xl bg-gradient-to-br from-green-50 to-emerald-50 p-6 border-2 border-green-200 shadow-sm">
+          {/* Coupon Card - Always show if coupon exists */}
+          {influencer.coupon && (
+            <div className="rounded-2xl bg-white p-6 border border-gray-100 shadow-sm">
               <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <DollarSign className="h-5 w-5 text-green-600" />
-                💰 Cupom para {influencer.name}
+                <DollarSign className="h-5 w-5 text-purple-600" />
+                Cupom
               </h3>
               
-              {!influencer.coupon ? (
-                <form onSubmit={handleCreateCoupon} className="space-y-4">
-                  <p className="text-sm text-gray-600">
-                    Insere um código de cupom. Exemplo: <span className="font-mono text-green-700">VECINO_{(influencer.tiktokHandle || influencer.instagramHandle || 'USER').replace('@', '').toUpperCase().slice(0, 8)}_10</span>
-                  </p>
-                  
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <input
-                      type="text"
-                      placeholder="Exemplo: VECINO_JOAO_10"
-                      value={couponCode}
-                      onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                      disabled={creatingCoupon}
-                      className="flex-1 px-4 py-2 rounded-xl border border-green-300 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50"
-                    />
-                    <button
-                      type="submit"
-                      disabled={creatingCoupon}
-                      className="px-6 py-2 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition active:scale-95 whitespace-nowrap"
-                    >
-                      {creatingCoupon ? '⏳ Criando...' : '✅ Criar Cupom'}
-                    </button>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide">Código</p>
+                    <p className="text-lg font-mono font-bold text-gray-900 mt-1">{influencer.coupon.code}</p>
                   </div>
-                </form>
-              ) : (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-4 bg-white rounded-xl border border-green-200">
-                    <div>
-                      <p className="text-sm text-gray-600">Código do Cupom</p>
-                      <p className="text-lg font-mono font-bold text-green-700">{influencer.coupon.code}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm text-gray-600">Desconto</p>
-                      <p className="text-2xl font-bold text-green-600">{influencer.coupon.discountValue}%</p>
-                    </div>
+                  <div className="text-right">
+                    <p className="text-xs text-gray-500 uppercase tracking-wide">Desconto</p>
+                    <p className="text-3xl font-bold text-purple-600 mt-1">{influencer.coupon.discountValue}%</p>
                   </div>
                 </div>
-              )}
+                
+                <div className="pt-3 border-t border-gray-100 grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide">Comissão</p>
+                    <p className="font-semibold text-gray-900 mt-1">10%</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-gray-500 uppercase tracking-wide">Status</p>
+                    <p className="font-semibold text-green-600 mt-1">Ativo</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Create Coupon Form - Only show when status is PRODUCT_SENT and no coupon */}
+          {influencer.status === 'PRODUCT_SENT' && !influencer.coupon && (
+            <div className="rounded-2xl bg-white p-6 border border-gray-100 shadow-sm">
+              <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <DollarSign className="h-5 w-5 text-purple-600" />
+                Criar Cupom
+              </h3>
+              
+              <form onSubmit={handleCreateCoupon} className="space-y-4">
+                <div>
+                  <label className="text-sm text-gray-600">Código do Cupom</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: VECINO_JOAO_10"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                    disabled={creatingCoupon}
+                    className="w-full mt-2 px-4 py-2 rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
+                  />
+                </div>
+                
+                <button
+                  type="submit"
+                  disabled={creatingCoupon}
+                  className="w-full px-4 py-2 rounded-lg bg-purple-600 text-white font-semibold hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  {creatingCoupon ? '⏳ Criando...' : '✅ Criar Cupom'}
+                </button>
+              </form>
             </div>
           )}
         </div>
