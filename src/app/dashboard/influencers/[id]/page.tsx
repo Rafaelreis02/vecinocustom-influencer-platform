@@ -48,23 +48,23 @@ function CollapsibleSection({
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div className="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
+    <div className="rounded-xl bg-white border border-gray-100 overflow-hidden">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between p-6 hover:bg-gray-50 transition"
+        className="w-full flex items-center justify-between p-4 hover:bg-gray-50/50 transition"
       >
-        <div className="flex items-center gap-3">
-          <Icon className="h-5 w-5 text-purple-600" />
-          <h3 className="text-lg font-bold text-gray-900">{title}</h3>
+        <div className="flex items-center gap-2">
+          <Icon className="h-4 w-4 text-purple-600" />
+          <h3 className="text-base font-semibold text-gray-900">{title}</h3>
         </div>
         {isOpen ? (
-          <ChevronUp className="h-5 w-5 text-gray-400" />
+          <ChevronUp className="h-4 w-4 text-gray-400" />
         ) : (
-          <ChevronDown className="h-5 w-5 text-gray-400" />
+          <ChevronDown className="h-4 w-4 text-gray-400" />
         )}
       </button>
       {isOpen && (
-        <div className="px-6 pb-6 border-t border-gray-100">
+        <div className="px-4 pb-4 border-t border-gray-100">
           {children}
         </div>
       )}
@@ -82,6 +82,8 @@ export default function InfluencerDetailPage() {
   const [loading, setLoading] = useState(true);
   const [influencer, setInfluencer] = useState<any>(null);
   const [couponCode, setCouponCode] = useState('');
+  const [couponDiscount, setCouponDiscount] = useState('10');
+  const [couponCommission, setCouponCommission] = useState('10');
   const [creatingCoupon, setCreatingCoupon] = useState(false);
 
   useEffect(() => {
@@ -335,48 +337,48 @@ export default function InfluencerDetailPage() {
       <div className="space-y-6">
         {/* 📊 Estatísticas Gerais */}
         <CollapsibleSection title="Estatísticas Gerais" icon={BarChart3} defaultOpen={true}>
-          <div className="pt-6 space-y-6">
+          <div className="pt-4 space-y-4">
             {/* Key Metrics Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
               {influencer.totalLikes && (
-                <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/50">
-                  <div className="flex items-center justify-between mb-2">
+                <div className="p-3 rounded-lg border border-gray-100 bg-gray-50/30">
+                  <div className="flex items-center justify-between mb-1">
                     <p className="text-xs text-gray-600">Total Likes</p>
-                    <Heart className="h-4 w-4 text-pink-500" />
+                    <Heart className="h-3 w-3 text-pink-500" />
                   </div>
-                  <p className="text-xl font-bold text-gray-900">
+                  <p className="text-lg font-bold text-gray-900">
                     {(Number(influencer.totalLikes) / 1000000).toFixed(1)}M
                   </p>
                 </div>
               )}
 
               {influencer.engagementRate !== null && influencer.engagementRate !== undefined && (
-                <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/50">
-                  <div className="flex items-center justify-between mb-2">
+                <div className="p-3 rounded-lg border border-gray-100 bg-gray-50/30">
+                  <div className="flex items-center justify-between mb-1">
                     <p className="text-xs text-gray-600">Engagement</p>
-                    <TrendingUp className="h-4 w-4 text-purple-500" />
+                    <TrendingUp className="h-3 w-3 text-purple-500" />
                   </div>
-                  <p className="text-xl font-bold text-purple-600">{influencer.engagementRate.toFixed(1)}%</p>
+                  <p className="text-lg font-bold text-purple-600">{influencer.engagementRate.toFixed(1)}%</p>
                 </div>
               )}
 
               {influencer.averageViews && (
-                <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/50">
-                  <div className="flex items-center justify-between mb-2">
+                <div className="p-3 rounded-lg border border-gray-100 bg-gray-50/30">
+                  <div className="flex items-center justify-between mb-1">
                     <p className="text-xs text-gray-600">Avg. Views</p>
-                    <Eye className="h-4 w-4 text-blue-500" />
+                    <Eye className="h-3 w-3 text-blue-500" />
                   </div>
-                  <p className="text-xl font-bold text-gray-900">{influencer.averageViews}</p>
+                  <p className="text-lg font-bold text-gray-900">{influencer.averageViews}</p>
                 </div>
               )}
 
               {influencer.estimatedPrice && (
-                <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/50">
-                  <div className="flex items-center justify-between mb-2">
+                <div className="p-3 rounded-lg border border-gray-100 bg-gray-50/30">
+                  <div className="flex items-center justify-between mb-1">
                     <p className="text-xs text-gray-600">Preço Est.</p>
-                    <DollarSign className="h-4 w-4 text-green-500" />
+                    <DollarSign className="h-3 w-3 text-green-500" />
                   </div>
-                  <p className="text-xl font-bold text-green-600">€{influencer.estimatedPrice}</p>
+                  <p className="text-lg font-bold text-green-600">€{influencer.estimatedPrice}</p>
                 </div>
               )}
             </div>
@@ -384,12 +386,12 @@ export default function InfluencerDetailPage() {
             {/* Tags */}
             {influencer.tags && influencer.tags.length > 0 && (
               <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-3">Tags</h4>
-                <div className="flex flex-wrap gap-2">
+                <h4 className="text-xs font-semibold text-gray-600 mb-2">TAGS</h4>
+                <div className="flex flex-wrap gap-1.5">
                   {influencer.tags.map((tag: string) => (
                     <span
                       key={tag}
-                      className="px-3 py-1.5 rounded-full text-sm font-medium bg-purple-100 text-purple-700"
+                      className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700"
                     >
                       #{tag}
                     </span>
@@ -400,21 +402,14 @@ export default function InfluencerDetailPage() {
 
             {/* Discovery Info */}
             {(influencer.discoveryMethod || influencer.discoveryDate) && (
-              <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/50">
-                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-purple-600" />
-                  Descoberta
-                </h4>
-                <div className="space-y-2 text-sm">
+              <div className="p-3 rounded-lg border border-gray-100 bg-gray-50/30">
+                <h4 className="text-xs font-semibold text-gray-600 mb-2 uppercase">Descoberta</h4>
+                <div className="space-y-1 text-xs">
                   {influencer.discoveryMethod && (
-                    <div>
-                      <span className="text-gray-600">Método:</span>
-                      <p className="font-medium text-gray-900 mt-1">{influencer.discoveryMethod}</p>
-                    </div>
+                    <div className="text-gray-700">{influencer.discoveryMethod}</div>
                   )}
                   {influencer.discoveryDate && (
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <Calendar className="h-4 w-4" />
+                    <div className="text-gray-600">
                       {new Date(influencer.discoveryDate).toLocaleDateString('pt-PT')}
                     </div>
                   )}
@@ -425,118 +420,142 @@ export default function InfluencerDetailPage() {
         </CollapsibleSection>
 
         {/* 🎬 Histórico de Vídeos */}
-        {influencer.videos && influencer.videos.length > 0 && (
-          <CollapsibleSection 
-            title={`Histórico de Vídeos (${influencer.videos.length})`} 
-            icon={Video}
-            defaultOpen={false}
-          >
-            <div className="pt-6 space-y-3">
-              {influencer.videos.map((video: any) => (
-                <div key={video.id} className="p-4 rounded-xl border border-gray-100 hover:border-purple-200 transition bg-gray-50/50">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${
-                          video.platform === 'TIKTOK' ? 'bg-black text-white' : 
-                          video.platform === 'INSTAGRAM' ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white' : 
-                          'bg-gray-200 text-gray-700'
-                        }`}>
-                          {video.platform}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          {new Date(video.publishedAt).toLocaleDateString('pt-PT')}
-                        </span>
+        <CollapsibleSection 
+          title={`Histórico de Vídeos${influencer.videos ? ` (${influencer.videos.length})` : ''}`} 
+          icon={Video}
+          defaultOpen={false}
+        >
+          <div className="pt-6">
+            {influencer.videos && influencer.videos.length > 0 ? (
+              <div className="space-y-2">
+                {influencer.videos.map((video: any) => (
+                  <div key={video.id} className="p-3 rounded-lg border border-gray-100 hover:bg-gray-50/50 transition">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${
+                            video.platform === 'TIKTOK' ? 'bg-black text-white' : 
+                            video.platform === 'INSTAGRAM' ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white' : 
+                            'bg-gray-200 text-gray-700'
+                          }`}>
+                            {video.platform}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {new Date(video.publishedAt).toLocaleDateString('pt-PT')}
+                          </span>
+                        </div>
+                        <a href={video.url} target="_blank" rel="noopener noreferrer" className="font-medium text-gray-900 hover:text-purple-600 text-sm truncate block mb-1">
+                          {video.title || 'Sem título'}
+                        </a>
+                        <div className="flex items-center gap-3 text-xs text-gray-500">
+                          <span className="flex items-center gap-1">
+                            <Eye className="h-3 w-3" /> {(video.views || 0).toLocaleString()}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Heart className="h-3 w-3" /> {(video.likes || 0).toLocaleString()}
+                          </span>
+                        </div>
                       </div>
-                      <a href={video.url} target="_blank" rel="noopener noreferrer" className="font-medium text-gray-900 hover:text-purple-600 truncate block mb-1">
-                        {video.title || 'Sem título'}
-                      </a>
-                      <div className="flex items-center gap-4 text-xs text-gray-500">
-                        <span className="flex items-center gap-1">
-                          <Eye className="h-3 w-3" /> {(video.views || 0).toLocaleString()}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Heart className="h-3 w-3" /> {(video.likes || 0).toLocaleString()}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <MessageCircle className="h-3 w-3" /> {(video.comments || 0).toLocaleString()}
-                        </span>
+                      <div className="text-right shrink-0">
+                        {video.cost ? (
+                          <div>
+                            <p className="text-sm font-bold text-gray-900">€{video.cost}</p>
+                            <p className="text-[10px] text-gray-500">Custo</p>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400">-</span>
+                        )}
                       </div>
-                    </div>
-                    <div className="text-right shrink-0">
-                      {video.cost ? (
-                        <>
-                          <p className="text-sm font-bold text-gray-900">€{video.cost}</p>
-                          <p className="text-[10px] text-gray-500 uppercase tracking-wide">Custo</p>
-                        </>
-                      ) : (
-                        <span className="text-xs text-gray-400 italic">Sem custo</span>
-                      )}
-                      <a href={video.url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center justify-center p-1.5 rounded-lg hover:bg-gray-200 text-gray-400 hover:text-gray-700 transition">
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </CollapsibleSection>
-        )}
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-6 text-gray-400">
+                <Video className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                <p className="text-sm">Nenhum vídeo registado</p>
+              </div>
+            )}
+          </div>
+        </CollapsibleSection>
 
         {/* 💰 Cupão Associado */}
-        {(influencer.coupon || influencer.status === 'PRODUCT_SENT') && (
-          <CollapsibleSection title="Cupão Associado" icon={DollarSign} defaultOpen={true}>
-            <div className="pt-6">
-              {influencer.coupon ? (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs text-gray-500 uppercase tracking-wide">Código</p>
-                      <p className="text-lg font-mono font-bold text-gray-900 mt-1">{influencer.coupon.code}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-gray-500 uppercase tracking-wide">Desconto</p>
-                      <p className="text-3xl font-bold text-purple-600 mt-1">{influencer.coupon.discountValue}%</p>
-                    </div>
+        <CollapsibleSection title="Cupão Associado" icon={DollarSign} defaultOpen={true}>
+          <div className="pt-6 space-y-6">
+            {/* Current Coupon Display */}
+            {influencer.coupon && (
+              <div className="p-4 rounded-lg border border-purple-100 bg-purple-50/50">
+                <h4 className="text-xs text-gray-600 font-semibold mb-3">CUPOM ATUAL</h4>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Código</p>
+                    <p className="text-sm font-mono font-bold text-gray-900">{influencer.coupon.code}</p>
                   </div>
-                  
-                  <div className="pt-3 border-t border-gray-100 grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-xs text-gray-500 uppercase tracking-wide">Comissão</p>
-                      <p className="font-semibold text-gray-900 mt-1">10%</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-gray-500 uppercase tracking-wide">Status</p>
-                      <p className="font-semibold text-green-600 mt-1">Ativo</p>
-                    </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Desconto</p>
+                    <p className="text-lg font-bold text-purple-600">{influencer.coupon.discountValue}%</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Status</p>
+                    <p className="text-sm font-semibold text-green-600">✅ Ativo</p>
                   </div>
                 </div>
-              ) : (
-                <form onSubmit={handleCreateCoupon} className="space-y-4">
-                  <div>
-                    <label className="text-sm text-gray-600">Código do Cupom</label>
-                    <input
-                      type="text"
-                      placeholder="Ex: VECINO_JOAO_10"
-                      value={couponCode}
-                      onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                      disabled={creatingCoupon}
-                      className="w-full mt-2 px-4 py-2 rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
-                    />
-                  </div>
-                  
-                  <button
-                    type="submit"
+              </div>
+            )}
+
+            {/* Create/Edit Coupon Form */}
+            <form onSubmit={handleCreateCoupon} className="space-y-4 p-4 rounded-lg border border-gray-100 bg-gray-50/50">
+              <h4 className="text-xs text-gray-600 font-semibold">ATRIBUIR CUPOM</h4>
+              
+              <div>
+                <label className="text-xs font-semibold text-gray-600">Código</label>
+                <input
+                  type="text"
+                  placeholder="Ex: VECINO_JOAO_10"
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                  disabled={creatingCoupon}
+                  className="w-full mt-1 px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-gray-600">Desconto (%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={couponDiscount}
+                    onChange={(e) => setCouponDiscount(e.target.value)}
                     disabled={creatingCoupon}
-                    className="w-full px-4 py-2 rounded-lg bg-purple-600 text-white font-semibold hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                  >
-                    {creatingCoupon ? '⏳ Criando...' : '✅ Criar Cupom'}
-                  </button>
-                </form>
-              )}
-            </div>
-          </CollapsibleSection>
-        )}
+                    className="w-full mt-1 px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-600">Comissão (%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={couponCommission}
+                    onChange={(e) => setCouponCommission(e.target.value)}
+                    disabled={creatingCoupon}
+                    className="w-full mt-1 px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
+                  />
+                </div>
+              </div>
+              
+              <button
+                type="submit"
+                disabled={creatingCoupon}
+                className="w-full px-3 py-2 rounded-lg bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              >
+                {creatingCoupon ? '⏳ Criando...' : '✅ Atribuir Cupom'}
+              </button>
+            </form>
+          </div>
+        </CollapsibleSection>
 
         {/* 💵 Histórico de Comissões */}
         <CollapsibleSection title="Histórico de Comissões" icon={Receipt} defaultOpen={false}>
@@ -552,7 +571,7 @@ export default function InfluencerDetailPage() {
         {/* 📝 Notas */}
         {influencer.notes && (
           <CollapsibleSection title="Notas Internas" icon={Sparkles} defaultOpen={false}>
-            <div className="pt-6 prose prose-sm max-w-none text-gray-700 whitespace-pre-line">
+            <div className="pt-4 text-sm text-gray-700 whitespace-pre-line">
               {influencer.notes}
             </div>
           </CollapsibleSection>
