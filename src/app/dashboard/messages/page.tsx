@@ -521,42 +521,6 @@ export default function MessagesPage() {
             </div>
           </div>
 
-          {/* Influencer Info or Auto-Detect */}
-          {selectedEmail.influencer ? (
-            <div className="p-4 md:p-6 bg-green-50 border-b border-green-200">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div className="min-w-0">
-                  <p className="text-xs md:text-sm text-green-700 mb-1">✅ Ligado a Influenciador</p>
-                  <p className="text-base md:text-lg font-bold text-gray-900 truncate">{selectedEmail.influencer.name}</p>
-                  {selectedEmail.influencer.fitScore && (
-                    <p className="text-xs md:text-sm text-gray-600 mt-1">
-                      Fit Score: {selectedEmail.influencer.fitScore}/5
-                    </p>
-                  )}
-                </div>
-                <button
-                  onClick={() =>
-                    window.location.href = `/dashboard/influencers/${selectedEmail.influencer?.id}`
-                  }
-                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs md:text-sm font-medium transition flex-shrink-0 whitespace-nowrap"
-                >
-                  Ver Perfil
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="p-4 md:p-6 bg-amber-50 border-b border-amber-200">
-              <p className="text-xs md:text-sm text-amber-700 mb-4">
-                ⚠️ Remetente não está registado como influenciador
-              </p>
-              <button
-                onClick={handleAutoDetect}
-                className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition text-sm"
-              >
-                🔍 Detectar/Adicionar Influenciador
-              </button>
-            </div>
-          )}
 
           {/* Email Body - Scrollable */}
           <div className="flex-1 overflow-y-auto p-4 md:p-6">
@@ -577,11 +541,10 @@ export default function MessagesPage() {
                     {selectedEmail.attachments.map((att, idx) => (
                       <div
                         key={idx}
-                        className="flex items-center gap-2 p-2 rounded border border-gray-200 hover:border-blue-400 transition cursor-pointer group flex-shrink-0 min-w-max bg-gray-50 hover:bg-blue-50"
+                        className="flex items-center gap-2 px-3 py-2 rounded border border-gray-200 hover:border-blue-400 transition cursor-pointer group flex-shrink-0 min-w-max bg-gray-50 hover:bg-blue-50"
                         title={`Baixar ${att.filename}`}
                       >
-                        <span className="text-base">{getFileIcon(att.mimeType)}</span>
-                        <div className="flex-1 min-w-0 max-w-xs">
+                        <div className="flex-1 min-w-0">
                           <p className="text-xs text-gray-700 truncate group-hover:text-blue-600 font-medium">
                             {att.filename}
                           </p>
