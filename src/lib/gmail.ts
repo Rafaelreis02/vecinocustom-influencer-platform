@@ -214,3 +214,57 @@ export async function markAsRead(auth: any, messageId: string) {
     console.error('[GMAIL ERROR] Marking as read:', error.message);
   }
 }
+
+export async function markAsUnread(auth: any, messageId: string) {
+  try {
+    await gmail.users.messages.modify({
+      userId: 'me',
+      id: messageId,
+      auth,
+      requestBody: {
+        addLabelIds: ['UNREAD'],
+      },
+    });
+  } catch (error: any) {
+    console.error('[GMAIL ERROR] Marking as unread:', error.message);
+  }
+}
+
+export async function sendEmail(auth: any, options: {
+  to: string;
+  subject: string;
+  body: string;
+  inReplyTo?: string; // Gmail message ID for threading
+  threadId?: string;
+}) {
+  try {
+    const message = [
+      `To: ${options.to}`,
+      `Subject: ${options.subject}`,
+      `In-Reply-To: ${options.inReplyTo || ''}`,
+      'Content-Type: text/plain; charset=utf-8',
+      '',
+      options.body
+    ].join('\r\n');
+
+    const encodedMessage = Buffer.from(message)
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+
+    const res = await gmail.users.messages.send({
+      userId: 'me',
+      auth,
+      requestBody: {
+        raw: encodedMessage,
+        threadId: options.threadId,
+      },
+    });
+
+    return res.data;
+  } catch (error: any) {
+    console.error('[GMAIL ERROR] Sending email:', error.message);
+    throw error;
+  }
+}

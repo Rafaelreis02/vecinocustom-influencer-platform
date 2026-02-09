@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Mail, Search, AlertCircle, CheckCircle, Clock, X, RefreshCw } from 'lucide-react';
+import { Mail, Search, AlertCircle, CheckCircle, Clock, X, RefreshCw, Reply, Trash2, Eye, EyeOff, Send } from 'lucide-react';
 import { useGlobalToast } from '@/contexts/ToastContext';
 
 interface Email {
@@ -34,6 +34,9 @@ export default function MessagesPage() {
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState('');
   const [syncing, setSyncing] = useState(false);
+  const [replyMode, setReplyMode] = useState(false);
+  const [replyText, setReplyText] = useState('');
+  const [sendingReply, setSendingReply] = useState(false);
 
   useEffect(() => {
     fetchEmails();
@@ -104,6 +107,71 @@ export default function MessagesPage() {
       addToast('Erro ao sincronizar: ' + error.message, 'error');
     } finally {
       setSyncing(false);
+    }
+  }
+
+  async function handleToggleRead() {
+    if (!selectedEmail) return;
+    try {
+      const newReadState = !selectedEmail.isRead;
+      const res = await fetch(`/api/emails/${selectedEmail.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isRead: newReadState }),
+      });
+
+      if (!res.ok) throw new Error('Failed to toggle read');
+
+      setSelectedEmail({ ...selectedEmail, isRead: newReadState });
+      addToast(newReadState ? 'Marcado como lido' : 'Marcado como por ler', 'success');
+      fetchEmails();
+    } catch (error: any) {
+      addToast('Erro: ' + error.message, 'error');
+    }
+  }
+
+  async function handleSendReply() {
+    if (!selectedEmail || !replyText.trim()) return;
+
+    try {
+      setSendingReply(true);
+      const res = await fetch(`/api/emails/${selectedEmail.id}/reply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: replyText }),
+      });
+
+      if (!res.ok) throw new Error('Failed to send reply');
+
+      addToast('✅ Resposta enviada!', 'success');
+      setReplyText('');
+      setReplyMode(false);
+      fetchEmails();
+    } catch (error: any) {
+      addToast('Erro ao enviar: ' + error.message, 'error');
+    } finally {
+      setSendingReply(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!selectedEmail) return;
+
+    const confirmed = window.confirm('Tens a certeza que queres eliminar este email?');
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(`/api/emails/${selectedEmail.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) throw new Error('Failed to delete');
+
+      addToast('✅ Email eliminado', 'success');
+      setSelectedEmail(null);
+      fetchEmails();
+    } catch (error: any) {
+      addToast('Erro ao eliminar: ' + error.message, 'error');
     }
   }
 
@@ -196,12 +264,39 @@ export default function MessagesPage() {
         <div className="fixed inset-0 md:static md:flex-1 flex flex-col bg-white z-50 md:z-auto">
           {/* Header */}
           <div className="p-4 md:p-6 border-b border-gray-200">
-            <button
-              onClick={() => setSelectedEmail(null)}
-              className="md:hidden mb-4 text-blue-600 text-sm"
-            >
-              ← Voltar
-            </button>
+            <div className="flex items-center justify-between mb-4">
+              <button
+                onClick={() => setSelectedEmail(null)}
+                className="md:hidden text-blue-600 text-sm"
+              >
+                ← Voltar
+              </button>
+              
+              {/* Action Buttons */}
+              <div className="flex gap-2">
+                <button
+                  onClick={handleToggleRead}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition"
+                  title={selectedEmail.isRead ? 'Marcar como por ler' : 'Marcar como lido'}
+                >
+                  {selectedEmail.isRead ? <EyeOff className="h-5 w-5 text-gray-600" /> : <Eye className="h-5 w-5 text-blue-600" />}
+                </button>
+                <button
+                  onClick={() => setReplyMode(!replyMode)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition"
+                  title="Responder"
+                >
+                  <Reply className="h-5 w-5 text-gray-600" />
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="p-2 hover:bg-red-100 rounded-lg transition"
+                  title="Eliminar"
+                >
+                  <Trash2 className="h-5 w-5 text-red-600" />
+                </button>
+              </div>
+            </div>
 
             <h2 className="text-2xl font-bold text-gray-900 mb-2">
               {selectedEmail.subject}
@@ -295,6 +390,39 @@ export default function MessagesPage() {
                     </li>
                   ))}
                 </ul>
+              </div>
+            )}
+
+            {/* Reply Box */}
+            {replyMode && (
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <h3 className="font-semibold text-gray-900 mb-4">Responder</h3>
+                <textarea
+                  value={replyText}
+                  onChange={(e) => setReplyText(e.target.value)}
+                  placeholder="Escreve a tua resposta aqui..."
+                  className="w-full p-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  rows={4}
+                />
+                <div className="flex gap-2 mt-4">
+                  <button
+                    onClick={handleSendReply}
+                    disabled={sendingReply || !replyText.trim()}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition"
+                  >
+                    <Send className="h-4 w-4" />
+                    {sendingReply ? 'Enviando...' : 'Enviar'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setReplyMode(false);
+                      setReplyText('');
+                    }}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition"
+                  >
+                    Cancelar
+                  </button>
+                </div>
               </div>
             )}
           </div>
