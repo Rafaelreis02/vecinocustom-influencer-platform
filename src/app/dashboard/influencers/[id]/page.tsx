@@ -40,6 +40,8 @@ export default function InfluencerDetailPage() {
   const { addToast } = useGlobalToast();
   const [loading, setLoading] = useState(true);
   const [influencer, setInfluencer] = useState<any>(null);
+  const [couponCode, setCouponCode] = useState('');
+  const [creatingCoupon, setCreatingCoupon] = useState(false);
 
   useEffect(() => {
     fetchInfluencer();
@@ -83,6 +85,44 @@ export default function InfluencerDetailPage() {
     } catch (error) {
       console.error('Error deleting influencer:', error);
       addToast('Erro ao apagar influencer', 'error');
+    }
+  };
+
+  const handleCreateCoupon = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!couponCode.trim()) {
+      addToast('Insere o código do cupom', 'error');
+      return;
+    }
+
+    try {
+      setCreatingCoupon(true);
+
+      const res = await fetch(`/api/influencers/${id}/create-coupon`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: couponCode.toUpperCase() }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Erro ao criar cupom');
+      }
+
+      // Refresh influencer data
+      fetchInfluencer();
+      setCouponCode('');
+      addToast(`✅ Cupom ${data.coupon.code} criado com sucesso!`, 'success');
+    } catch (error) {
+      console.error('Error creating coupon:', error);
+      addToast(
+        error instanceof Error ? error.message : 'Erro ao criar cupom',
+        'error'
+      );
+    } finally {
+      setCreatingCoupon(false);
     }
   };
 
@@ -510,6 +550,55 @@ export default function InfluencerDetailPage() {
               </div>
             </div>
           </div>
+
+          {/* Coupon Section - Only show when status is PRODUCT_SENT */}
+          {influencer.status === 'PRODUCT_SENT' && (
+            <div className="rounded-2xl bg-gradient-to-br from-green-50 to-emerald-50 p-6 border-2 border-green-200 shadow-sm">
+              <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <DollarSign className="h-5 w-5 text-green-600" />
+                💰 Cupom para {influencer.name}
+              </h3>
+              
+              {!influencer.coupon ? (
+                <form onSubmit={handleCreateCoupon} className="space-y-4">
+                  <p className="text-sm text-gray-600">
+                    Insere um código de cupom. Exemplo: <span className="font-mono text-green-700">VECINO_{(influencer.tiktokHandle || influencer.instagramHandle || 'USER').replace('@', '').toUpperCase().slice(0, 8)}_10</span>
+                  </p>
+                  
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <input
+                      type="text"
+                      placeholder="Exemplo: VECINO_JOAO_10"
+                      value={couponCode}
+                      onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                      disabled={creatingCoupon}
+                      className="flex-1 px-4 py-2 rounded-xl border border-green-300 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50"
+                    />
+                    <button
+                      type="submit"
+                      disabled={creatingCoupon}
+                      className="px-6 py-2 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition active:scale-95 whitespace-nowrap"
+                    >
+                      {creatingCoupon ? '⏳ Criando...' : '✅ Criar Cupom'}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-4 bg-white rounded-xl border border-green-200">
+                    <div>
+                      <p className="text-sm text-gray-600">Código do Cupom</p>
+                      <p className="text-lg font-mono font-bold text-green-700">{influencer.coupon.code}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-gray-600">Desconto</p>
+                      <p className="text-2xl font-bold text-green-600">{influencer.coupon.discountValue}%</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
