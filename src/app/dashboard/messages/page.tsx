@@ -56,6 +56,7 @@ export default function MessagesPage() {
   const [sendingReply, setSendingReply] = useState(false);
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [showSidebar, setShowSidebar] = useState(false);
+  const [showProfilePreview, setShowProfilePreview] = useState(false);
 
   useEffect(() => {
     fetchEmails();
@@ -228,6 +229,16 @@ export default function MessagesPage() {
     if (mimeType.includes('word') || mimeType.includes('document')) return '📝';
     if (mimeType.includes('sheet') || mimeType.includes('excel')) return '📊';
     return '📎';
+  }
+
+  function getInitials(email: string) {
+    return email.split('@')[0].slice(0, 2).toUpperCase();
+  }
+
+  function getAvatarColor(email: string) {
+    const colors = ['bg-blue-500', 'bg-purple-500', 'bg-pink-500', 'bg-green-500', 'bg-orange-500', 'bg-red-500', 'bg-indigo-500', 'bg-cyan-500'];
+    const hash = email.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return colors[hash % colors.length];
   }
 
   async function handleSyncNow() {
@@ -455,14 +466,20 @@ export default function MessagesPage() {
               ← Voltar
             </button>
 
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 break-words">{selectedEmail.subject}</h2>
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 break-words">{selectedEmail.subject}</h2>
 
-            <div className="flex flex-col md:flex-row md:items-start md:justify-between mb-4 gap-4">
-              <div className="min-w-0">
-                <p className="text-xs md:text-sm font-medium text-gray-900 truncate">De: {selectedEmail.from}</p>
-                <p className="text-xs md:text-sm text-gray-500 truncate">
-                  Para: {selectedEmail.to}
-                </p>
+            {/* Sender Info with Avatar */}
+            <div className="flex items-start gap-3 mb-4 pb-4 border-b border-gray-100">
+              <button
+                onClick={() => setShowProfilePreview(true)}
+                className={`flex-shrink-0 w-10 h-10 rounded-full ${getAvatarColor(selectedEmail.from)} text-white font-bold text-sm flex items-center justify-center hover:opacity-80 transition cursor-pointer`}
+                title="Ver perfil"
+              >
+                {getInitials(selectedEmail.from)}
+              </button>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">{selectedEmail.from}</p>
+                <p className="text-xs text-gray-500 truncate">Para: {selectedEmail.to}</p>
                 <p className="text-xs text-gray-500 mt-1">
                   {new Date(selectedEmail.receivedAt).toLocaleDateString('pt-PT', {
                     year: 'numeric',
@@ -475,10 +492,10 @@ export default function MessagesPage() {
               </div>
 
               {/* Action Buttons - Quick Actions */}
-              <div className="flex flex-wrap md:flex-nowrap gap-2">
+              <div className="flex gap-2 flex-shrink-0">
                 <button
                   onClick={handleToggleRead}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition flex-shrink-0"
+                  className="p-2 hover:bg-gray-100 rounded-lg transition"
                   title={selectedEmail.isRead ? 'Marcar como por ler' : 'Marcar como lido'}
                 >
                   {selectedEmail.isRead ? (
@@ -489,7 +506,7 @@ export default function MessagesPage() {
                 </button>
                 <button
                   onClick={handleToggleFlag}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition flex-shrink-0"
+                  className="p-2 hover:bg-gray-100 rounded-lg transition"
                   title="Marcar com flag"
                 >
                   <Flag
@@ -552,48 +569,43 @@ export default function MessagesPage() {
               <p className="text-sm md:text-base text-gray-700 whitespace-pre-wrap">{selectedEmail.body}</p>
             )}
 
-            {/* Attachments - Gmail Style */}
+            {/* Attachments - Horizontal Scroll */}
             {selectedEmail.attachments && selectedEmail.attachments.length > 0 && (
               <div className="mt-4 pt-4 border-t border-gray-200 pb-20">
-                <div className="space-y-2">
-                  {selectedEmail.attachments.map((att, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center gap-3 p-2 rounded hover:bg-gray-50 transition cursor-pointer group"
-                      title={`Baixar ${att.filename}`}
-                    >
-                      <span className="text-lg flex-shrink-0">{getFileIcon(att.mimeType)}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs md:text-sm text-gray-700 truncate group-hover:text-blue-600 font-medium">
-                          {att.filename}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {att.size ? `${(att.size / 1024).toFixed(0)} KB` : 'Anexo'}
-                        </p>
+                <div className="overflow-x-auto -mx-4 md:-mx-6 px-4 md:px-6">
+                  <div className="flex gap-3 pb-2">
+                    {selectedEmail.attachments.map((att, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center gap-2 p-2 rounded border border-gray-200 hover:border-blue-400 transition cursor-pointer group flex-shrink-0 min-w-max bg-gray-50 hover:bg-blue-50"
+                        title={`Baixar ${att.filename}`}
+                      >
+                        <span className="text-base">{getFileIcon(att.mimeType)}</span>
+                        <div className="flex-1 min-w-0 max-w-xs">
+                          <p className="text-xs text-gray-700 truncate group-hover:text-blue-600 font-medium">
+                            {att.filename}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {att.size ? `${(att.size / 1024).toFixed(0)} KB` : 'Anexo'}
+                          </p>
+                        </div>
+                        <Download className="h-4 w-4 text-gray-400 group-hover:text-blue-600 flex-shrink-0 opacity-0 group-hover:opacity-100 transition" />
                       </div>
-                      <Download className="h-4 w-4 text-gray-400 group-hover:text-blue-600 flex-shrink-0 opacity-0 group-hover:opacity-100 transition" />
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
           </div>
 
           {/* Sticky Reply Button at Bottom */}
-          <div className="p-3 md:p-4 border-t border-gray-200 bg-white flex gap-2 flex-shrink-0">
+          <div className="p-3 md:p-4 border-t border-gray-200 bg-white flex-shrink-0">
             <button
               onClick={() => setShowReplyModal(true)}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-lg font-medium transition text-sm"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-lg font-medium transition text-sm"
             >
               <Reply className="h-4 w-4" />
               Responder
-            </button>
-            <button
-              onClick={handleDelete}
-              className="p-2 hover:bg-gray-100 rounded-lg transition text-gray-600 flex-shrink-0"
-              title="Eliminar"
-            >
-              <Trash2 className="h-5 w-5" />
             </button>
           </div>
         </div>
@@ -604,6 +616,96 @@ export default function MessagesPage() {
             <p className="text-lg">Seleciona um email para ver detalhes</p>
           </div>
         </div>
+      )}
+
+      {/* Profile Preview Sidebar */}
+      {showProfilePreview && selectedEmail && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/50 z-40 md:hidden"
+            onClick={() => setShowProfilePreview(false)}
+          />
+          <div className={`fixed inset-y-0 right-0 z-40 w-full md:w-96 bg-white shadow-xl transition-transform duration-300 overflow-y-auto ${
+            showProfilePreview ? 'translate-x-0' : 'translate-x-full'
+          }`}>
+            {/* Header */}
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white">
+              <h3 className="font-semibold text-gray-900">Perfil</h3>
+              <button
+                onClick={() => setShowProfilePreview(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Profile Content */}
+            <div className="p-4">
+              {/* Avatar */}
+              <div className="flex flex-col items-center mb-4">
+                <div className={`w-16 h-16 rounded-full ${getAvatarColor(selectedEmail.from)} text-white font-bold text-2xl flex items-center justify-center mb-3`}>
+                  {getInitials(selectedEmail.from)}
+                </div>
+                <h2 className="text-lg font-bold text-gray-900 truncate text-center">{selectedEmail.from}</h2>
+              </div>
+
+              {/* Email Info */}
+              <div className="bg-gray-50 rounded-lg p-4 space-y-3 mb-4">
+                <div>
+                  <p className="text-xs text-gray-500 font-medium">Email</p>
+                  <p className="text-sm text-gray-900 truncate">{selectedEmail.from}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 font-medium">Primeiro Email</p>
+                  <p className="text-sm text-gray-900">
+                    {new Date(selectedEmail.receivedAt).toLocaleDateString('pt-PT')}
+                  </p>
+                </div>
+              </div>
+
+              {/* Influencer Info or CTA */}
+              {selectedEmail.influencer ? (
+                <div className="bg-green-50 rounded-lg p-4 border border-green-200 mb-4">
+                  <p className="text-sm font-semibold text-green-700 mb-2">✅ Influenciador Registado</p>
+                  <p className="text-lg font-bold text-gray-900 mb-2">{selectedEmail.influencer.name}</p>
+                  {selectedEmail.influencer.fitScore && (
+                    <div className="mb-3">
+                      <p className="text-sm text-gray-600 mb-1">Fit Score</p>
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <span key={i} className={`text-lg ${i < (selectedEmail.influencer?.fitScore || 0) ? '⭐' : '☆'}`}>
+                            {i < (selectedEmail.influencer?.fitScore || 0) ? '★' : '☆'}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <button
+                    onClick={() => {
+                      window.location.href = `/dashboard/influencers/${selectedEmail.influencer?.id}`;
+                    }}
+                    className="w-full px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition"
+                  >
+                    Ver Perfil Completo
+                  </button>
+                </div>
+              ) : (
+                <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
+                  <p className="text-sm text-amber-700 font-semibold mb-3">⚠️ Não Registado</p>
+                  <button
+                    onClick={() => {
+                      setShowProfilePreview(false);
+                      handleAutoDetect();
+                    }}
+                    className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition"
+                  >
+                    Adicionar como Influenciador
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </>
       )}
 
       {/* Reply Modal */}
