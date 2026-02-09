@@ -19,6 +19,7 @@ import {
   CheckSquare,
   Archive,
   Flag,
+  Download,
 } from 'lucide-react';
 import { useGlobalToast } from '@/contexts/ToastContext';
 
@@ -217,6 +218,16 @@ export default function MessagesPage() {
     } catch (error: any) {
       addToast('Erro: ' + error.message, 'error');
     }
+  }
+
+  function getFileIcon(mimeType: string) {
+    if (mimeType.startsWith('image/')) return '🖼️';
+    if (mimeType.startsWith('video/')) return '🎬';
+    if (mimeType.startsWith('audio/')) return '🎵';
+    if (mimeType.includes('pdf')) return '📄';
+    if (mimeType.includes('word') || mimeType.includes('document')) return '📝';
+    if (mimeType.includes('sheet') || mimeType.includes('excel')) return '📊';
+    return '📎';
   }
 
   async function handleSyncNow() {
@@ -434,7 +445,7 @@ export default function MessagesPage() {
 
       {/* Email Detail */}
       {selectedEmail ? (
-        <div className="fixed inset-0 md:static md:flex-1 md:flex md:flex-col bg-white z-30 overflow-y-auto">
+        <div className="fixed inset-0 md:static md:flex-1 md:flex md:flex-col bg-white z-30 flex flex-col overflow-hidden">
           {/* Header */}
           <div className="p-4 md:p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
             <button
@@ -463,7 +474,7 @@ export default function MessagesPage() {
                 </p>
               </div>
 
-              {/* Action Buttons */}
+              {/* Action Buttons - Quick Actions */}
               <div className="flex flex-wrap md:flex-nowrap gap-2">
                 <button
                   onClick={handleToggleRead}
@@ -488,20 +499,6 @@ export default function MessagesPage() {
                         : 'text-gray-600'
                     }`}
                   />
-                </button>
-                <button
-                  onClick={() => setShowReplyModal(true)}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition flex-shrink-0"
-                  title="Responder"
-                >
-                  <Reply className="h-5 w-5 text-gray-600" />
-                </button>
-                <button
-                  onClick={handleDelete}
-                  className="p-2 hover:bg-red-100 rounded-lg transition flex-shrink-0"
-                  title="Eliminar"
-                >
-                  <Trash2 className="h-5 w-5 text-red-600" />
                 </button>
               </div>
             </div>
@@ -544,7 +541,7 @@ export default function MessagesPage() {
             </div>
           )}
 
-          {/* Email Body */}
+          {/* Email Body - Scrollable */}
           <div className="flex-1 overflow-y-auto p-4 md:p-6">
             {selectedEmail.htmlBody ? (
               <div
@@ -555,19 +552,52 @@ export default function MessagesPage() {
               <p className="text-sm md:text-base text-gray-700 whitespace-pre-wrap">{selectedEmail.body}</p>
             )}
 
-            {/* Attachments */}
+            {/* Attachments Grid */}
             {selectedEmail.attachments && selectedEmail.attachments.length > 0 && (
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <h3 className="text-sm md:text-base font-semibold text-gray-900 mb-3">Anexos ({selectedEmail.attachments.length})</h3>
-                <ul className="space-y-2">
+              <div className="mt-6 pt-6 border-t border-gray-200 pb-20">
+                <h3 className="text-sm md:text-base font-semibold text-gray-900 mb-3">
+                  Anexos ({selectedEmail.attachments.length})
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                   {selectedEmail.attachments.map((att, idx) => (
-                    <li key={idx} className="flex items-center p-2 bg-gray-50 rounded border border-gray-200">
-                      <span className="text-xs md:text-sm text-gray-700 truncate">📎 {att.filename}</span>
-                    </li>
+                    <div
+                      key={idx}
+                      className="p-2 bg-gray-50 rounded border border-gray-200 hover:bg-gray-100 transition cursor-pointer flex flex-col items-center justify-center group"
+                      title={`Baixar ${att.filename}`}
+                    >
+                      <div className="text-2xl mb-1">{getFileIcon(att.mimeType)}</div>
+                      <p className="text-xs text-gray-700 text-center truncate group-hover:text-blue-600 font-medium">
+                        {att.filename.length > 12
+                          ? att.filename.substring(0, 12) + '...'
+                          : att.filename}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {(att.size / 1024 / 1024).toFixed(1)} MB
+                      </p>
+                      <Download className="h-3 w-3 text-gray-400 group-hover:text-blue-600 mt-1 opacity-0 group-hover:opacity-100 transition" />
+                    </div>
                   ))}
-                </ul>
+                </div>
               </div>
             )}
+          </div>
+
+          {/* Sticky Reply Button at Bottom */}
+          <div className="p-4 border-t border-gray-200 bg-white flex gap-2 flex-shrink-0">
+            <button
+              onClick={() => setShowReplyModal(true)}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition text-sm md:text-base"
+            >
+              <Reply className="h-5 w-5" />
+              Responder
+            </button>
+            <button
+              onClick={handleDelete}
+              className="p-3 hover:bg-red-100 rounded-lg transition text-red-600 flex-shrink-0"
+              title="Eliminar"
+            >
+              <Trash2 className="h-5 w-5" />
+            </button>
           </div>
         </div>
       ) : (
