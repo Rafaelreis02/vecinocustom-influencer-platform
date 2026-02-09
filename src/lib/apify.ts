@@ -71,7 +71,7 @@ async function scrapeTikTokProfile(handle: string): Promise<ParsedProfile> {
   
   const run = await client.actor('GdWCkxBtKWOsKjdch').call({
     profiles: [`https://www.tiktok.com/@${cleanHandle}`],
-    resultsPerPage: 1,
+    resultsPerPage: 100,
   });
 
   const { items } = await client.dataset(run.defaultDatasetId).listItems();
@@ -80,46 +80,64 @@ async function scrapeTikTokProfile(handle: string): Promise<ParsedProfile> {
     throw new Error(`TikTok profile not found: @${cleanHandle}`);
   }
 
-  const profile = items[0] as any;
+  // Apify returns videos, not profile stats
+  // Calculate metrics from the videos returned
+  const videos = items as any[];
   
-  // Calculate engagement rate if possible
+  let totalLikes = 0;
+  let totalViews = 0;
+  let totalComments = 0;
+  
+  videos.forEach((video) => {
+    totalLikes += (video.diggCount || 0);
+    totalViews += (video.playCount || 0);
+    totalComments += (video.commentCount || 0);
+  });
+  
+  const avgLikesPerVideo = videos.length > 0 ? totalLikes / videos.length : 0;
+  const avgViewsPerVideo = videos.length > 0 ? totalViews / videos.length : 0;
+  
+  // Calculate engagement rate (likes per view)
   let engagementRate: number | null = null;
-  const followerCount = (profile.stats?.followerCount as number) ?? 0;
-  const heartCount = (profile.stats?.heartCount as number) ?? 0;
-  const videoCount = (profile.stats?.videoCount as number) ?? 0;
-  
-  if (followerCount > 0 && heartCount > 0 && videoCount > 0) {
-    const avgLikesPerVideo = heartCount / Math.max(videoCount, 1);
-    engagementRate = (avgLikesPerVideo / followerCount) * 100;
+  if (totalViews > 0) {
+    engagementRate = (totalLikes / totalViews) * 100;
   }
-
-  // Estimate price based on followers (rough estimation)
+  
+  // Fallback engagement rate if no videos
+  const firstVideo = videos[0] as any;
+  const profileData = firstVideo.author || {};
+  
+  // Estimate followers from avg views (fallback)
+  // Assuming ~10% of followers view a video
+  const estimatedFollowers = Math.round((avgViewsPerVideo / 0.1) || 5000);
+  
+  // Estimate price based on average views per video
   let estimatedPrice: number | null = null;
-  if (followerCount > 0) {
-    if (followerCount < 10000) {
-      estimatedPrice = 50; // Nano: 50€
-    } else if (followerCount < 50000) {
-      estimatedPrice = 150; // Micro: 150€
-    } else if (followerCount < 100000) {
-      estimatedPrice = 300; // Mid: 300€
-    } else if (followerCount < 500000) {
-      estimatedPrice = 800; // Macro: 800€
+  if (avgViewsPerVideo > 0) {
+    if (avgViewsPerVideo < 5000) {
+      estimatedPrice = 50; // Nano
+    } else if (avgViewsPerVideo < 50000) {
+      estimatedPrice = 150; // Micro
+    } else if (avgViewsPerVideo < 200000) {
+      estimatedPrice = 300; // Mid
+    } else if (avgViewsPerVideo < 500000) {
+      estimatedPrice = 800; // Macro
     } else {
-      estimatedPrice = 2000; // Mega: 2000€+
+      estimatedPrice = 2000; // Mega
     }
   }
 
   return {
     handle: cleanHandle,
     platform: 'TIKTOK',
-    followers: followerCount > 0 ? followerCount : null,
-    totalLikes: heartCount > 0 ? BigInt(heartCount) : null,
+    followers: estimatedFollowers > 0 ? estimatedFollowers : null,
+    totalLikes: totalLikes > 0 ? BigInt(totalLikes) : null,
     engagementRate: engagementRate,
-    biography: (profile.signature as string) || null,
-    estimatedPrice: estimatedPrice,
-    averageViews: videoCount > 0 ? `${Math.round(heartCount / videoCount)}` : null,
-    verified: (profile.verified as boolean) || false,
-    rawData: profile,
+    biography: (profileData.signature as string) || null,
+    estimatedPrice: estimatedPrice || 150,
+    averageViews: avgViewsPerVideo > 0 ? `${Math.round(avgViewsPerVideo)}` : null,
+    verified: (profileData.verified as boolean) || false,
+    rawData: { videos, totalLikes, totalViews, totalComments, avgEngagement: engagementRate },
   };
 }
 

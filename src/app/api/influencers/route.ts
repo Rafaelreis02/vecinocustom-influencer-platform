@@ -209,6 +209,19 @@ export async function POST(request: Request) {
       },
     });
 
+    // If IMPORT_PENDING, trigger analysis immediately (async, don't block response)
+    if (body.status === 'IMPORT_PENDING' && (body.tiktokHandle || body.instagramHandle)) {
+      const handle = (body.tiktokHandle || body.instagramHandle).replace('@', '');
+      const platform = body.tiktokHandle ? 'TIKTOK' : 'INSTAGRAM';
+      
+      // Fire and forget - don't wait for response
+      fetch(`${request.headers.get('x-forwarded-proto') || 'http'}://${request.headers.get('host')}/api/worker/analyze-influencer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ handle, platform }),
+      }).catch(err => console.error('[AUTO-ANALYZE] Error:', err.message));
+    }
+
     return NextResponse.json(influencer, { status: 201 });
   } catch (err: any) {
     console.log('[API ERROR] Creating influencer:', err?.message || String(err));

@@ -96,6 +96,7 @@ model Influencer {
   coupons           Coupon[]
   payments          Payment[]
   files             File[]
+  emails            Email[]           @relation("InfluencerEmails")
   
   @@map("influencers")
 }
@@ -357,3 +358,44 @@ enum FileType {
   AVATAR
   OTHER
 }
+
+// ============================================
+// EMAILS / INBOX (CRM)
+// ============================================
+
+model Email {
+  id              String        @id @default(cuid())
+  
+  // Email Info
+  from            String        // Remetente (email)
+  to              String        // Destinatário (email)
+  subject         String
+  body            String        @db.Text
+  htmlBody        String?       @db.Text
+  
+  // Gmail Integration
+  gmailId         String?       @unique
+  gmailThreadId   String?
+  
+  // Relations
+  influencerId    String?
+  influencer      Influencer?   @relation("InfluencerEmails", fields: [influencerId], references: [id], onDelete: SetNull)
+  
+  // Attachments
+  attachments     String[]      // JSON array of {filename, url, size, type}
+  
+  // Metadata
+  receivedAt      DateTime
+  isRead          Boolean       @default(false)
+  isFlagged       Boolean       @default(false)
+  labels          String[]      // Gmail labels
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  @@map("emails")
+  @@index([influencerId])
+  @@index([gmailThreadId])
+  @@index([from])
+}
+

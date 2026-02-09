@@ -14,13 +14,15 @@ import {
   FileText,
   Instagram,
   LogOut,
-  X
+  X,
+  Mail
 } from 'lucide-react';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Influencers', href: '/dashboard/influencers', icon: Users },
   { name: 'Campanhas', href: '/dashboard/campaigns', icon: Target },
+  { name: 'Mensagens', href: '/dashboard/messages', icon: Mail },
   { name: 'Cupões', href: '/dashboard/coupons', icon: Ticket },
   { name: 'Pagamentos', href: '/dashboard/payments', icon: DollarSign },
   { name: 'Analytics', href: '/dashboard/analytics', icon: TrendingUp },
