@@ -10,12 +10,6 @@
 import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
 
-const oauth2Client = new google.auth.OAuth2(
-  process.env.GOOGLE_CLIENT_ID,
-  process.env.GOOGLE_CLIENT_SECRET,
-  `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/auth/gmail/callback`
-);
-
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -37,6 +31,19 @@ export async function GET(request: Request) {
         { status: 400 }
       );
     }
+
+    // Build redirect URI from the actual request URL
+    const url = new URL(request.url);
+    const redirectUri = `${url.protocol}//${url.host}/api/auth/gmail/callback`;
+    
+    console.log('[GMAIL OAUTH] Using redirect URI:', redirectUri);
+
+    // Create OAuth2 client with the correct redirect URI
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      redirectUri
+    );
 
     // Exchange code for tokens
     console.log('[GMAIL OAUTH] Exchanging code for tokens...');
