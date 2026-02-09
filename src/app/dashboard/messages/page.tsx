@@ -57,6 +57,8 @@ export default function MessagesPage() {
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [showSidebar, setShowSidebar] = useState(false);
   const [showProfilePreview, setShowProfilePreview] = useState(false);
+  const [fullInfluencer, setFullInfluencer] = useState<any>(null);
+  const [loadingInfluencer, setLoadingInfluencer] = useState(false);
 
   useEffect(() => {
     fetchEmails();
@@ -239,6 +241,20 @@ export default function MessagesPage() {
     const colors = ['bg-blue-500', 'bg-purple-500', 'bg-pink-500', 'bg-green-500', 'bg-orange-500', 'bg-red-500', 'bg-indigo-500', 'bg-cyan-500'];
     const hash = email.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     return colors[hash % colors.length];
+  }
+
+  async function fetchFullInfluencer(influencerId: string) {
+    try {
+      setLoadingInfluencer(true);
+      const res = await fetch(`/api/influencers/${influencerId}`);
+      if (!res.ok) throw new Error('Failed to fetch influencer');
+      const data = await res.json();
+      setFullInfluencer(data);
+    } catch (error: any) {
+      addToast('Erro ao carregar influenciador: ' + error.message, 'error');
+    } finally {
+      setLoadingInfluencer(false);
+    }
   }
 
   async function handleSyncNow() {
@@ -471,7 +487,12 @@ export default function MessagesPage() {
             {/* Sender Info with Avatar */}
             <div className="flex items-start gap-3 mb-4 pb-4 border-b border-gray-100">
               <button
-                onClick={() => setShowProfilePreview(true)}
+                onClick={() => {
+                  setShowProfilePreview(true);
+                  if (selectedEmail.influencer?.id) {
+                    fetchFullInfluencer(selectedEmail.influencer.id);
+                  }
+                }}
                 className={`flex-shrink-0 w-10 h-10 rounded-full ${getAvatarColor(selectedEmail.from)} text-white font-bold text-sm flex items-center justify-center hover:opacity-80 transition cursor-pointer`}
                 title="Ver perfil"
               >
@@ -628,30 +649,170 @@ export default function MessagesPage() {
 
               {/* Influencer Info or CTA */}
               {selectedEmail.influencer ? (
-                <div className="bg-green-50 rounded-lg p-4 border border-green-200 mb-4">
-                  <p className="text-sm font-semibold text-green-700 mb-2">✅ Influenciador Registado</p>
-                  <p className="text-lg font-bold text-gray-900 mb-2">{selectedEmail.influencer.name}</p>
-                  {selectedEmail.influencer.fitScore && (
-                    <div className="mb-3">
-                      <p className="text-sm text-gray-600 mb-1">Fit Score</p>
-                      <div className="flex items-center gap-1">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <span key={i} className={`text-lg ${i < (selectedEmail.influencer?.fitScore || 0) ? '⭐' : '☆'}`}>
-                            {i < (selectedEmail.influencer?.fitScore || 0) ? '★' : '☆'}
-                          </span>
-                        ))}
-                      </div>
+                loadingInfluencer ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Clock className="h-6 w-6 text-gray-400 animate-spin" />
+                  </div>
+                ) : fullInfluencer ? (
+                  <div className="space-y-4">
+                    {/* Status Badge */}
+                    <div className="flex items-center justify-between">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        ✓ Influenciador
+                      </span>
+                      {fullInfluencer.tier && (
+                        <span className="text-xs font-medium text-gray-600 bg-gray-100 px-2 py-1 rounded">
+                          {fullInfluencer.tier}
+                        </span>
+                      )}
                     </div>
-                  )}
-                  <button
-                    onClick={() => {
-                      window.location.href = `/dashboard/influencers/${selectedEmail.influencer?.id}`;
-                    }}
-                    className="w-full px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition"
-                  >
-                    Ver Perfil Completo
-                  </button>
-                </div>
+
+                    {/* Fit Score */}
+                    {fullInfluencer.fitScore && (
+                      <div className="bg-blue-50 rounded-lg p-3">
+                        <p className="text-xs text-gray-600 mb-1">Fit Score</p>
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <span key={i} className="text-yellow-500">
+                              {i < fullInfluencer.fitScore ? '★' : '☆'}
+                            </span>
+                          ))}
+                          <span className="text-sm font-bold ml-2">{fullInfluencer.fitScore}/5</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Social Media */}
+                    {(fullInfluencer.tiktokHandle || fullInfluencer.instagramHandle) && (
+                      <div className="space-y-2">
+                        <h4 className="text-xs font-semibold text-gray-900">Redes Sociais</h4>
+                        {fullInfluencer.tiktokHandle && (
+                          <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                            <span className="text-xs text-gray-600">TikTok</span>
+                            <span className="text-xs font-medium">@{fullInfluencer.tiktokHandle}</span>
+                          </div>
+                        )}
+                        {fullInfluencer.instagramHandle && (
+                          <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                            <span className="text-xs text-gray-600">Instagram</span>
+                            <span className="text-xs font-medium">@{fullInfluencer.instagramHandle}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Followers */}
+                    {(fullInfluencer.tiktokFollowers || fullInfluencer.instagramFollowers) && (
+                      <div className="grid grid-cols-2 gap-2">
+                        {fullInfluencer.tiktokFollowers && (
+                          <div className="p-3 bg-gray-50 rounded">
+                            <p className="text-xs text-gray-500">TikTok</p>
+                            <p className="text-sm font-bold">{fullInfluencer.tiktokFollowers.toLocaleString()}</p>
+                          </div>
+                        )}
+                        {fullInfluencer.instagramFollowers && (
+                          <div className="p-3 bg-gray-50 rounded">
+                            <p className="text-xs text-gray-500">Instagram</p>
+                            <p className="text-sm font-bold">{fullInfluencer.instagramFollowers.toLocaleString()}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Metrics */}
+                    {(fullInfluencer.engagementRate || fullInfluencer.averageViews) && (
+                      <div className="space-y-2">
+                        {fullInfluencer.engagementRate && (
+                          <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                            <span className="text-xs text-gray-600">Engagement</span>
+                            <span className="text-xs font-medium">{fullInfluencer.engagementRate}%</span>
+                          </div>
+                        )}
+                        {fullInfluencer.averageViews && (
+                          <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                            <span className="text-xs text-gray-600">Avg Views</span>
+                            <span className="text-xs font-medium">{fullInfluencer.averageViews}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Niche & Content */}
+                    {(fullInfluencer.niche || fullInfluencer.contentTypes?.length > 0) && (
+                      <div className="space-y-2">
+                        {fullInfluencer.niche && (
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">Nicho</p>
+                            <span className="inline-block px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded">
+                              {fullInfluencer.niche}
+                            </span>
+                          </div>
+                        )}
+                        {fullInfluencer.contentTypes?.length > 0 && (
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">Conteúdo</p>
+                            <div className="flex flex-wrap gap-1">
+                              {fullInfluencer.contentTypes.map((type: string, idx: number) => (
+                                <span key={idx} className="inline-block px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
+                                  {type}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Location */}
+                    {(fullInfluencer.country || fullInfluencer.language) && (
+                      <div className="flex gap-2">
+                        {fullInfluencer.country && (
+                          <div className="flex-1 p-2 bg-gray-50 rounded">
+                            <p className="text-xs text-gray-500">País</p>
+                            <p className="text-xs font-medium">{fullInfluencer.country}</p>
+                          </div>
+                        )}
+                        {fullInfluencer.language && (
+                          <div className="flex-1 p-2 bg-gray-50 rounded">
+                            <p className="text-xs text-gray-500">Idioma</p>
+                            <p className="text-xs font-medium">{fullInfluencer.language}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Pricing */}
+                    {fullInfluencer.estimatedPrice && (
+                      <div className="bg-green-50 rounded-lg p-3 border border-green-200">
+                        <p className="text-xs text-gray-600 mb-1">Preço Estimado</p>
+                        <p className="text-lg font-bold text-gray-900">€{fullInfluencer.estimatedPrice}</p>
+                      </div>
+                    )}
+
+                    {/* Notes */}
+                    {fullInfluencer.notes && (
+                      <div className="p-3 bg-amber-50 rounded border border-amber-200">
+                        <p className="text-xs text-gray-600 mb-1">Notas</p>
+                        <p className="text-xs text-gray-700">{fullInfluencer.notes}</p>
+                      </div>
+                    )}
+
+                    {/* Action Button */}
+                    <button
+                      onClick={() => {
+                        window.location.href = `/dashboard/influencers/${fullInfluencer.id}`;
+                      }}
+                      className="w-full px-3 py-2 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-lg text-sm font-medium transition"
+                    >
+                      Ver Perfil Completo →
+                    </button>
+                  </div>
+                ) : (
+                  <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                    <p className="text-sm font-semibold text-green-700 mb-2">✅ Influenciador Registado</p>
+                    <p className="text-lg font-bold text-gray-900 mb-2">{selectedEmail.influencer.name}</p>
+                  </div>
+                )
               ) : (
                 <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
                   <p className="text-sm text-amber-700 font-semibold mb-3">⚠️ Não Registado</p>
