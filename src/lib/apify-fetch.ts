@@ -61,25 +61,7 @@ async function runActorAndWait(actorId: string, input: any): Promise<any[]> {
 async function scrapeTikTokProfile(handle: string): Promise<ParsedProfile> {
   const cleanHandle = handle.replace('@', '');
   
-  // Try to get real profile data (followers, bio, etc.) from Profile Actor
-  let profileData: any = null;
-  try {
-    const profileResults = await runActorAndWait('iH5tKMhpc9Z8vL3m4', {
-      profiles: [`https://www.tiktok.com/@${cleanHandle}`],
-    });
-    if (profileResults && profileResults.length > 0) {
-      profileData = profileResults[0];
-      console.log(`[APIFY] Profile data extracted:`, {
-        followers: profileData.followerCount,
-        verified: profileData.verified,
-        bio: profileData.description,
-      });
-    }
-  } catch (e) {
-    console.log(`[APIFY] Profile actor failed, will estimate from video stats`);
-  }
-
-  // Get videos for engagement/views metrics
+  // Get videos for engagement/views metrics AND author profile data
   const videos = await runActorAndWait('GdWCkxBtKWOsKjdch', {
     profiles: [`https://www.tiktok.com/@${cleanHandle}`],
     resultsPerPage: 100,
@@ -91,6 +73,17 @@ async function scrapeTikTokProfile(handle: string): Promise<ParsedProfile> {
     throw new Error(`TikTok profile not found: @${cleanHandle}`);
   }
 
+  const author = videos[0]?.author || {};
+  
+  // Extract real followers from author data (from videos)
+  const followers = author.followerCount || author.fans || null;
+  
+  if (!followers) {
+    console.log(`[APIFY] WARNING: No follower count found in video author data for @${cleanHandle}`);
+    console.log(`[APIFY] Author data keys:`, Object.keys(author));
+    throw new Error(`Could not extract follower count for @${cleanHandle}`);
+  }
+
   let totalLikes = 0, totalViews = 0;
   videos.forEach((v: any) => {
     totalLikes += v.diggCount || 0;
@@ -99,9 +92,6 @@ async function scrapeTikTokProfile(handle: string): Promise<ParsedProfile> {
 
   const avgViews = videos.length > 0 ? totalViews / videos.length : 0;
   const engagementRate = totalViews > 0 ? (totalLikes / totalViews) * 100 : null;
-  
-  // Use real followers if available from profile, else estimate from average views
-  const followers = profileData?.followerCount || Math.round(avgViews / 0.1) || 5000;
 
   let estimatedPrice = 150;
   if (avgViews < 5000) estimatedPrice = 50;
@@ -110,7 +100,13 @@ async function scrapeTikTokProfile(handle: string): Promise<ParsedProfile> {
   else if (avgViews < 500000) estimatedPrice = 800;
   else estimatedPrice = 2000;
 
-  const author = videos[0]?.author || {};
+  console.log(`[APIFY] Profile extracted:`, {
+    handle: cleanHandle,
+    followers: followers,
+    totalLikes: totalLikes,
+    avgViews: Math.round(avgViews),
+    engagementRate: engagementRate?.toFixed(2) + '%',
+  });
 
   return {
     handle: cleanHandle,
@@ -118,11 +114,11 @@ async function scrapeTikTokProfile(handle: string): Promise<ParsedProfile> {
     followers: followers,
     totalLikes: totalLikes > 0 ? BigInt(totalLikes) : null,
     engagementRate,
-    biography: profileData?.description || author.signature || null,
+    biography: author.signature || null,
     estimatedPrice,
     averageViews: avgViews > 0 ? Math.round(avgViews).toString() : null,
-    verified: profileData?.verified || author.verified || false,
-    rawData: { videos, totalLikes, totalViews, profileData },
+    verified: author.verified || false,
+    rawData: { videos, totalLikes, totalViews, author },
   };
 }
 
