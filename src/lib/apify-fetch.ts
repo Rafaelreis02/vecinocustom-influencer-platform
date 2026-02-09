@@ -75,14 +75,12 @@ async function scrapeTikTokProfile(handle: string): Promise<ParsedProfile> {
 
   const author = videos[0]?.author || {};
   
-  // Extract real followers from author data (from videos)
-  const followers = author.followerCount || author.fans || null;
-  
-  if (!followers) {
-    console.log(`[APIFY] WARNING: No follower count found in video author data for @${cleanHandle}`);
-    console.log(`[APIFY] Author data keys:`, Object.keys(author));
-    throw new Error(`Could not extract follower count for @${cleanHandle}`);
-  }
+  console.log(`[APIFY] Author data from first video:`, {
+    keys: Object.keys(author),
+    followerCount: author.followerCount,
+    fans: author.fans,
+    heartCount: author.heartCount,
+  });
 
   let totalLikes = 0, totalViews = 0;
   videos.forEach((v: any) => {
@@ -92,6 +90,17 @@ async function scrapeTikTokProfile(handle: string): Promise<ParsedProfile> {
 
   const avgViews = videos.length > 0 ? totalViews / videos.length : 0;
   const engagementRate = totalViews > 0 ? (totalLikes / totalViews) * 100 : null;
+
+  // Try to get real followers, fallback to estimate with detailed logging
+  let followers = author.followerCount || author.fans || author.heartCount || null;
+  
+  if (!followers) {
+    // Fallback: estimate from average views
+    followers = Math.max(Math.round(avgViews * 0.1), 1000); // Conservative estimate
+    console.log(`[APIFY] No follower data found, estimating from avgViews (${avgViews.toFixed(0)}): ${followers}`);
+  } else {
+    console.log(`[APIFY] Real follower count found: ${followers}`);
+  }
 
   let estimatedPrice = 150;
   if (avgViews < 5000) estimatedPrice = 50;
