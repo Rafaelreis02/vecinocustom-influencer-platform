@@ -323,7 +323,6 @@ export default function MessagesPage() {
       setShowAddInfluencerModal(false);
       setInfluencerUsername('');
       setInfluencerPlatform('TikTok');
-      setShowAddInfluencerModal(true);
       fetchEmails();
       
       // Refresh the email detail to show updated influencer link
