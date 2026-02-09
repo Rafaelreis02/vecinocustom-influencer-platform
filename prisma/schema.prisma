@@ -382,7 +382,7 @@ model Email {
   influencer      Influencer?   @relation("InfluencerEmails", fields: [influencerId], references: [id], onDelete: SetNull)
   
   // Attachments
-  attachments     String[]      // JSON array of {filename, url, size, type}
+  attachments     Json?         // JSON array of {filename, mimeType, size, attachmentId}
   
   // Metadata
   receivedAt      DateTime
