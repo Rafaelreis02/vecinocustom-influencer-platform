@@ -884,10 +884,7 @@ export default function MessagesPage() {
                 <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
                   <p className="text-sm text-amber-700 font-semibold mb-3">⚠️ Não Registado</p>
                   <button
-                    onClick={() => {
-                      setShowAddInfluencerModal(true);
-                      handleAutoDetect();
-                    }}
+                    onClick={() => setShowAddInfluencerModal(true)}
                     className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition"
                   >
                     Adicionar como Influenciador
