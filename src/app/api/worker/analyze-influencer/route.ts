@@ -22,6 +22,9 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
+// Force Node.js runtime (Edge has issues with ApifyClient)
+export const runtime = 'nodejs';
+
 export async function POST(req: Request) {
   try {
     const { handle, platform } = await req.json();
