@@ -471,15 +471,9 @@ export default function MessagesPage() {
             {/* Sender Info with Avatar */}
             <div className="flex items-start gap-3 mb-4 pb-4 border-b border-gray-100">
               <button
-                onClick={() => {
-                  if (selectedEmail.influencer) {
-                    window.location.href = `/dashboard/influencers/${selectedEmail.influencer.id}`;
-                  } else {
-                    setShowProfilePreview(true);
-                  }
-                }}
+                onClick={() => setShowProfilePreview(true)}
                 className={`flex-shrink-0 w-10 h-10 rounded-full ${getAvatarColor(selectedEmail.from)} text-white font-bold text-sm flex items-center justify-center hover:opacity-80 transition cursor-pointer`}
-                title={selectedEmail.influencer ? "Ver perfil completo" : "Ver detalhes"}
+                title="Ver perfil"
               >
                 {getInitials(selectedEmail.from)}
               </button>
