@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { Suspense, useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useGlobalToast } from '@/contexts/ToastContext';
 import { Settings, CheckCircle, XCircle, Loader2, ShoppingBag } from 'lucide-react';
 
-export default function SettingsPage() {
+function SettingsContent() {
   const searchParams = useSearchParams();
   const { addToast } = useGlobalToast();
   
@@ -35,13 +35,11 @@ export default function SettingsPage() {
   }, []);
 
   useEffect(() => {
-    // Check for OAuth success/error messages
     const shopifyParam = searchParams.get('shopify');
     const errorParam = searchParams.get('error');
 
     if (shopifyParam === 'connected') {
       addToast('✅ Shopify conectado com sucesso!', 'success');
-      // Clean URL
       window.history.replaceState({}, '', '/dashboard/settings');
     } else if (errorParam) {
       let errorMessage = 'Erro ao conectar ao Shopify';
@@ -51,7 +49,6 @@ export default function SettingsPage() {
       else if (errorParam === 'connection_failed') errorMessage = 'Falha na conexão';
       
       addToast(errorMessage, 'error');
-      // Clean URL
       window.history.replaceState({}, '', '/dashboard/settings');
     }
 
@@ -114,13 +111,11 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center gap-3">
         <Settings className="h-6 w-6 text-slate-900" />
         <h1 className="text-2xl font-bold text-slate-900">Configurações</h1>
       </div>
 
-      {/* Shopify Integration Section */}
       <div className="rounded-lg bg-white border border-gray-200 p-6">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
@@ -199,7 +194,6 @@ export default function SettingsPage() {
         )}
       </div>
 
-      {/* Future sections can be added here */}
       <div className="rounded-lg bg-white border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-slate-900 mb-2">Outras Configurações</h2>
         <p className="text-sm text-gray-500">
@@ -207,5 +201,17 @@ export default function SettingsPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+      </div>
+    }>
+      <SettingsContent />
+    </Suspense>
   );
 }
