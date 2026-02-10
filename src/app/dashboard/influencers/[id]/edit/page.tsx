@@ -32,7 +32,7 @@ export default function EditInfluencerPage() {
     instagramFollowers: '',
     tiktokHandle: '',
     tiktokFollowers: '',
-    status: 'suggestion',
+    status: 'UNKNOWN',
     tier: 'micro',
     notes: '',
     tags: '',
@@ -56,7 +56,7 @@ export default function EditInfluencerPage() {
         instagramFollowers: data.instagramFollowers?.toString() || '',
         tiktokHandle: data.tiktokHandle || '',
         tiktokFollowers: data.tiktokFollowers?.toString() || '',
-        status: data.status || 'suggestion',
+        status: data.status || 'UNKNOWN',
         tier: data.tier || 'micro',
         notes: data.notes || '',
         tags: Array.isArray(data.tags) ? data.tags.join(', ') : '',
@@ -283,9 +283,26 @@ export default function EditInfluencerPage() {
                 onChange={handleChange}
                 className="w-full rounded-md border border-gray-200 px-4 py-2 text-sm focus:border-gray-900 focus:outline-none"
               >
-                <option value="suggestion">Sugestão</option>
-                <option value="negotiating">Em Negociação</option>
-                <option value="working">A Trabalhar</option>
+                <optgroup label="🔍 Prospeção">
+                  <option value="UNKNOWN">Desconhecido</option>
+                  <option value="SUGGESTION">Sugestão</option>
+                  <option value="IMPORT_PENDING">A Importar</option>
+                </optgroup>
+                <optgroup label="💬 A Negociar">
+                  <option value="ANALYZING">Em Análise</option>
+                  <option value="COUNTER_PROPOSAL">Contraproposta</option>
+                </optgroup>
+                <optgroup label="✅ Em Curso">
+                  <option value="AGREED">Acordado</option>
+                  <option value="PRODUCT_SELECTION">Seleção Produto</option>
+                  <option value="CONTRACT_PENDING">Contrato Pendente</option>
+                  <option value="SHIPPED">Enviado</option>
+                  <option value="COMPLETED">Concluído</option>
+                </optgroup>
+                <optgroup label="──────────">
+                  <option value="CANCELLED">Cancelado</option>
+                  <option value="BLACKLISTED">Bloqueado</option>
+                </optgroup>
               </select>
             </div>
 

@@ -87,7 +87,12 @@ export async function GET(request: Request) {
       };
     });
 
-    return NextResponse.json(influencersWithStats);
+    // Converter BigInt para string para JSON
+    const result = JSON.parse(JSON.stringify(influencersWithStats, (key, value) =>
+      typeof value === 'bigint' ? value.toString() : value
+    ));
+
+    return NextResponse.json(result);
   } catch (err: any) {
     console.log('[API ERROR] Fetching influencers:', err?.message || String(err));
     return NextResponse.json(
@@ -200,7 +205,7 @@ export async function POST(request: Request) {
         discoveryDate: body.discoveryDate ? new Date(body.discoveryDate) : null,
         
         // Status
-        status: body.status || 'suggestion',
+        status: body.status || 'UNKNOWN',
         tier: body.tier || 'micro',
         notes: body.notes || null,
         tags,

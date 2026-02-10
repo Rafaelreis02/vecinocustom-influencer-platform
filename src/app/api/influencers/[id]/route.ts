@@ -52,7 +52,8 @@ export async function GET(
       ? ((totalLikes + totalComments + totalShares) / totalFollowers) * 100
       : 0;
 
-    return NextResponse.json({
+    // Converter BigInt para string para JSON
+    const result = JSON.parse(JSON.stringify({
       ...influencer,
       totalViews,
       totalLikes,
@@ -61,7 +62,11 @@ export async function GET(
       totalRevenue,
       avgEngagement: parseFloat(engagementRate.toFixed(2)),
       activeCoupons: influencer.coupons.filter(c => c.usageCount > 0).length,
-    });
+    }, (key, value) =>
+      typeof value === 'bigint' ? value.toString() : value
+    ));
+
+    return NextResponse.json(result);
   } catch (err: any) {
     console.log('[API ERROR] Fetching influencer:', err?.message || String(err));
     return NextResponse.json(
