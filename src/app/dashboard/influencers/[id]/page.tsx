@@ -142,10 +142,14 @@ export default function InfluencerDetailPage() {
     try {
       setCreatingCoupon(true);
 
-      const res = await fetch(`/api/influencers/${id}/create-coupon`, {
+      const res = await fetch(`/api/influencers/${id}/coupon`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: couponCode.toUpperCase() }),
+        body: JSON.stringify({ 
+          code: couponCode.toUpperCase(),
+          discountPercent: parseFloat(couponDiscount),
+          commissionPercent: parseFloat(couponCommission),
+        }),
       });
 
       const data = await res.json();
@@ -165,6 +169,39 @@ export default function InfluencerDetailPage() {
       );
     } finally {
       setCreatingCoupon(false);
+    }
+  };
+
+  const handleDeleteCoupon = async () => {
+    const confirmed = await showConfirm({
+      title: 'Apagar Cupão',
+      message: 'Tens a certeza que queres apagar este cupão? Esta ação não pode ser desfeita.',
+      confirmText: 'Apagar',
+      cancelText: 'Cancelar',
+      isDangerous: true,
+    });
+
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(`/api/influencers/${id}/coupon`, {
+        method: 'DELETE',
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Erro ao apagar cupom');
+      }
+
+      fetchInfluencer();
+      addToast('Cupão apagado com sucesso', 'success');
+    } catch (error) {
+      console.error('Error deleting coupon:', error);
+      addToast(
+        error instanceof Error ? error.message : 'Erro ao apagar cupom',
+        'error'
+      );
     }
   };
 
@@ -483,87 +520,162 @@ export default function InfluencerDetailPage() {
         <CollapsibleSection title="Cupão Associado" icon={DollarSign} defaultOpen={true}>
           <div className="pt-4 space-y-4">
             {/* Current Coupon Display */}
-            {influencer.coupon && (
-              <div className="p-3 rounded-lg border border-gray-200 bg-gray-50">
-                <h4 className="text-xs text-gray-600 font-semibold mb-2">CUPOM ATUAL</h4>
-                <div className="grid grid-cols-3 gap-3">
+            {influencer.coupons && influencer.coupons.length > 0 && (
+              <div className="p-3 rounded-lg border border-gray-200 bg-gray-50 space-y-3">
+                <div className="flex items-start justify-between">
+                  <h4 className="text-xs text-gray-600 font-semibold">CUPOM ATUAL</h4>
+                  {influencer.coupons[0].shopifyPriceRuleId && (
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700 flex items-center gap-1">
+                      Shopify ✓
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Código</p>
-                    <p className="text-sm font-mono font-bold text-slate-900">{influencer.coupon.code}</p>
+                    <p className="text-sm font-mono font-bold text-slate-900">{influencer.coupons[0].code}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Desconto</p>
-                    <p className="text-lg font-bold text-slate-900">{influencer.coupon.discountValue}%</p>
+                    <p className="text-lg font-bold text-slate-900">{influencer.coupons[0].discountValue}%</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Status</p>
-                    <p className="text-sm font-semibold text-slate-700">✓ Ativo</p>
+                    <p className="text-xs text-gray-500 mb-1">Comissão</p>
+                    <p className="text-lg font-bold text-slate-900">{influencer.coupons[0].commissionRate || 0}%</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Usos</p>
+                    <p className="text-lg font-bold text-slate-900">{influencer.coupons[0].usageCount || 0}</p>
                   </div>
                 </div>
+                <button
+                  onClick={handleDeleteCoupon}
+                  className="w-full px-3 py-2 rounded bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition"
+                >
+                  🗑️ Apagar Cupão
+                </button>
               </div>
             )}
 
-            {/* Create/Edit Coupon Form */}
-            <form onSubmit={handleCreateCoupon} className="space-y-3 p-3 rounded-lg border border-gray-200 bg-white">
-              <h4 className="text-xs text-gray-600 font-semibold">ATRIBUIR CUPOM</h4>
-              
-              <div>
-                <label className="text-xs font-semibold text-gray-600">Código</label>
-                <input
-                  type="text"
-                  placeholder="Ex: VECINO_JOAO_10"
-                  value={couponCode}
-                  onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                  disabled={creatingCoupon}
-                  className="w-full mt-1 px-3 py-2 text-sm rounded border border-gray-200 bg-white text-slate-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 disabled:opacity-50"
-                />
-              </div>
+            {/* Create Coupon Form - Only show if no active coupon */}
+            {(!influencer.coupons || influencer.coupons.length === 0) && (
+              <form onSubmit={handleCreateCoupon} className="space-y-3 p-3 rounded-lg border border-gray-200 bg-white">
+                <h4 className="text-xs text-gray-600 font-semibold">ATRIBUIR CUPOM</h4>
+                
+                <div>
+                  <label className="text-xs font-semibold text-gray-600">Código</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: VECINO_JOAO_10"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                    disabled={creatingCoupon}
+                    className="w-full mt-1 px-3 py-2 text-sm rounded border border-gray-200 bg-white text-slate-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 disabled:opacity-50"
+                  />
+                </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-xs font-semibold text-gray-600">Desconto (%)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={couponDiscount}
-                    onChange={(e) => setCouponDiscount(e.target.value)}
-                    disabled={creatingCoupon}
-                    className="w-full mt-1 px-3 py-2 text-sm rounded border border-gray-200 bg-white text-slate-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 disabled:opacity-50"
-                  />
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-xs font-semibold text-gray-600">Desconto (%)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={couponDiscount}
+                      onChange={(e) => setCouponDiscount(e.target.value)}
+                      disabled={creatingCoupon}
+                      className="w-full mt-1 px-3 py-2 text-sm rounded border border-gray-200 bg-white text-slate-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 disabled:opacity-50"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-600">Comissão (%)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={couponCommission}
+                      onChange={(e) => setCouponCommission(e.target.value)}
+                      disabled={creatingCoupon}
+                      className="w-full mt-1 px-3 py-2 text-sm rounded border border-gray-200 bg-white text-slate-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 disabled:opacity-50"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-600">Comissão (%)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={couponCommission}
-                    onChange={(e) => setCouponCommission(e.target.value)}
-                    disabled={creatingCoupon}
-                    className="w-full mt-1 px-3 py-2 text-sm rounded border border-gray-200 bg-white text-slate-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-900 disabled:opacity-50"
-                  />
-                </div>
-              </div>
-              
-              <button
-                type="submit"
-                disabled={creatingCoupon}
-                className="w-full px-3 py-2 rounded bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
-              >
-                {creatingCoupon ? '⏳ Criando...' : '✅ Atribuir Cupom'}
-              </button>
-            </form>
+                
+                <button
+                  type="submit"
+                  disabled={creatingCoupon}
+                  className="w-full px-3 py-2 rounded bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  {creatingCoupon ? '⏳ Criando...' : '✅ Atribuir Cupom'}
+                </button>
+              </form>
+            )}
           </div>
         </CollapsibleSection>
 
         {/* 💵 Histórico de Comissões */}
         <CollapsibleSection title="Histórico de Comissões" icon={Receipt} defaultOpen={false}>
           <div className="pt-4">
-            <div className="text-center py-6 text-gray-400">
-              <Receipt className="h-8 w-8 mx-auto mb-2 opacity-40" />
-              <p className="text-sm">Nenhuma comissão registada ainda</p>
-            </div>
+            {influencer.coupons && influencer.coupons.length > 0 && influencer.coupons[0].totalSales > 0 ? (
+              <div className="space-y-3">
+                {/* Summary Stats */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="p-3 rounded-lg border border-gray-200 bg-white">
+                    <p className="text-xs text-gray-500 mb-1">Total Vendas</p>
+                    <p className="text-lg font-bold text-slate-900">
+                      {influencer.coupons[0].usageCount || 0}
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-lg border border-gray-200 bg-white">
+                    <p className="text-xs text-gray-500 mb-1">Valor Vendas</p>
+                    <p className="text-lg font-bold text-slate-900">
+                      €{(influencer.coupons[0].totalSales || 0).toFixed(2)}
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-lg border border-gray-200 bg-white">
+                    <p className="text-xs text-gray-500 mb-1">Comissão Total</p>
+                    <p className="text-lg font-bold text-green-600">
+                      €{((influencer.coupons[0].totalSales || 0) * ((influencer.coupons[0].commissionRate || 0) / 100)).toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Payment Records */}
+                {influencer.payments && influencer.payments.length > 0 ? (
+                  <div className="space-y-2">
+                    <h4 className="text-xs text-gray-600 font-semibold mt-4">HISTÓRICO DE PAGAMENTOS</h4>
+                    {influencer.payments.map((payment: any) => (
+                      <div key={payment.id} className="p-3 rounded-lg border border-gray-200 bg-white">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold text-slate-900">€{payment.amount.toFixed(2)}</p>
+                            <p className="text-xs text-gray-500">{payment.description}</p>
+                            <p className="text-xs text-gray-400">
+                              {new Date(payment.createdAt).toLocaleDateString('pt-PT')}
+                            </p>
+                          </div>
+                          <div>
+                            <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                              payment.status === 'PAID' ? 'bg-green-100 text-green-700' :
+                              payment.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
+                              payment.status === 'PROCESSING' ? 'bg-blue-100 text-blue-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {payment.status}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <div className="text-center py-6 text-gray-400">
+                <Receipt className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                <p className="text-sm">Nenhuma comissão registada ainda</p>
+              </div>
+            )}
           </div>
         </CollapsibleSection>
 
