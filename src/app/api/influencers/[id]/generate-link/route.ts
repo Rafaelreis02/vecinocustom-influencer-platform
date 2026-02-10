@@ -34,12 +34,14 @@ export async function POST(
       });
     }
 
-    // Generate new token (Prisma will auto-generate UUID)
+    // Generate new UUID token explicitly
+    const crypto = require('crypto');
+    const newToken = crypto.randomUUID();
+    
     const updated = await prisma.influencer.update({
       where: { id },
       data: {
-        // Force update to trigger default value generation if needed
-        updatedAt: new Date(),
+        portalToken: newToken,
       },
       select: { portalToken: true },
     });

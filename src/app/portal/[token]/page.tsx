@@ -4,6 +4,10 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 
+// Constants
+const VALIDATION_ERROR_DISPLAY_DURATION = 4000; // 4 seconds
+const STEP_TRANSITION_DELAY = 1500; // 1.5 seconds
+
 // Types
 interface InfluencerData {
   id: string;
@@ -22,6 +26,20 @@ interface InfluencerData {
   chosenProduct: string | null;
   trackingUrl: string | null;
   couponCode: string | null;
+}
+
+interface StepProps {
+  data: InfluencerData;
+  token: string;
+  onUpdate: () => Promise<void>;
+  onNext: () => void;
+  onBack?: () => void;
+}
+
+interface ProductSearchResult {
+  title: string;
+  url: string;
+  image: string | null;
 }
 
 // DDI options
@@ -222,7 +240,7 @@ function ProgressBar({ currentStep }: { currentStep: number }) {
 }
 
 // Step 1 - Partnership Details
-function Step1({ data, token, onUpdate, onNext }: any) {
+function Step1({ data, token, onUpdate, onNext }: StepProps) {
   const [formData, setFormData] = useState({
     name: data.name || '',
     email: data.email || '',
@@ -287,7 +305,7 @@ function Step1({ data, token, onUpdate, onNext }: any) {
       // Wait 1.5s then advance to next step
       setTimeout(() => {
         onNext();
-      }, 1500);
+      }, STEP_TRANSITION_DELAY);
       
     } catch (err: any) {
       alert(err.message);
@@ -300,7 +318,7 @@ function Step1({ data, token, onUpdate, onNext }: any) {
     const error = validateForm();
     if (error) {
       setValidationError(error);
-      setTimeout(() => setValidationError(null), 4000);
+      setTimeout(() => setValidationError(null), VALIDATION_ERROR_DISPLAY_DURATION);
       return;
     }
     
@@ -334,7 +352,7 @@ function Step1({ data, token, onUpdate, onNext }: any) {
     const error = validateForm();
     if (error) {
       setValidationError(error);
-      setTimeout(() => setValidationError(null), 4000);
+      setTimeout(() => setValidationError(null), VALIDATION_ERROR_DISPLAY_DURATION);
       return;
     }
     
@@ -539,7 +557,7 @@ function Step1({ data, token, onUpdate, onNext }: any) {
   );
 }
 
-function Step2({ data, token, onUpdate, onBack, onNext }: any) {
+function Step2({ data, token, onUpdate, onBack, onNext }: StepProps) {
   const [formData, setFormData] = useState({
     shippingAddress: data.shippingAddress || '',
     productSuggestion1: data.productSuggestion1 || '',
@@ -550,9 +568,9 @@ function Step2({ data, token, onUpdate, onBack, onNext }: any) {
   const [searchQuery1, setSearchQuery1] = useState('');
   const [searchQuery2, setSearchQuery2] = useState('');
   const [searchQuery3, setSearchQuery3] = useState('');
-  const [searchResults1, setSearchResults1] = useState<any[]>([]);
-  const [searchResults2, setSearchResults2] = useState<any[]>([]);
-  const [searchResults3, setSearchResults3] = useState<any[]>([]);
+  const [searchResults1, setSearchResults1] = useState<ProductSearchResult[]>([]);
+  const [searchResults2, setSearchResults2] = useState<ProductSearchResult[]>([]);
+  const [searchResults3, setSearchResults3] = useState<ProductSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -561,7 +579,7 @@ function Step2({ data, token, onUpdate, onBack, onNext }: any) {
     if (validationError) setValidationError(null);
   };
 
-  const searchProducts = async (query: string, setResults: Function) => {
+  const searchProducts = async (query: string, setResults: (results: ProductSearchResult[]) => void) => {
     if (query.length < 3) {
       setResults([]);
       return;
@@ -602,7 +620,12 @@ function Step2({ data, token, onUpdate, onBack, onNext }: any) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery3]);
 
-  const selectProduct = (field: string, product: any, setSearch: Function, setResults: Function) => {
+  const selectProduct = (
+    field: string,
+    product: ProductSearchResult,
+    setSearch: (query: string) => void,
+    setResults: (results: ProductSearchResult[]) => void
+  ) => {
     handleChange(field, product.url);
     setSearch(product.title);
     setResults([]);
@@ -618,7 +641,7 @@ function Step2({ data, token, onUpdate, onBack, onNext }: any) {
     const error = validateForm();
     if (error) {
       setValidationError(error);
-      setTimeout(() => setValidationError(null), 4000);
+      setTimeout(() => setValidationError(null), VALIDATION_ERROR_DISPLAY_DURATION);
       return;
     }
 
@@ -644,7 +667,7 @@ function Step2({ data, token, onUpdate, onBack, onNext }: any) {
       // Wait 1.5s then advance to next step
       setTimeout(() => {
         onNext();
-      }, 1500);
+      }, STEP_TRANSITION_DELAY);
 
     } catch (err: any) {
       alert(err.message);
@@ -830,7 +853,7 @@ function Step4() {
   );
 }
 
-function Step5({ data }: any) {
+function Step5({ data }: { data: InfluencerData }) {
   return (
     <div>
       <h2 className="text-xl font-bold text-[#0E1E37] mb-6 uppercase">Shipped</h2>

@@ -53,9 +53,12 @@ export async function GET(
     const products = data.products || [];
 
     // Format products for portal
+    // Extract shop name from SHOPIFY_STORE_URL (e.g., "mystore.myshopify.com" -> "mystore")
+    const shopName = SHOPIFY_STORE_URL.replace('.myshopify.com', '');
+    
     const formattedProducts = products.map((product: any) => ({
       title: product.title,
-      url: `https://${SHOPIFY_STORE_URL.replace('.myshopify.com', '')}.myshopify.com/products/${product.handle}`,
+      url: `https://${shopName}.myshopify.com/products/${product.handle}`,
       image: product.images?.[0]?.src || product.image?.src || null,
     }));
 
