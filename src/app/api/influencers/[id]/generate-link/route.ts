@@ -47,7 +47,7 @@ export async function POST(
     const newToken = crypto.randomUUID();
     
     // Update data - set token and change status from UNKNOWN to COUNTER_PROPOSAL if needed
-    const updateData: any = { portalToken: newToken };
+    const updateData: { portalToken: string; status?: string } = { portalToken: newToken };
     if (influencer.status === 'UNKNOWN') {
       updateData.status = 'COUNTER_PROPOSAL';
     }
