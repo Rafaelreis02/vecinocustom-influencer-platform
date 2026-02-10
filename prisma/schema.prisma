@@ -75,7 +75,7 @@ model Influencer {
   fitScore          Int?                // 1-5 score para joias
   
   // Status
-  status            InfluencerStatus    @default(NEW)
+  status            InfluencerStatus    @default(UNKNOWN)
   tier              String?             // Micro, Macro, Mega, etc.
   notes             String?
   tags              String[]            // Array of tags
@@ -102,25 +102,25 @@ model Influencer {
 }
 
 enum InfluencerStatus {
-  // Estados do workflow (novos)
-  NEW              // 🔵 Novo (recém adicionado)
-  NEGOTIATING      // 💬 Em negociação
-  AWAITING_PRODUCT // ⏳ À espera do produto
-  PRODUCT_SENT     // 📦 Produto enviado
-  COMPLETED        // ✅ Concluído
-  CANCELLED        // ❌ Cancelado
-  
-  // Estados técnicos
-  IMPORT_PENDING   // ⏳ Aguardando importação pelo Agente
-  BLACKLISTED      // 🚫 Bloqueado
-  
-  // DEPRECATED - Manter temporariamente para migração
-  ACTIVE
-  INACTIVE
-  PENDING
-  working
-  negotiating
-  suggestion
+  // Fase 1: Prospeção
+  UNKNOWN            // 🔍 Desconhecido - não tem rede social associada
+  SUGGESTION         // 💡 Sugestão - IA sugeriu via scraping
+  IMPORT_PENDING     // ⏳ A Importar - a ser analisado pelo agente
+
+  // Fase 2: A Negociar
+  ANALYZING          // 🔎 Em Análise - estamos a analisar proposta do influencer
+  COUNTER_PROPOSAL   // ↩️ Contraproposta - influencer a analisar a nossa proposta
+
+  // Fase 3: Em Curso
+  AGREED             // 🤝 Acordado - valores acordados, falta sugerir produtos + morada
+  PRODUCT_SELECTION  // 🎁 Seleção Produto - produto escolhido, aguardar confirmação design
+  CONTRACT_PENDING   // 📝 Contrato Pendente - design escolhido, falta assinar contrato
+  SHIPPED            // 📦 Enviado - encomenda enviada, falta entregar conteúdo
+  COMPLETED          // ✅ Concluído - conteúdo entregue e aprovado
+
+  // Especiais
+  CANCELLED          // ❌ Cancelado
+  BLACKLISTED        // 🚫 Bloqueado
 }
 
 enum PaymentMethod {

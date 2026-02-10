@@ -40,7 +40,7 @@ export async function POST() {
       await prisma.influencer.update({
         where: { id: pending.id },
         data: {
-          status: 'suggestion',
+          status: 'SUGGESTION',
           notes: 'Erro: Nenhum handle fornecido.'
         }
       });
@@ -55,7 +55,7 @@ export async function POST() {
       await prisma.influencer.update({
         where: { id: pending.id },
         data: {
-          status: 'suggestion',
+          status: 'SUGGESTION',
           notes: 'Instagram scraping não implementado ainda. Use TikTok.'
         }
       });
@@ -82,7 +82,7 @@ export async function POST() {
       await prisma.influencer.update({
         where: { id: pending.id },
         data: {
-          status: 'suggestion',
+          status: 'SUGGESTION',
           notes: `Erro ao extrair dados: ${scrapeError.message}. Verifique se OpenClaw Gateway está rodando.`
         }
       });
@@ -126,7 +126,7 @@ export async function POST() {
 
     // 5. Atualizar influencer no DB
     const updateData: any = {
-      status: 'suggestion',
+      status: 'SUGGESTION',
       notes: `✅ Dados REAIS extraídos via Browser em ${new Date().toLocaleString('pt-PT')}.\n\nBio: ${profileData.bio}`,
       name: profileData.name,
       tiktokFollowers: profileData.followers,

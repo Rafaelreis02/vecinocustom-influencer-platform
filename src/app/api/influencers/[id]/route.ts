@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { serializeBigInt } from '@/lib/serialize';
 
 // Updated: 2026-02-07 - Added PATCH support for auto-import
 
@@ -52,7 +53,7 @@ export async function GET(
       ? ((totalLikes + totalComments + totalShares) / totalFollowers) * 100
       : 0;
 
-    return NextResponse.json({
+    const result = serializeBigInt({
       ...influencer,
       totalViews,
       totalLikes,
@@ -62,6 +63,8 @@ export async function GET(
       avgEngagement: parseFloat(engagementRate.toFixed(2)),
       activeCoupons: influencer.coupons.filter(c => c.usageCount > 0).length,
     });
+
+    return NextResponse.json(result);
   } catch (err: any) {
     console.log('[API ERROR] Fetching influencer:', err?.message || String(err));
     return NextResponse.json(

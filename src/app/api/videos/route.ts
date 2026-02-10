@@ -91,7 +91,7 @@ export async function POST(request: Request) {
           data: {
             name: body.influencerName || handle,
             [handleField]: handle,
-            status: 'suggestion',
+            status: 'SUGGESTION',
             primaryPlatform: body.platform || 'TIKTOK',
             discoveryMethod: `Video with ${body.campaignHashtag || 'hashtag'}`,
             discoveryDate: new Date(),

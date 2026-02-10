@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { serializeBigInt } from '@/lib/serialize';
 
 // GET /api/influencers - Listar todos os influencers
 export async function GET(request: Request) {
@@ -87,7 +88,7 @@ export async function GET(request: Request) {
       };
     });
 
-    return NextResponse.json(influencersWithStats);
+    return NextResponse.json(serializeBigInt(influencersWithStats));
   } catch (err: any) {
     console.log('[API ERROR] Fetching influencers:', err?.message || String(err));
     return NextResponse.json(
@@ -102,8 +103,8 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
 
-    // Validação de campos obrigatórios (apenas para status working/negotiating)
-    const requiresFullData = body.status === 'working' || body.status === 'negotiating';
+    // Validação de campos obrigatórios (apenas para statuses do CLOSING phase)
+    const requiresFullData = ['AGREED', 'PRODUCT_SELECTION', 'CONTRACT_PENDING', 'SHIPPED', 'COMPLETED'].includes(body.status);
     
     if (requiresFullData) {
       const missingFields = [];
@@ -200,7 +201,7 @@ export async function POST(request: Request) {
         discoveryDate: body.discoveryDate ? new Date(body.discoveryDate) : null,
         
         // Status
-        status: body.status || 'suggestion',
+        status: body.status || 'UNKNOWN',
         tier: body.tier || 'micro',
         notes: body.notes || null,
         tags,

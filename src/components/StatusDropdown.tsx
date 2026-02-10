@@ -2,7 +2,14 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
-import { getStatusConfig, WORKFLOW_STATUSES, type InfluencerStatus } from '@/lib/influencer-status';
+import { 
+  getStatusConfig, 
+  getWorkflowStatuses, 
+  getSpecialStatuses,
+  PHASES,
+  type InfluencerStatus,
+  type PhaseId 
+} from '@/lib/influencer-status';
 import { StatusBadge } from './StatusBadge';
 
 interface StatusDropdownProps {
@@ -71,31 +78,66 @@ export function StatusDropdown({ influencerId, currentStatus, onStatusChange, si
       </button>
       
       {isOpen && (
-        <div className="absolute left-0 sm:right-0 sm:left-auto top-full mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1">
+        <div className="absolute left-0 sm:right-0 sm:left-auto top-full mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1 max-h-96 overflow-y-auto">
           <div className="px-3 py-2 border-b border-gray-100">
             <p className="text-xs font-semibold text-gray-500 uppercase">Alterar Estado</p>
           </div>
           
-          {WORKFLOW_STATUSES.map((status) => {
-            const config = getStatusConfig(status);
-            const isActive = status === currentStatus;
-            
-            return (
-              <button
-                key={status}
-                onClick={() => handleStatusChange(status)}
-                className={`w-full px-3 py-2 text-left text-sm flex items-center gap-2 transition ${
-                  isActive
-                    ? 'bg-blue-50 text-blue-700 font-medium'
-                    : 'text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                <span className={`h-2 w-2 rounded-full ${config.dotColor}`} />
-                {config.label}
-                {isActive && <span className="ml-auto text-blue-600">✓</span>}
-              </button>
-            );
-          })}
+          {/* Render statuses grouped by phase */}
+          {Object.values(PHASES).map((phase) => (
+            <div key={phase.id}>
+              <div className="px-3 py-2 border-b border-gray-100 bg-gray-50">
+                <p className="text-xs font-medium text-gray-600 flex items-center gap-1">
+                  <span>{phase.icon}</span>
+                  <span>{phase.label}</span>
+                </p>
+              </div>
+              {phase.statuses.map((status) => {
+                const config = getStatusConfig(status);
+                const isActive = status === currentStatus;
+                
+                return (
+                  <button
+                    key={status}
+                    onClick={() => handleStatusChange(status as InfluencerStatus)}
+                    className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 transition ${
+                      isActive
+                        ? 'bg-blue-50 text-blue-700 font-medium'
+                        : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span className={`h-2 w-2 rounded-full ${config.dotColor}`} />
+                    {config.label}
+                    {isActive && <span className="ml-auto text-blue-600">✓</span>}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+          
+          {/* Special statuses (no phase) */}
+          <div className="border-t border-gray-200 mt-1">
+            {getSpecialStatuses().map((status) => {
+              const config = getStatusConfig(status);
+              const isActive = status === currentStatus;
+              
+              return (
+                <button
+                  key={status}
+                  onClick={() => handleStatusChange(status)}
+                  className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 transition ${
+                    isActive
+                      ? 'bg-blue-50 text-blue-700 font-medium'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <span className={`h-2 w-2 rounded-full ${config.dotColor}`} />
+                  {config.label}
+                  {isActive && <span className="ml-auto text-blue-600">✓</span>}
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>

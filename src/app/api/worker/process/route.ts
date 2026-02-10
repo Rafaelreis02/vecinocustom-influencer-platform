@@ -31,7 +31,7 @@ export async function POST() {
       await prisma.influencer.update({
         where: { id: pending.id },
         data: {
-          status: 'suggestion',
+          status: 'SUGGESTION',
           notes: 'Erro: Nenhum handle fornecido.'
         }
       });
@@ -123,7 +123,7 @@ IMPORTANTE:
 
     // 4. Atualizar influencer no DB
     const updateData: any = {
-      status: 'suggestion', // Mover para sugestão
+      status: 'SUGGESTION', // Mover para sugestão
       notes: errorMessage || `Analisado automaticamente via IA. Bio: ${analysis.bio || 'N/A'}`,
     };
 
