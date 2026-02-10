@@ -4,6 +4,7 @@
  */
 
 import { prisma } from './prisma';
+import crypto from 'crypto';
 
 const SHOPIFY_STORE_URL = process.env.SHOPIFY_STORE_URL || '';
 const SHOPIFY_CLIENT_ID = process.env.SHOPIFY_CLIENT_ID || '';
@@ -41,11 +42,12 @@ export async function getShopifyAccessToken(): Promise<string | null> {
 
 /**
  * Make authenticated request to Shopify REST API
+ * Returns both data and response for header access
  */
 async function shopifyRestAPI(
   endpoint: string,
   options: RequestInit = {}
-): Promise<any> {
+): Promise<{ data: any; response: Response }> {
   const accessToken = await getShopifyAccessToken();
   
   if (!accessToken) {
@@ -70,7 +72,8 @@ async function shopifyRestAPI(
     );
   }
 
-  return response.json();
+  const data = await response.json();
+  return { data, response };
 }
 
 /**
@@ -83,7 +86,7 @@ export async function createShopifyCoupon(
 ): Promise<{ priceRuleId: string; discountCodeId: string }> {
   try {
     // Step 1: Create price rule
-    const priceRuleResponse = await shopifyRestAPI('/price_rules.json', {
+    const { data: priceRuleData } = await shopifyRestAPI('/price_rules.json', {
       method: 'POST',
       body: JSON.stringify({
         price_rule: {
@@ -99,10 +102,10 @@ export async function createShopifyCoupon(
       }),
     });
 
-    const priceRuleId = priceRuleResponse.price_rule.id;
+    const priceRuleId = priceRuleData.price_rule.id;
 
     // Step 2: Create discount code
-    const discountCodeResponse = await shopifyRestAPI(
+    const { data: discountCodeData } = await shopifyRestAPI(
       `/price_rules/${priceRuleId}/discount_codes.json`,
       {
         method: 'POST',
@@ -114,7 +117,7 @@ export async function createShopifyCoupon(
       }
     );
 
-    const discountCodeId = discountCodeResponse.discount_code.id;
+    const discountCodeId = discountCodeData.discount_code.id;
 
     return {
       priceRuleId: priceRuleId.toString(),
@@ -157,8 +160,8 @@ export async function getOrdersByDiscountCode(
         ? `/orders.json?page_info=${nextPageInfo}&status=any&limit=250`
         : `/orders.json?discount_code=${discountCode}&status=any&limit=250`;
 
-      const response = await shopifyRestAPI(endpoint, { method: 'GET' });
-      const orders = response.orders || [];
+      const { data, response } = await shopifyRestAPI(endpoint, { method: 'GET' });
+      const orders = data.orders || [];
 
       // Filter orders that have the discount code
       const matchingOrders = orders.filter((order: any) =>
@@ -169,8 +172,8 @@ export async function getOrdersByDiscountCode(
 
       allOrders = [...allOrders, ...matchingOrders];
 
-      // Check for pagination
-      const linkHeader = response.headers?.get?.('Link') || '';
+      // Check for pagination in Link header
+      const linkHeader = response.headers.get('Link') || '';
       const nextLinkMatch = linkHeader.match(/<([^>]+)>;\s*rel="next"/);
       
       if (nextLinkMatch) {
@@ -203,8 +206,6 @@ export function verifyShopifyHmac(
   query: Record<string, string>,
   hmac: string
 ): boolean {
-  const crypto = require('crypto');
-  
   // Create a copy without hmac
   const { hmac: _, ...params } = query;
   
@@ -266,11 +267,11 @@ export async function testShopifyConnection() {
       };
     }
 
-    const response = await shopifyRestAPI('/shop.json', { method: 'GET' });
+    const { data } = await shopifyRestAPI('/shop.json', { method: 'GET' });
     
     return {
       success: true,
-      shop: response.shop,
+      shop: data.shop,
     };
   } catch (error) {
     console.error('Shopify connection test failed:', error);

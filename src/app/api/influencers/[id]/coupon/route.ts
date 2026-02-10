@@ -24,14 +24,14 @@ export async function POST(
       );
     }
 
-    if (!discountPercent || discountPercent < 0 || discountPercent > 100) {
+    if (typeof discountPercent !== 'number' || discountPercent < 0 || discountPercent > 100) {
       return NextResponse.json(
         { success: false, error: 'Percentagem de desconto inválida (0-100)' },
         { status: 400 }
       );
     }
 
-    if (!commissionPercent || commissionPercent < 0 || commissionPercent > 100) {
+    if (typeof commissionPercent !== 'number' || commissionPercent < 0 || commissionPercent > 100) {
       return NextResponse.json(
         { success: false, error: 'Percentagem de comissão inválida (0-100)' },
         { status: 400 }

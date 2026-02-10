@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useGlobalToast } from '@/contexts/ToastContext';
 import { Settings, CheckCircle, XCircle, Loader2, ShoppingBag } from 'lucide-react';
@@ -13,6 +13,26 @@ export default function SettingsPage() {
   const [shopifyConnected, setShopifyConnected] = useState(false);
   const [shopifyData, setShopifyData] = useState<any>(null);
   const [testing, setTesting] = useState(false);
+
+  const checkShopifyConnection = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await fetch('/api/shopify/status');
+      const data = await res.json();
+      
+      if (data.connected) {
+        setShopifyConnected(true);
+        setShopifyData(data.shop);
+      } else {
+        setShopifyConnected(false);
+      }
+    } catch (error) {
+      console.error('Error checking Shopify connection:', error);
+      setShopifyConnected(false);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     // Check for OAuth success/error messages
@@ -36,27 +56,8 @@ export default function SettingsPage() {
     }
 
     checkShopifyConnection();
-  }, []);
+  }, [searchParams, addToast, checkShopifyConnection]);
 
-  const checkShopifyConnection = async () => {
-    try {
-      setLoading(true);
-      const res = await fetch('/api/shopify/status');
-      const data = await res.json();
-      
-      if (data.connected) {
-        setShopifyConnected(true);
-        setShopifyData(data.shop);
-      } else {
-        setShopifyConnected(false);
-      }
-    } catch (error) {
-      console.error('Error checking Shopify connection:', error);
-      setShopifyConnected(false);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleConnect = () => {
     window.location.href = '/api/shopify/auth';

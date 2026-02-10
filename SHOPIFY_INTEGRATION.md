@@ -19,9 +19,9 @@ Add the following to your `.env` file:
 
 ```env
 # Shopify OAuth Credentials
-SHOPIFY_STORE_URL="f5ed86-2.myshopify.com"
-SHOPIFY_CLIENT_ID="6bad0a2237b330b2b4a3b13f3bc16d68"
-SHOPIFY_CLIENT_SECRET="<your-new-secret>"
+SHOPIFY_STORE_URL="your-store.myshopify.com"
+SHOPIFY_CLIENT_ID="your-client-id-here"
+SHOPIFY_CLIENT_SECRET="<your-client-secret>"
 NEXT_PUBLIC_BASE_URL="https://your-domain.com"
 
 # Cron Job Protection
