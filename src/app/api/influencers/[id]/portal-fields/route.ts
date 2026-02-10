@@ -48,14 +48,14 @@ export async function PUT(
     }
 
     // Prepare update data - only portal-related fields
-    const updateData: any = {};
+    const updateData: Record<string, any> = {};
     
     const allowedFields = [
       'agreedPrice',
       'chosenProduct',
       'trackingUrl',
       'status',
-    ];
+    ] as const;
 
     allowedFields.forEach(field => {
       if (body[field] !== undefined) {
@@ -97,11 +97,11 @@ export async function PUT(
     });
 
     // Calculate statistics (same as GET)
-    const totalViews = updatedInfluencer.videos.reduce((sum, v) => sum + (v.views || 0), 0);
-    const totalLikes = updatedInfluencer.videos.reduce((sum, v) => sum + (v.likes || 0), 0);
-    const totalComments = updatedInfluencer.videos.reduce((sum, v) => sum + (v.comments || 0), 0);
-    const totalShares = updatedInfluencer.videos.reduce((sum, v) => sum + (v.shares || 0), 0);
-    const totalRevenue = updatedInfluencer.coupons.reduce((sum, c) => sum + (c.totalSales || 0), 0);
+    const totalViews = updatedInfluencer.videos.reduce((sum: number, v: any) => sum + (v.views || 0), 0);
+    const totalLikes = updatedInfluencer.videos.reduce((sum: number, v: any) => sum + (v.likes || 0), 0);
+    const totalComments = updatedInfluencer.videos.reduce((sum: number, v: any) => sum + (v.comments || 0), 0);
+    const totalShares = updatedInfluencer.videos.reduce((sum: number, v: any) => sum + (v.shares || 0), 0);
+    const totalRevenue = updatedInfluencer.coupons.reduce((sum: number, c: any) => sum + (c.totalSales || 0), 0);
     
     const totalFollowers = (updatedInfluencer.instagramFollowers || 0) + (updatedInfluencer.tiktokFollowers || 0);
     const engagementRate = totalFollowers > 0 
@@ -116,7 +116,7 @@ export async function PUT(
       totalShares,
       totalRevenue,
       avgEngagement: parseFloat(engagementRate.toFixed(2)),
-      activeCoupons: updatedInfluencer.coupons.filter(c => c.usageCount > 0).length,
+      activeCoupons: updatedInfluencer.coupons.filter((c: any) => c.usageCount > 0).length,
     });
 
     return NextResponse.json(result);

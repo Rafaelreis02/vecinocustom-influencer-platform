@@ -302,7 +302,7 @@ export default function InfluencerDetailPage() {
     }
   };
 
-  const handleSavePortalField = async (field: string, value: string | number) => {
+  const handleSavePortalField = async (field: string, value: string | number | null) => {
     try {
       setSavingField(field);
       
@@ -951,7 +951,7 @@ export default function InfluencerDetailPage() {
                   className="flex-1 px-3 py-2 text-sm rounded border border-gray-300 bg-white text-slate-900"
                 />
                 <button
-                  onClick={() => handleSavePortalField('agreedPrice', parseFloat(agreedPrice) || 0)}
+                  onClick={() => handleSavePortalField('agreedPrice', agreedPrice === '' ? null : parseFloat(agreedPrice))}
                   disabled={savingField === 'agreedPrice'}
                   className="px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
@@ -1008,8 +1008,8 @@ export default function InfluencerDetailPage() {
                       <ExternalLink className="h-4 w-4 text-gray-400 shrink-0" />
                     </div>
                   )}
-                  {!influencer.productSuggestion1 && !influencer.productSuggestion2 && !influencer.productSuggestion3 && (
-                    <p className="text-sm text-gray-500 italic">Nenhuma sugestão enviada ainda</p>
+                  {!influencer.productSuggestion1 && !influencer.productSuggestion2 && !influencer.productSuggestion3 && !influencer.shippingAddress && (
+                    <p className="text-sm text-gray-500 italic">Nenhuma informação enviada ainda</p>
                   )}
                   
                   {influencer.shippingAddress && (
