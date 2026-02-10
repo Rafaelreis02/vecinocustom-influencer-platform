@@ -299,7 +299,7 @@ export default function EditInfluencerPage() {
                   <option value="SHIPPED">Enviado</option>
                   <option value="COMPLETED">Concluído</option>
                 </optgroup>
-                <optgroup label="──────────">
+                <optgroup label="Especiais">
                   <option value="CANCELLED">Cancelado</option>
                   <option value="BLACKLISTED">Bloqueado</option>
                 </optgroup>

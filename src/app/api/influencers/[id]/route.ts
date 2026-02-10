@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { serializeBigInt } from '@/lib/serialize';
 
 // Updated: 2026-02-07 - Added PATCH support for auto-import
 
@@ -52,8 +53,7 @@ export async function GET(
       ? ((totalLikes + totalComments + totalShares) / totalFollowers) * 100
       : 0;
 
-    // Converter BigInt para string para JSON
-    const result = JSON.parse(JSON.stringify({
+    const result = serializeBigInt({
       ...influencer,
       totalViews,
       totalLikes,
@@ -62,9 +62,7 @@ export async function GET(
       totalRevenue,
       avgEngagement: parseFloat(engagementRate.toFixed(2)),
       activeCoupons: influencer.coupons.filter(c => c.usageCount > 0).length,
-    }, (key, value) =>
-      typeof value === 'bigint' ? value.toString() : value
-    ));
+    });
 
     return NextResponse.json(result);
   } catch (err: any) {

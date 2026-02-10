@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { serializeBigInt } from '@/lib/serialize';
 
 // GET /api/influencers - Listar todos os influencers
 export async function GET(request: Request) {
@@ -87,12 +88,7 @@ export async function GET(request: Request) {
       };
     });
 
-    // Converter BigInt para string para JSON
-    const result = JSON.parse(JSON.stringify(influencersWithStats, (key, value) =>
-      typeof value === 'bigint' ? value.toString() : value
-    ));
-
-    return NextResponse.json(result);
+    return NextResponse.json(serializeBigInt(influencersWithStats));
   } catch (err: any) {
     console.log('[API ERROR] Fetching influencers:', err?.message || String(err));
     return NextResponse.json(
