@@ -72,6 +72,51 @@ function CollapsibleSection({
   );
 }
 
+// Progress Bar Component for Portal Section
+function PortalProgressBar({ currentStep }: { currentStep: number }) {
+  const steps = [
+    { num: 1, label: 'Partnership' },
+    { num: 2, label: 'Shipping' },
+    { num: 3, label: 'Preparing' },
+    { num: 4, label: 'Contract' },
+    { num: 5, label: 'Shipped' },
+  ];
+  
+  return (
+    <div className="mb-6">
+      <div className="flex items-center justify-between">
+        {steps.map((step, index) => (
+          <div key={step.num} className="flex items-center flex-1">
+            {/* Circle */}
+            <div className="flex flex-col items-center">
+              <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-colors ${
+                  step.num < currentStep
+                    ? 'bg-[#27ae60] text-white'
+                    : step.num === currentStep
+                    ? 'bg-[#0E1E37] text-white'
+                    : 'bg-gray-300 text-gray-600'
+                }`}
+              >
+                {step.num}
+              </div>
+              <span className="text-[10px] text-gray-600 mt-1 whitespace-nowrap">{step.label}</span>
+            </div>
+            {/* Line */}
+            {index < steps.length - 1 && (
+              <div
+                className={`flex-1 h-1 mx-1 transition-colors ${
+                  step.num < currentStep ? 'bg-[#27ae60]' : 'bg-gray-300'
+                }`}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function InfluencerDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -87,6 +132,11 @@ export default function InfluencerDetailPage() {
   const [creatingCoupon, setCreatingCoupon] = useState(false);
   const [portalUrl, setPortalUrl] = useState<string | null>(null);
   const [generatingLink, setGeneratingLink] = useState(false);
+  const [agreedPrice, setAgreedPrice] = useState('');
+  const [chosenProduct, setChosenProduct] = useState('');
+  const [trackingUrl, setTrackingUrl] = useState('');
+  const [savingField, setSavingField] = useState<string | null>(null);
+  const [advancingStatus, setAdvancingStatus] = useState(false);
 
   useEffect(() => {
     fetchInfluencer();
@@ -97,6 +147,17 @@ export default function InfluencerDetailPage() {
       const res = await fetch(`/api/influencers/${id}`);
       const data = await res.json();
       setInfluencer(data);
+      
+      // Load portal fields
+      setAgreedPrice(data.agreedPrice?.toString() || '');
+      setChosenProduct(data.chosenProduct || '');
+      setTrackingUrl(data.trackingUrl || '');
+      
+      // Reconstruct portal URL if portalToken exists
+      if (data.portalToken && typeof window !== 'undefined') {
+        const baseUrl = window.location.origin;
+        setPortalUrl(`${baseUrl}/portal/${data.portalToken}`);
+      }
     } catch (error) {
       console.error('Error fetching influencer:', error);
       addToast('Erro ao carregar influencer', 'error');
@@ -238,6 +299,115 @@ export default function InfluencerDetailPage() {
     if (portalUrl) {
       navigator.clipboard.writeText(portalUrl);
       addToast('Link copiado para a área de transferência!', 'success');
+    }
+  };
+
+  const handleSavePortalField = async (field: string, value: string | number) => {
+    try {
+      setSavingField(field);
+      
+      const res = await fetch(`/api/influencers/${id}/portal-fields`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [field]: value }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || `Erro ao guardar ${field}`);
+      }
+
+      setInfluencer(data);
+      addToast('✅ Campo guardado com sucesso!', 'success');
+    } catch (error) {
+      console.error(`Error saving ${field}:`, error);
+      addToast(
+        error instanceof Error ? error.message : `Erro ao guardar ${field}`,
+        'error'
+      );
+    } finally {
+      setSavingField(null);
+    }
+  };
+
+  const getNextStatus = (currentStatus: string): string | null => {
+    const statusFlow: { [key: string]: string } = {
+      'ANALYZING': 'AGREED',
+      'COUNTER_PROPOSAL': 'AGREED',
+      'PRODUCT_SELECTION': 'CONTRACT_PENDING',
+      'CONTRACT_PENDING': 'SHIPPED',
+    };
+    return statusFlow[currentStatus] || null;
+  };
+
+  const getAdvanceButtonText = (currentStatus: string): string => {
+    const buttonTexts: { [key: string]: string } = {
+      'ANALYZING': 'Aceitar contraproposta (→ Agreed)',
+      'COUNTER_PROPOSAL': 'Aceitar contraproposta (→ Agreed)',
+      'PRODUCT_SELECTION': 'Produto escolhido (→ Contract Pending)',
+      'CONTRACT_PENDING': 'Contrato assinado (→ Shipped)',
+    };
+    return buttonTexts[currentStatus] || '';
+  };
+
+  const handleAdvanceStatus = async () => {
+    const nextStatus = getNextStatus(influencer.status);
+    if (!nextStatus) return;
+
+    const confirmed = await showConfirm({
+      title: 'Avançar Status',
+      message: `Tens a certeza que queres avançar o status para ${nextStatus}?`,
+      confirmText: 'Avançar',
+      cancelText: 'Cancelar',
+      isDangerous: false,
+    });
+
+    if (!confirmed) return;
+
+    try {
+      setAdvancingStatus(true);
+      
+      const res = await fetch(`/api/influencers/${id}/portal-fields`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Erro ao avançar status');
+      }
+
+      setInfluencer(data);
+      addToast(`✅ Status avançado para ${nextStatus}!`, 'success');
+    } catch (error) {
+      console.error('Error advancing status:', error);
+      addToast(
+        error instanceof Error ? error.message : 'Erro ao avançar status',
+        'error'
+      );
+    } finally {
+      setAdvancingStatus(false);
+    }
+  };
+
+  const getStepFromStatus = (status: string): number => {
+    switch (status) {
+      case 'COUNTER_PROPOSAL':
+      case 'ANALYZING':
+        return 1;
+      case 'AGREED':
+        return 2;
+      case 'PRODUCT_SELECTION':
+        return 3;
+      case 'CONTRACT_PENDING':
+        return 4;
+      case 'SHIPPED':
+        return 5;
+      default:
+        return 1;
     }
   };
 
@@ -715,9 +885,20 @@ export default function InfluencerDetailPage() {
           </div>
         </CollapsibleSection>
 
-        {/* 🔗 Portal Link */}
+        {/* 🔗 Portal do Influencer */}
         <CollapsibleSection title="Portal do Influencer" icon={ExternalLink} defaultOpen={true}>
-          <div className="pt-4 space-y-4">
+          <div className="pt-4 space-y-6">
+            {/* Progress Bar */}
+            <div>
+              <PortalProgressBar currentStep={getStepFromStatus(influencer.status)} />
+              <p className="text-sm text-gray-600 text-center">
+                Status: <span className="font-semibold">{influencer.status}</span> — Step {getStepFromStatus(influencer.status)}
+              </p>
+            </div>
+
+            <hr className="border-gray-200" />
+
+            {/* Portal Link */}
             {portalUrl ? (
               <div className="p-3 rounded-lg border border-gray-200 bg-gray-50 space-y-3">
                 <h4 className="text-xs text-gray-600 font-semibold">LINK DO PORTAL</h4>
@@ -753,6 +934,170 @@ export default function InfluencerDetailPage() {
                   {generatingLink ? '⏳ A gerar...' : '🔗 Gerar Link do Portal'}
                 </button>
               </div>
+            )}
+
+            <hr className="border-gray-200" />
+
+            {/* Agreed Price */}
+            <div className="space-y-2">
+              <h4 className="text-xs text-gray-600 font-semibold">VALOR PROPOSTO AO INFLUENCER (€)</h4>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  step="0.01"
+                  value={agreedPrice}
+                  onChange={(e) => setAgreedPrice(e.target.value)}
+                  placeholder="0.00"
+                  className="flex-1 px-3 py-2 text-sm rounded border border-gray-300 bg-white text-slate-900"
+                />
+                <button
+                  onClick={() => handleSavePortalField('agreedPrice', parseFloat(agreedPrice) || 0)}
+                  disabled={savingField === 'agreedPrice'}
+                  className="px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  {savingField === 'agreedPrice' ? '⏳' : 'Guardar'}
+                </button>
+              </div>
+            </div>
+
+            {/* Influencer Suggestions */}
+            {(influencer.productSuggestion1 || influencer.productSuggestion2 || influencer.productSuggestion3 || influencer.shippingAddress) && (
+              <>
+                <hr className="border-gray-200" />
+                <div className="space-y-3">
+                  <h4 className="text-xs text-gray-600 font-semibold">SUGESTÕES DO INFLUENCER</h4>
+                  {influencer.productSuggestion1 && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-700">1.</span>
+                      <a
+                        href={influencer.productSuggestion1}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-blue-600 hover:text-blue-800 underline flex-1 truncate"
+                      >
+                        {influencer.productSuggestion1}
+                      </a>
+                      <ExternalLink className="h-4 w-4 text-gray-400 shrink-0" />
+                    </div>
+                  )}
+                  {influencer.productSuggestion2 && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-700">2.</span>
+                      <a
+                        href={influencer.productSuggestion2}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-blue-600 hover:text-blue-800 underline flex-1 truncate"
+                      >
+                        {influencer.productSuggestion2}
+                      </a>
+                      <ExternalLink className="h-4 w-4 text-gray-400 shrink-0" />
+                    </div>
+                  )}
+                  {influencer.productSuggestion3 && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-700">3.</span>
+                      <a
+                        href={influencer.productSuggestion3}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-blue-600 hover:text-blue-800 underline flex-1 truncate"
+                      >
+                        {influencer.productSuggestion3}
+                      </a>
+                      <ExternalLink className="h-4 w-4 text-gray-400 shrink-0" />
+                    </div>
+                  )}
+                  {!influencer.productSuggestion1 && !influencer.productSuggestion2 && !influencer.productSuggestion3 && (
+                    <p className="text-sm text-gray-500 italic">Nenhuma sugestão enviada ainda</p>
+                  )}
+                  
+                  {influencer.shippingAddress && (
+                    <div className="mt-3">
+                      <h5 className="text-xs text-gray-600 font-semibold mb-2">MORADA FORNECIDA</h5>
+                      <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded border border-gray-200">
+                        {influencer.shippingAddress}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            <hr className="border-gray-200" />
+
+            {/* Chosen Product */}
+            <div className="space-y-2">
+              <h4 className="text-xs text-gray-600 font-semibold">URL DO PRODUTO ESCOLHIDO</h4>
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  value={chosenProduct}
+                  onChange={(e) => setChosenProduct(e.target.value)}
+                  placeholder="https://..."
+                  className="flex-1 px-3 py-2 text-sm rounded border border-gray-300 bg-white text-slate-900"
+                />
+                <button
+                  onClick={() => handleSavePortalField('chosenProduct', chosenProduct)}
+                  disabled={savingField === 'chosenProduct'}
+                  className="px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  {savingField === 'chosenProduct' ? '⏳' : 'Guardar'}
+                </button>
+              </div>
+            </div>
+
+            {/* Tracking URL */}
+            <div className="space-y-2">
+              <h4 className="text-xs text-gray-600 font-semibold">URL DE TRACKING</h4>
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  value={trackingUrl}
+                  onChange={(e) => setTrackingUrl(e.target.value)}
+                  placeholder="https://..."
+                  className="flex-1 px-3 py-2 text-sm rounded border border-gray-300 bg-white text-slate-900"
+                />
+                <button
+                  onClick={() => handleSavePortalField('trackingUrl', trackingUrl)}
+                  disabled={savingField === 'trackingUrl'}
+                  className="px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  {savingField === 'trackingUrl' ? '⏳' : 'Guardar'}
+                </button>
+              </div>
+            </div>
+
+            <hr className="border-gray-200" />
+
+            {/* Advance Status Button */}
+            {getNextStatus(influencer.status) && (
+              <button
+                onClick={handleAdvanceStatus}
+                disabled={advancingStatus || influencer.status === 'AGREED'}
+                className="w-full px-4 py-3 rounded bg-[#0E1E37] text-white text-sm font-semibold hover:bg-[#1a2f4f] disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
+              >
+                {advancingStatus ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    A avançar...
+                  </>
+                ) : (
+                  <>
+                    🔄 {getAdvanceButtonText(influencer.status)}
+                  </>
+                )}
+              </button>
+            )}
+            {influencer.status === 'AGREED' && (
+              <p className="text-sm text-gray-500 italic text-center">
+                O influencer avança este passo através do portal (Step 2)
+              </p>
+            )}
+            {influencer.status === 'SHIPPED' && (
+              <p className="text-sm text-green-600 font-semibold text-center">
+                ✅ Encomenda enviada — Status final
+              </p>
             )}
           </div>
         </CollapsibleSection>
