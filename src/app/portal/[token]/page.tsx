@@ -48,6 +48,7 @@ export default function PortalPage() {
     if (token) {
       fetchInfluencerData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const fetchInfluencerData = async () => {
@@ -582,6 +583,7 @@ function Step2({ data, token, onUpdate, onBack, onNext }: any) {
       searchProducts(searchQuery1, setSearchResults1);
     }, 300);
     return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery1]);
 
   useEffect(() => {
@@ -589,6 +591,7 @@ function Step2({ data, token, onUpdate, onBack, onNext }: any) {
       searchProducts(searchQuery2, setSearchResults2);
     }, 300);
     return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery2]);
 
   useEffect(() => {
@@ -596,6 +599,7 @@ function Step2({ data, token, onUpdate, onBack, onNext }: any) {
       searchProducts(searchQuery3, setSearchResults3);
     }, 300);
     return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery3]);
 
   const selectProduct = (field: string, product: any, setSearch: Function, setResults: Function) => {
@@ -819,7 +823,7 @@ function Step4() {
         <div className="text-4xl mb-4">📝</div>
         <h3 className="text-lg font-bold text-blue-800 mb-3">Just one step away</h3>
         <p className="text-sm text-blue-700">
-          We've sent the contract via e-mail and WhatsApp. Please sign it to move forward.
+          We&apos;ve sent the contract via e-mail and WhatsApp. Please sign it to move forward.
         </p>
       </div>
     </div>

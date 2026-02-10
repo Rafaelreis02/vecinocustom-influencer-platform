@@ -106,7 +106,7 @@ export async function PUT(
     if (currentStatusIndex >= statusOrder.indexOf('ANALYZING')) {
       const personalFields = ['name', 'instagramHandle', 'tiktokHandle', 'phone', 'ddiCode'];
       const isAttemptingPersonalChange = personalFields.some(field => 
-        body[field] !== undefined && body[field] !== influencer[field]
+        body[field] !== undefined && body[field] !== (influencer as any)[field]
       );
       
       if (isAttemptingPersonalChange) {
@@ -121,7 +121,7 @@ export async function PUT(
     if (currentStatusIndex >= statusOrder.indexOf('PRODUCT_SELECTION')) {
       const shippingFields = ['shippingAddress', 'productSuggestion1', 'productSuggestion2', 'productSuggestion3'];
       const isAttemptingShippingChange = shippingFields.some(field => 
-        body[field] !== undefined && body[field] !== influencer[field]
+        body[field] !== undefined && body[field] !== (influencer as any)[field]
       );
       
       if (isAttemptingShippingChange) {
