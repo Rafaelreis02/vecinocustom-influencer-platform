@@ -100,6 +100,7 @@ export default function PortalPage() {
 
   const getStepFromStatus = (status: string): number => {
     switch (status) {
+      case 'UNKNOWN':
       case 'COUNTER_PROPOSAL':
       case 'ANALYZING':
         return 1;

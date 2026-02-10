@@ -12,7 +12,7 @@ export async function POST(
     // Find the influencer
     const influencer = await prisma.influencer.findUnique({
       where: { id },
-      select: { portalToken: true },
+      select: { portalToken: true, status: true },
     });
 
     if (!influencer) {
@@ -27,6 +27,14 @@ export async function POST(
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
       const portalUrl = `${baseUrl}/portal/${influencer.portalToken}`;
       
+      // If status is UNKNOWN, update it to COUNTER_PROPOSAL when generating link
+      if (influencer.status === 'UNKNOWN') {
+        await prisma.influencer.update({
+          where: { id },
+          data: { status: 'COUNTER_PROPOSAL' },
+        });
+      }
+      
       return NextResponse.json({
         success: true,
         portalToken: influencer.portalToken,
@@ -38,11 +46,15 @@ export async function POST(
     const crypto = require('crypto');
     const newToken = crypto.randomUUID();
     
+    // Update data - set token and change status from UNKNOWN to COUNTER_PROPOSAL if needed
+    const updateData: any = { portalToken: newToken };
+    if (influencer.status === 'UNKNOWN') {
+      updateData.status = 'COUNTER_PROPOSAL';
+    }
+    
     const updated = await prisma.influencer.update({
       where: { id },
-      data: {
-        portalToken: newToken,
-      },
+      data: updateData,
       select: { portalToken: true },
     });
 
