@@ -74,6 +74,17 @@ model Influencer {
   estimatedPrice    Float?              // Preço estimado por vídeo
   fitScore          Int?                // 1-5 score para joias
   
+  // Portal Fields
+  portalToken        String?   @unique @default(uuid())
+  ddiCode            String?   // Phone country code (+351, +34, etc.)
+  agreedPrice        Float?    // The actual price proposed/negotiated (NOT estimatedPrice which is AI estimate)
+  productSuggestion1 String?   // URL of product suggestion 1 from influencer
+  productSuggestion2 String?   // URL of product suggestion 2 from influencer
+  productSuggestion3 String?   // URL of product suggestion 3 from influencer
+  chosenProduct      String?   // URL of product chosen by admin
+  trackingUrl        String?   // Shipping tracking URL
+  shippingAddress    String?   // Full shipping address
+  
   // Status
   status            InfluencerStatus    @default(UNKNOWN)
   tier              String?             // Micro, Macro, Mega, etc.
