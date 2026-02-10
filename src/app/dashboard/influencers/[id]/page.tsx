@@ -85,6 +85,8 @@ export default function InfluencerDetailPage() {
   const [couponDiscount, setCouponDiscount] = useState('10');
   const [couponCommission, setCouponCommission] = useState('10');
   const [creatingCoupon, setCreatingCoupon] = useState(false);
+  const [portalUrl, setPortalUrl] = useState<string | null>(null);
+  const [generatingLink, setGeneratingLink] = useState(false);
 
   useEffect(() => {
     fetchInfluencer();
@@ -202,6 +204,40 @@ export default function InfluencerDetailPage() {
         error instanceof Error ? error.message : 'Erro ao apagar cupom',
         'error'
       );
+    }
+  };
+
+  const handleGeneratePortalLink = async () => {
+    try {
+      setGeneratingLink(true);
+
+      const res = await fetch(`/api/influencers/${id}/generate-link`, {
+        method: 'POST',
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Erro ao gerar link do portal');
+      }
+
+      setPortalUrl(data.portalUrl);
+      addToast('✅ Link do portal gerado com sucesso!', 'success');
+    } catch (error) {
+      console.error('Error generating portal link:', error);
+      addToast(
+        error instanceof Error ? error.message : 'Erro ao gerar link do portal',
+        'error'
+      );
+    } finally {
+      setGeneratingLink(false);
+    }
+  };
+
+  const copyPortalLink = () => {
+    if (portalUrl) {
+      navigator.clipboard.writeText(portalUrl);
+      addToast('Link copiado para a área de transferência!', 'success');
     }
   };
 
@@ -674,6 +710,48 @@ export default function InfluencerDetailPage() {
               <div className="text-center py-6 text-gray-400">
                 <Receipt className="h-8 w-8 mx-auto mb-2 opacity-40" />
                 <p className="text-sm">Nenhuma comissão registada ainda</p>
+              </div>
+            )}
+          </div>
+        </CollapsibleSection>
+
+        {/* 🔗 Portal Link */}
+        <CollapsibleSection title="Portal do Influencer" icon={ExternalLink} defaultOpen={true}>
+          <div className="pt-4 space-y-4">
+            {portalUrl ? (
+              <div className="p-3 rounded-lg border border-gray-200 bg-gray-50 space-y-3">
+                <h4 className="text-xs text-gray-600 font-semibold">LINK DO PORTAL</h4>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={portalUrl}
+                    readOnly
+                    className="flex-1 px-3 py-2 text-sm rounded border border-gray-300 bg-white text-slate-900 font-mono"
+                  />
+                  <button
+                    onClick={copyPortalLink}
+                    className="px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded hover:bg-slate-800 transition"
+                  >
+                    Copiar
+                  </button>
+                </div>
+                <p className="text-xs text-gray-600">
+                  Este link permite ao influencer aceder ao portal e acompanhar o progresso da parceria.
+                </p>
+              </div>
+            ) : (
+              <div className="p-3 rounded-lg border border-gray-200 bg-white space-y-3">
+                <h4 className="text-xs text-gray-600 font-semibold">GERAR LINK DO PORTAL</h4>
+                <p className="text-sm text-gray-600">
+                  Gera um link único para este influencer aceder ao portal de parceria.
+                </p>
+                <button
+                  onClick={handleGeneratePortalLink}
+                  disabled={generatingLink}
+                  className="w-full px-3 py-2 rounded bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  {generatingLink ? '⏳ A gerar...' : '🔗 Gerar Link do Portal'}
+                </button>
               </div>
             )}
           </div>
