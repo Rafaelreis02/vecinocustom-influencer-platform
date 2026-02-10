@@ -11,7 +11,7 @@ Plataforma interna de gestão de influencers para a VecinoCustom.
   - Notas e histórico
   
 - 🎬 **Gestão de Campanhas**
-  - Criar e organizar campanhas
+  - Criar e organizar campanhas 
   - Associar influencers a campanhas
   - Tracking de vídeos/posts
   - Comparação de performance
