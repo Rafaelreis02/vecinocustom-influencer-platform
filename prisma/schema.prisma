@@ -273,14 +273,19 @@ model Coupon {
   totalSales      Float       @default(0)
   totalOrders     Int         @default(0)
   
+  // Commission
+  commissionRate    Float?          // Percentagem de comissão do influencer
+  
   // Dates
   validFrom       DateTime?
   validUntil      DateTime?
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
   
-  // Shopify (when ready)
-  shopifyId       String?     @unique
+  // Shopify Integration
+  shopifyId             String?     @unique
+  shopifyPriceRuleId    String?     // ID da price rule no Shopify
+  shopifyDiscountCodeId String?     // ID do discount code no Shopify
   
   @@map("coupons")
 }
@@ -408,5 +413,20 @@ model Email {
   @@index([influencerId])
   @@index([gmailThreadId])
   @@index([from])
+}
+
+// ============================================
+// SHOPIFY INTEGRATION
+// ============================================
+
+model ShopifyAuth {
+  id            String   @id @default(cuid())
+  shop          String   @unique
+  accessToken   String
+  scope         String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@map("shopify_auth")
 }
 
