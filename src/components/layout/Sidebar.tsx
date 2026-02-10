@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { clsx } from 'clsx';
@@ -15,12 +16,24 @@ import {
   Instagram,
   LogOut,
   X,
-  Mail
+  Mail,
+  ChevronDown
 } from 'lucide-react';
+import { PHASES } from '@/lib/influencer-status';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Influencers', href: '/dashboard/influencers', icon: Users },
+  { 
+    name: 'Influencers', 
+    href: '/dashboard/influencers', 
+    icon: Users,
+    isExpandable: true,
+    subItems: Object.values(PHASES).map(phase => ({
+      name: phase.label,
+      href: phase.href,
+      icon: phase.icon,
+    }))
+  },
   { name: 'Campanhas', href: '/dashboard/campaigns', icon: Target },
   { name: 'Mensagens', href: '/dashboard/messages', icon: Mail },
   { name: 'Comissões', href: '/dashboard/commissions', icon: DollarSign },
@@ -37,6 +50,24 @@ interface SidebarProps {
 
 export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const [expandedItems, setExpandedItems] = useState<string[]>([]);
+
+  // Auto-expand Influencers menu when on any influencers route
+  useEffect(() => {
+    if (pathname.startsWith('/dashboard/influencers')) {
+      setExpandedItems(prev => 
+        prev.includes('Influencers') ? prev : [...prev, 'Influencers']
+      );
+    }
+  }, [pathname]);
+
+  const toggleExpand = (itemName: string) => {
+    setExpandedItems(prev => 
+      prev.includes(itemName) 
+        ? prev.filter(name => name !== itemName)
+        : [...prev, itemName]
+    );
+  };
 
   return (
     <>
@@ -75,9 +106,65 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {navigation.map((item) => {
             const isActive = pathname === item.href;
+            const isExpanded = expandedItems.includes(item.name);
+            const hasSubItems = item.isExpandable && item.subItems;
+
+            if (hasSubItems) {
+              return (
+                <div key={item.name}>
+                  {/* Main expandable item */}
+                  <button
+                    onClick={() => toggleExpand(item.name)}
+                    className={clsx(
+                      'w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors',
+                      pathname.startsWith(item.href)
+                        ? 'bg-gray-100 text-gray-900'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    )}
+                  >
+                    <div className="flex items-center">
+                      <item.icon className="mr-3 h-5 w-5" />
+                      {item.name}
+                    </div>
+                    <ChevronDown 
+                      className={clsx(
+                        "h-4 w-4 transition-transform",
+                        isExpanded ? "rotate-180" : ""
+                      )}
+                    />
+                  </button>
+
+                  {/* Sub-items */}
+                  {isExpanded && (
+                    <div className="mt-1 space-y-1">
+                      {item.subItems.map((subItem) => {
+                        const isSubActive = pathname === subItem.href;
+                        return (
+                          <Link
+                            key={subItem.href}
+                            href={subItem.href}
+                            className={clsx(
+                              'flex items-center pl-10 pr-3 py-2 text-sm font-medium rounded-md transition-colors',
+                              isSubActive
+                                ? 'bg-gray-900 text-white'
+                                : 'text-gray-700 hover:bg-gray-100'
+                            )}
+                          >
+                            <span className="mr-2">{subItem.icon}</span>
+                            {subItem.name}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            // Regular non-expandable item
             return (
               <Link
                 key={item.name}
