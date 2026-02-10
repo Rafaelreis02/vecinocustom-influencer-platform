@@ -107,8 +107,8 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
 
-    // Validação de campos obrigatórios (apenas para status working/negotiating)
-    const requiresFullData = body.status === 'working' || body.status === 'negotiating';
+    // Validação de campos obrigatórios (apenas para statuses do CLOSING phase)
+    const requiresFullData = ['AGREED', 'PRODUCT_SELECTION', 'CONTRACT_PENDING', 'SHIPPED', 'COMPLETED'].includes(body.status);
     
     if (requiresFullData) {
       const missingFields = [];
