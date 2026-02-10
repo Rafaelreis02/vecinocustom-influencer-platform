@@ -45,7 +45,7 @@ export async function POST(request: Request) {
               name: author,
               tiktokHandle: platform === 'TIKTOK' ? author : null,
               instagramHandle: platform === 'INSTAGRAM' ? author : null,
-              status: 'suggestion',
+              status: 'SUGGESTION',
               tier: 'micro',
               primaryPlatform: platform,
               notes: `Auto-discovered via hashtag ${hashtag}`,

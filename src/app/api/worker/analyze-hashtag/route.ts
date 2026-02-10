@@ -87,7 +87,7 @@ export async function POST(request: Request) {
             data: {
               name: videoData.authorUsername,
               tiktokHandle: videoData.authorUsername,
-              status: 'suggestion',
+              status: 'SUGGESTION',
               tier: 'micro',
               primaryPlatform: 'TIKTOK',
               notes: `Auto-discovered via hashtag #${hashtag}`,

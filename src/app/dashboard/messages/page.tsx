@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { useGlobalToast } from '@/contexts/ToastContext';
 import { StatusDropdown } from '@/components/StatusDropdown';
-import { WORKFLOW_STATUSES, getStatusConfig } from '@/lib/influencer-status';
+import { getWorkflowStatuses, getStatusConfig } from '@/lib/influencer-status';
 
 interface Email {
   id: string;
@@ -453,7 +453,7 @@ export default function MessagesPage() {
               <span className="text-sm">Todos</span>
             </button>
             
-            {WORKFLOW_STATUSES.map((status) => {
+            {getWorkflowStatuses().map((status) => {
               const config = getStatusConfig(status);
               const count = emails.filter((e) => e.influencer?.status === status).length;
               

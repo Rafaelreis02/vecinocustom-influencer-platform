@@ -59,7 +59,7 @@ export default function PhasePageLayout({ phaseId }: PhasePageLayoutProps) {
       const data = await res.json();
       // Filter by phase statuses
       const phaseInfluencers = data.filter((inf: Influencer) => 
-        phase.statuses.includes(inf.status)
+        (phase.statuses as readonly string[]).includes(inf.status)
       );
       setAllInfluencers(phaseInfluencers);
     } catch (error) {

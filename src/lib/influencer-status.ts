@@ -153,7 +153,7 @@ export function getPhaseForStatus(status: string): PhaseId | null {
 /**
  * Obtém todos os statuses de uma fase específica
  */
-export function getStatusesForPhase(phaseId: string): string[] {
+export function getStatusesForPhase(phaseId: string): readonly string[] {
   const phase = PHASES[phaseId.toUpperCase() as PhaseId];
   return phase ? phase.statuses : [];
 }
