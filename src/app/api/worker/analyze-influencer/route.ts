@@ -35,7 +35,7 @@ async function analyzeWithGemini(
   profile: ParsedProfile
 ): Promise<SonnetAnalysis> {
   const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || '');
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-3.0-flash' });
 
   // Build video descriptions with URLs
   const videoInfo = profile.rawData?.videos
