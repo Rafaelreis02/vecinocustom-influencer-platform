@@ -65,6 +65,9 @@ model Influencer {
   niche             String?             // Fashion, Lifestyle, etc.
   contentTypes      String[]            // ["Hauls", "Unboxings", "Lifestyle"]
   primaryPlatform   String?             // TikTok, Instagram, YouTube
+  biography         String?             // Bio do perfil
+  verified          Boolean?            @default(false) // Perfil verificado
+  videoCount        Int?                // Número total de vídeos
   
   // Business
   nif               String?             // Tax ID

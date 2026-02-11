@@ -35,9 +35,8 @@ async function analyzeWithGemini(
   profile: ParsedProfile
 ): Promise<SonnetAnalysis> {
   const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || '');
-  // Using gemini-2.0-flash-exp (latest experimental model with video support)
-  // Note: gemini-3.0-flash not yet available in public API v1beta (404 error)
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+  // Using gemini-1.5-flash (stable model, works with public API)
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
   // Build video descriptions with URLs from posts (max 5 for Gemini)
   const videoInfo = profile.rawData?.posts && profile.rawData.posts.length > 0
