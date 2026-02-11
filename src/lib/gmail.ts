@@ -35,24 +35,35 @@ export function getAuthClient() {
 // FETCH EMAILS
 // ============================================
 
-export async function fetchEmails(auth: any) {
+export async function fetchEmails(auth: any, maxPages: number = 5) {
   try {
-    const res = await gmail.users.messages.list({
-      userId: 'me',
-      auth,
-      q: 'is:unread', // Only unread emails (easier to sync)
-      maxResults: 10,
-    });
+    const allEmails: any[] = [];
+    let pageToken: string | undefined = undefined;
 
-    const messages = res.data.messages || [];
-    
-    // Fetch full message content for each
-    const emailsData = await Promise.all(
-      messages.map(msg => getMessageDetails(auth, msg.id!))
-    );
+    for (let page = 0; page < maxPages; page++) {
+      const res = await gmail.users.messages.list({
+        userId: 'me',
+        auth,
+        q: 'is:unread',
+        maxResults: 50,
+        pageToken,
+      });
+
+      const messages = res.data.messages || [];
+      
+      // Fetch details for each message
+      const emailsData = await Promise.all(
+        messages.map(msg => getMessageDetails(auth, msg.id!))
+      );
+      
+      allEmails.push(...emailsData);
+
+      if (!res.data.nextPageToken) break;
+      pageToken = res.data.nextPageToken;
+    }
 
     return {
-      emails: emailsData,
+      emails: allEmails,
     };
   } catch (error: any) {
     console.error('[GMAIL ERROR] Fetching emails:', error.message);
@@ -235,17 +246,25 @@ export async function sendEmail(auth: any, options: {
   subject: string;
   body: string;
   inReplyTo?: string; // Gmail message ID for threading
+  references?: string; // Reference header for threading
   threadId?: string;
 }) {
   try {
-    const message = [
+    const headers = [
       `To: ${options.to}`,
       `Subject: ${options.subject}`,
-      `In-Reply-To: ${options.inReplyTo || ''}`,
-      'Content-Type: text/plain; charset=utf-8',
-      '',
-      options.body
-    ].join('\r\n');
+    ];
+
+    if (options.inReplyTo) {
+      headers.push(`In-Reply-To: <${options.inReplyTo}>`);
+    }
+    if (options.references) {
+      headers.push(`References: <${options.references}>`);
+    }
+
+    headers.push('Content-Type: text/plain; charset=utf-8');
+
+    const message = [...headers, '', options.body].join('\r\n');
 
     const encodedMessage = Buffer.from(message)
       .toString('base64')
