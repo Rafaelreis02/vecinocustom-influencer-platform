@@ -9,6 +9,8 @@
 
 import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
+import { handleApiError } from '@/lib/api-error';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: Request) {
   try {
@@ -18,7 +20,7 @@ export async function GET(request: Request) {
 
     // Handle error
     if (error) {
-      console.error('[GMAIL OAUTH] Error from Google:', error);
+      logger.error('Error from Google', error);
       return NextResponse.json(
         { error: `Google auth error: ${error}` },
         { status: 400 }
@@ -36,7 +38,7 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const redirectUri = `${url.protocol}//${url.host}/api/auth/gmail/callback`;
     
-    console.log('[GMAIL OAUTH] Using redirect URI:', redirectUri);
+    logger.info('Using redirect URI:', redirectUri);
 
     // Create OAuth2 client with the correct redirect URI
     const oauth2Client = new google.auth.OAuth2(
@@ -46,11 +48,11 @@ export async function GET(request: Request) {
     );
 
     // Exchange code for tokens
-    console.log('[GMAIL OAUTH] Exchanging code for tokens...');
+    logger.info('Exchanging code for tokens...');
     const { tokens } = await oauth2Client.getToken(code);
 
-    console.log('[GMAIL OAUTH] Got tokens');
-    console.log('[GMAIL OAUTH] Refresh Token:', tokens.refresh_token);
+    logger.info('Got tokens');
+    logger.info('Refresh Token:', tokens.refresh_token);
 
     // Return refresh token to user (need to save to .env)
     return NextResponse.json({
@@ -59,11 +61,8 @@ export async function GET(request: Request) {
       refreshToken: tokens.refresh_token,
       instruction: 'Add this to your .env.local: GOOGLE_REFRESH_TOKEN=' + tokens.refresh_token,
     });
-  } catch (error: any) {
-    console.error('[GMAIL OAUTH ERROR]', error.message);
-    return NextResponse.json(
-      { error: error.message || 'OAuth callback failed' },
-      { status: 500 }
-    );
+  } catch (error) {
+    logger.error('GET /api/auth/gmail/callback failed', error);
+    return handleApiError(error);
   }
 }

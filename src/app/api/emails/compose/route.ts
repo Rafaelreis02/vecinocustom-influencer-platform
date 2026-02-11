@@ -8,6 +8,8 @@
 
 import { NextResponse } from 'next/server';
 import { getAuthClient, sendEmail } from '@/lib/gmail';
+import { handleApiError } from '@/lib/api-error';
+import { logger } from '@/lib/logger';
 
 export async function POST(request: Request) {
   try {
@@ -44,21 +46,15 @@ export async function POST(request: Request) {
       body,
     });
 
-    console.log(`[EMAIL COMPOSE] Sent to ${to}: ${subject}`);
+    logger.info(`Sent to ${to}: ${subject}`);
 
     return NextResponse.json({
       success: true,
       message: 'Email sent successfully',
       timestamp: new Date().toISOString(),
     });
-  } catch (error: any) {
-    console.error('[EMAIL COMPOSE ERROR]', error.message);
-    return NextResponse.json(
-      {
-        error: error.message || 'Failed to send email',
-        timestamp: new Date().toISOString(),
-      },
-      { status: 500 }
-    );
+  } catch (error) {
+    logger.error('POST /api/emails/compose failed', error);
+    return handleApiError(error);
   }
 }

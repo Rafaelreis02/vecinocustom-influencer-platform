@@ -9,6 +9,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAuthClient, sendEmail } from '@/lib/gmail';
+import { handleApiError } from '@/lib/api-error';
+import { logger } from '@/lib/logger';
 
 export async function POST(
   request: Request,
@@ -50,21 +52,15 @@ export async function POST(
       threadId: email.gmailThreadId || '',
     });
 
-    console.log(`[EMAIL REPLY] Replied to ${email.from}: ${email.subject}`);
+    logger.info(`Replied to ${email.from}: ${email.subject}`);
 
     return NextResponse.json({
       success: true,
       message: 'Reply sent successfully',
       timestamp: new Date().toISOString(),
     });
-  } catch (error: any) {
-    console.error('[EMAIL REPLY ERROR]', error.message);
-    return NextResponse.json(
-      {
-        error: error.message || 'Failed to send reply',
-        timestamp: new Date().toISOString(),
-      },
-      { status: 500 }
-    );
+  } catch (error) {
+    logger.error('POST /api/emails/[id]/reply failed', error);
+    return handleApiError(error);
   }
 }

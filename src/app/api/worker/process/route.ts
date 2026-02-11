@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import Anthropic from '@anthropic-ai/sdk';
+import { handleApiError } from '@/lib/api-error';
+import { logger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // Vercel: max 60s on hobby
@@ -21,7 +23,7 @@ export async function POST() {
       });
     }
 
-    console.log(`[WORKER] Processando influencer: ${pending.name} (${pending.id})`);
+    logger.info(`Processando influencer: ${pending.name} (${pending.id})`);
 
     // 2. Extrair handle
     const handle = pending.tiktokHandle || pending.instagramHandle;
@@ -104,10 +106,10 @@ IMPORTANTE:
         }
       }
 
-      console.log('[WORKER] Claude analysis:', analysis);
+      logger.info('Claude analysis:', analysis);
 
     } catch (aiError: any) {
-      console.error('[WORKER] Claude API error:', aiError.message);
+      logger.error('Claude API error', aiError.message);
       errorMessage = `Erro na análise IA: ${aiError.message}`;
       
       // Fallback: dados básicos
@@ -158,7 +160,7 @@ IMPORTANTE:
       data: updateData
     });
 
-    console.log(`[WORKER]  Influencer processado: ${updated.name}`);
+    logger.info(`Influencer processado: ${updated.name}`);
 
     // Converter BigInt para string para JSON
     const influencerData = JSON.parse(JSON.stringify(updated, (key, value) =>
@@ -171,11 +173,8 @@ IMPORTANTE:
       analysis
     });
 
-  } catch (error: any) {
-    console.error('[WORKER] Process error:', error);
-    return NextResponse.json({
-      success: false,
-      error: error.message
-    }, { status: 500 });
+  } catch (error) {
+    logger.error('POST /api/worker/process failed', error);
+    return handleApiError(error);
   }
 }

@@ -7,6 +7,8 @@ import {
   determineTier,
   calculateFitScore
 } from '@/lib/tiktok-scraper';
+import { handleApiError } from '@/lib/api-error';
+import { logger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -30,7 +32,7 @@ export async function POST() {
       });
     }
 
-    console.log(`[WORKER-REAL] Processando: ${pending.name} (${pending.id})`);
+    logger.info(`Processando: ${pending.name} (${pending.id})`);
 
     // 2. Extrair handle
     const handle = pending.tiktokHandle || pending.instagramHandle;
@@ -66,7 +68,7 @@ export async function POST() {
     }
 
     // 3. Scrape dados REAIS do TikTok via Browser
-    console.log(`[WORKER-REAL] Abrindo browser para @${handle}...`);
+    logger.info(`Abrindo browser para @${handle}...`);
     
     let profileData;
     try {
@@ -74,10 +76,10 @@ export async function POST() {
       const openclawUrl = process.env.OPENCLAW_GATEWAY_URL || 'http://localhost:18789';
       
       profileData = await scrapeTikTokProfile(handle, openclawUrl);
-      console.log('[WORKER-REAL] Dados extraídos:', profileData);
+      logger.info('Dados extraídos:', profileData);
       
     } catch (scrapeError: any) {
-      console.error('[WORKER-REAL] Erro no scraping:', scrapeError.message);
+      logger.error('Erro no scraping', scrapeError.message);
       
       await prisma.influencer.update({
         where: { id: pending.id },
@@ -176,8 +178,8 @@ export async function POST() {
       data: updateData
     });
 
-    console.log(`[WORKER-REAL]  Processado: ${updated.name}`);
-    console.log(`[WORKER-REAL] Followers: ${updated.tiktokFollowers} | Engagement: ${updated.engagementRate}% | Price: €${updated.estimatedPrice}`);
+    logger.info(`Processado: ${updated.name}`);
+    logger.info(`Followers: ${updated.tiktokFollowers} | Engagement: ${updated.engagementRate}% | Price: €${updated.estimatedPrice}`);
 
     // Converter BigInt para string para JSON
     const influencerData = JSON.parse(JSON.stringify(updated, (key, value) =>
@@ -197,11 +199,8 @@ export async function POST() {
       }
     });
 
-  } catch (error: any) {
-    console.error('[WORKER-REAL] Error:', error);
-    return NextResponse.json({
-      success: false,
-      error: error.message
-    }, { status: 500 });
+  } catch (error) {
+    logger.error('POST /api/worker/process-real failed', error);
+    return handleApiError(error);
   }
 }

@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { handleApiError } from '@/lib/api-error';
+import { logger } from '@/lib/logger';
 
 const BRAND_ACCOUNTS = ['vecinocustom', 'vecino.custom'];
 
@@ -14,7 +16,7 @@ export async function POST(request: Request) {
       );
     }
 
-    console.log(`[CLEANUP] Starting cleanup for campaign ${campaignId}`);
+    logger.info(`Starting cleanup for campaign ${campaignId}`);
 
     // Find brand influencers
     const brandInfluencers = await prisma.influencer.findMany({
@@ -27,7 +29,7 @@ export async function POST(request: Request) {
       },
     });
 
-    console.log(`[CLEANUP] Found ${brandInfluencers.length} brand accounts`);
+    logger.info(`Found ${brandInfluencers.length} brand accounts`);
 
     let totalDeleted = 0;
 
@@ -39,7 +41,7 @@ export async function POST(request: Request) {
         },
       });
 
-      console.log(`[CLEANUP] Deleted ${deleted.count} videos from @${influencer.tiktokHandle || influencer.name}`);
+      logger.info(`Deleted ${deleted.count} videos from @${influencer.tiktokHandle || influencer.name}`);
       totalDeleted += deleted.count;
     }
 
@@ -50,11 +52,8 @@ export async function POST(request: Request) {
       message: `Deleted ${totalDeleted} brand videos from campaign`,
     });
 
-  } catch (error: any) {
-    console.error('[CLEANUP ERROR]', error.message);
-    return NextResponse.json(
-      { error: 'Failed to cleanup', details: error.message },
-      { status: 500 }
-    );
+  } catch (error) {
+    logger.error('POST /api/admin/cleanup-brand-videos failed', error);
+    return handleApiError(error);
   }
 }

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { serializeBigInt } from '@/lib/serialize';
+import { handleApiError } from '@/lib/api-error';
+import { logger } from '@/lib/logger';
 
 // GET /api/portal/[token] - Fetch influencer data by portalToken
 export async function GET(
@@ -51,12 +53,9 @@ export async function GET(
     });
 
     return NextResponse.json(result);
-  } catch (err: any) {
-    console.error('[API ERROR] Fetching portal data:', err?.message || String(err));
-    return NextResponse.json(
-      { error: 'Failed to fetch portal data', details: err?.message },
-      { status: 500 }
-    );
+  } catch (error) {
+    logger.error('GET /api/portal/[token] failed', error);
+    return handleApiError(error);
   }
 }
 
@@ -168,11 +167,8 @@ export async function PUT(
         status: updatedInfluencer.status,
       })
     );
-  } catch (err: any) {
-    console.error('[API ERROR] Updating portal data:', err?.message || String(err));
-    return NextResponse.json(
-      { error: 'Failed to update portal data', details: err?.message },
-      { status: 500 }
-    );
+  } catch (error) {
+    logger.error('PUT /api/portal/[token] failed', error);
+    return handleApiError(error);
   }
 }

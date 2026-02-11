@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { handleApiError } from '@/lib/api-error';
+import { logger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -23,7 +25,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  console.log('[CRON] Triggered: Process Influencers');
+  logger.info('Triggered: Process Influencers');
 
   try {
     // 1. Verificar se há pendentes
@@ -42,14 +44,14 @@ export async function GET(request: Request) {
     const checkData = await checkRes.json();
     
     if (!checkData.found) {
-      console.log('[CRON] No pending influencers');
+      logger.info('No pending influencers');
       return NextResponse.json({ 
         success: true, 
         message: 'No pending influencers' 
       });
     }
 
-    console.log(`[CRON] Found pending: ${checkData.task.name}`);
+    logger.info(`Found pending: ${checkData.task.name}`);
 
     // 2. Processar com browser real (se disponível) ou fallback para IA
     const useRealScraping = process.env.USE_REAL_SCRAPING !== 'false'; // Default: true
@@ -57,7 +59,7 @@ export async function GET(request: Request) {
       ? `${baseUrl}/api/worker/process-real`
       : `${baseUrl}/api/worker/process`;
     
-    console.log(`[CRON] Using endpoint: ${processEndpoint}`);
+    logger.info(`Using endpoint: ${processEndpoint}`);
     
     const processRes = await fetch(processEndpoint, {
       method: 'POST',
@@ -71,7 +73,7 @@ export async function GET(request: Request) {
     const processData = await processRes.json();
 
     if (processData.success) {
-      console.log(`[CRON]  Processed: ${processData.influencer.name}`);
+      logger.info(`Processed: ${processData.influencer.name}`);
       return NextResponse.json({
         success: true,
         influencer: processData.influencer.name,
@@ -85,11 +87,8 @@ export async function GET(request: Request) {
       }, { status: 500 });
     }
 
-  } catch (error: any) {
-    console.error('[CRON] Error:', error.message);
-    return NextResponse.json({
-      success: false,
-      error: error.message
-    }, { status: 500 });
+  } catch (error) {
+    logger.error('GET /api/cron/process-influencers failed', error);
+    return handleApiError(error);
   }
 }

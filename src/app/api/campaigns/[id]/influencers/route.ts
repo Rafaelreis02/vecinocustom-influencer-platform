@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { handleApiError } from '@/lib/api-error';
+import { logger } from '@/lib/logger';
 
 // POST /api/campaigns/[id]/influencers - Add influencer to campaign
 export async function POST(
@@ -55,11 +57,8 @@ export async function POST(
     });
 
     return NextResponse.json(campaignInfluencer, { status: 201 });
-  } catch (err: any) {
-    console.error('[API ERROR] Adding influencer to campaign:', err);
-    return NextResponse.json(
-      { error: 'Failed to add influencer', details: err?.message },
-      { status: 500 }
-    );
+  } catch (error) {
+    logger.error('POST /api/campaigns/[id]/influencers failed', error);
+    return handleApiError(error);
   }
 }

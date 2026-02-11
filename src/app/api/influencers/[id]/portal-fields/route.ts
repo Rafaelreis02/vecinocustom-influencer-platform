@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { serializeBigInt } from '@/lib/serialize';
+import { handleApiError } from '@/lib/api-error';
+import { logger } from '@/lib/logger';
 
 // PUT /api/influencers/[id]/portal-fields - Update portal-specific fields (admin only)
 export async function PUT(
@@ -121,11 +123,8 @@ export async function PUT(
     });
 
     return NextResponse.json(result);
-  } catch (err: any) {
-    console.error('[API ERROR] Updating portal fields:', err?.message || String(err));
-    return NextResponse.json(
-      { error: 'Failed to update portal fields', details: err?.message },
-      { status: 500 }
-    );
+  } catch (error) {
+    logger.error('PUT /api/influencers/[id]/portal-fields failed', error);
+    return handleApiError(error);
   }
 }

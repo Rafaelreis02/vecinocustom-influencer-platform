@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { parseProfile } from '@/lib/apify-fetch';
 import Anthropic from '@anthropic-ai/sdk';
+import { handleApiError } from '@/lib/api-error';
+import { logger } from '@/lib/logger';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -78,7 +80,7 @@ Retorna APENAS JSON válido (sem markdown):
     };
 
   } catch (error) {
-    console.error('[FIT ANALYSIS ERROR]', error);
+    logger.error('FIT ANALYSIS failed', error);
     return {
       fitScore: 3,
       reasoning: 'Erro na análise automática. Revisão manual necessária.',
@@ -97,16 +99,16 @@ export async function POST(request: Request) {
     }
 
     const cleanHandle = handle.replace('@', '');
-    console.log(`[IMPORT] Starting import for @${cleanHandle} (${platform})`);
+    logger.info(`Starting import for @${cleanHandle} (${platform})`);
 
     // Step 1: Scrape profile data via Apify
     let profileData;
     try {
       const platformUpper = platform === 'tiktok' ? 'TIKTOK' : 'INSTAGRAM';
       profileData = await parseProfile(cleanHandle, platformUpper as any);
-      console.log('[IMPORT] Apify scrape successful');
+      logger.info('Apify scrape successful');
     } catch (error: any) {
-      console.error('[IMPORT] Apify scrape failed:', error.message);
+      logger.error('Apify scrape failed', error.message);
       return NextResponse.json(
         { success: false, error: `Falha ao importar perfil: ${error.message}` },
         { status: 500 }
@@ -114,9 +116,9 @@ export async function POST(request: Request) {
     }
 
     // Step 2: AI analysis for fit score
-    console.log('[IMPORT] Starting AI fit analysis...');
+    logger.info('Starting AI fit analysis...');
     const fitAnalysis = await analyzeFit(profileData);
-    console.log('[IMPORT] Fit analysis complete:', fitAnalysis);
+    logger.info('Fit analysis complete:', fitAnalysis);
 
     // Step 3: Map to influencer structure
     const influencerData = {
@@ -156,7 +158,7 @@ export async function POST(request: Request) {
       tier: profileData.followers && profileData.followers < 50000 ? 'micro' : 'macro',
     };
 
-    console.log('[IMPORT] Import complete');
+    logger.info('Import complete');
 
     return NextResponse.json({
       success: true,
@@ -164,11 +166,8 @@ export async function POST(request: Request) {
       fitAnalysis: fitAnalysis,
     });
 
-  } catch (error: any) {
-    console.error('[IMPORT API ERROR]', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    );
+  } catch (error) {
+    logger.error('POST /api/influencers/import failed', error);
+    return handleApiError(error);
   }
 }

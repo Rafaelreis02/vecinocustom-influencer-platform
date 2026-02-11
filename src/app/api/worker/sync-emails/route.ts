@@ -9,10 +9,12 @@
 
 import { NextResponse } from 'next/server';
 import { syncEmails, getAuthClient } from '@/lib/gmail';
+import { handleApiError } from '@/lib/api-error';
+import { logger } from '@/lib/logger';
 
 export async function POST(request: Request) {
   try {
-    console.log('[SYNC-EMAILS] Starting email sync...');
+    logger.info('Starting email sync...');
 
     // Check if Gmail OAuth is configured
     if (!process.env.GOOGLE_REFRESH_TOKEN) {
@@ -31,21 +33,15 @@ export async function POST(request: Request) {
     // Sync emails using Gmail API
     const totalSynced = await syncEmails(auth);
 
-    console.log(`[SYNC-EMAILS] Synced ${totalSynced} emails`);
+    logger.info(`Synced ${totalSynced} emails`);
 
     return NextResponse.json({
       success: true,
       synced: totalSynced,
       timestamp: new Date().toISOString(),
     });
-  } catch (error: any) {
-    console.error('[SYNC-EMAILS ERROR]', error.message);
-    return NextResponse.json(
-      {
-        error: error.message || 'Failed to sync emails',
-        timestamp: new Date().toISOString(),
-      },
-      { status: 500 }
-    );
+  } catch (error) {
+    logger.error('POST /api/worker/sync-emails failed', error);
+    return handleApiError(error);
   }
 }

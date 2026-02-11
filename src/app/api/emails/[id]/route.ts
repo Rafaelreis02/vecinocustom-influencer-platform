@@ -6,6 +6,8 @@
 
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { handleApiError } from '@/lib/api-error';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: Request, { params }: any) {
   try {
@@ -42,12 +44,9 @@ export async function GET(request: Request, { params }: any) {
     }
 
     return NextResponse.json(email);
-  } catch (err: any) {
-    console.log('[API ERROR] Getting email:', err?.message);
-    return NextResponse.json(
-      { error: 'Failed to get email' },
-      { status: 500 }
-    );
+  } catch (error) {
+    logger.error('GET /api/emails/[id] failed', error);
+    return handleApiError(error);
   }
 }
 
@@ -69,12 +68,9 @@ export async function PUT(request: Request, { params }: any) {
     });
 
     return NextResponse.json(email);
-  } catch (err: any) {
-    console.log('[API ERROR] Updating email:', err?.message);
-    return NextResponse.json(
-      { error: 'Failed to update email' },
-      { status: 500 }
-    );
+  } catch (error) {
+    logger.error('PUT /api/emails/[id] failed', error);
+    return handleApiError(error);
   }
 }
 
@@ -85,11 +81,8 @@ export async function DELETE(request: Request, { params }: any) {
     });
 
     return NextResponse.json({ success: true });
-  } catch (err: any) {
-    console.log('[API ERROR] Deleting email:', err?.message);
-    return NextResponse.json(
-      { error: 'Failed to delete email' },
-      { status: 500 }
-    );
+  } catch (error) {
+    logger.error('DELETE /api/emails/[id] failed', error);
+    return handleApiError(error);
   }
 }

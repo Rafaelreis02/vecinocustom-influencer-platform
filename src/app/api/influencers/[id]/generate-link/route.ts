@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { InfluencerStatus } from '@prisma/client';
+import { handleApiError } from '@/lib/api-error';
+import { logger } from '@/lib/logger';
 
 // POST /api/influencers/[id]/generate-link - Generate/regenerate portalToken
 export async function POST(
@@ -67,11 +69,8 @@ export async function POST(
       portalToken: updated.portalToken,
       portalUrl,
     });
-  } catch (err: any) {
-    console.error('[API ERROR] Generating portal link:', err?.message || String(err));
-    return NextResponse.json(
-      { error: 'Failed to generate portal link', details: err?.message },
-      { status: 500 }
-    );
+  } catch (error) {
+    logger.error('POST /api/influencers/[id]/generate-link failed', error);
+    return handleApiError(error);
   }
 }

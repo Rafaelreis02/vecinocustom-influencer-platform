@@ -5,6 +5,8 @@
 
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { handleApiError } from '@/lib/api-error';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: Request) {
   try {
@@ -44,12 +46,9 @@ export async function GET(request: Request) {
     });
 
     return NextResponse.json(emails);
-  } catch (err: any) {
-    console.log('[API ERROR] Fetching emails:', err?.message);
-    return NextResponse.json(
-      { error: 'Failed to fetch emails' },
-      { status: 500 }
-    );
+  } catch (error) {
+    logger.error('GET /api/emails failed', error);
+    return handleApiError(error);
   }
 }
 
@@ -77,11 +76,8 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json(email, { status: 201 });
-  } catch (err: any) {
-    console.log('[API ERROR] Creating email:', err?.message);
-    return NextResponse.json(
-      { error: 'Failed to create email' },
-      { status: 500 }
-    );
+  } catch (error) {
+    logger.error('POST /api/emails failed', error);
+    return handleApiError(error);
   }
 }

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { handleApiError } from '@/lib/api-error';
+import { logger } from '@/lib/logger';
 
 export async function PATCH(
   req: NextRequest,
@@ -16,11 +18,8 @@ export async function PATCH(
 
     return NextResponse.json(video);
   } catch (error) {
-    console.error('Error updating video:', error);
-    return NextResponse.json(
-      { error: 'Failed to update video' },
-      { status: 500 }
-    );
+    logger.error('PATCH /api/videos/[id] failed', error);
+    return handleApiError(error);
   }
 }
 
@@ -37,10 +36,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting video:', error);
-    return NextResponse.json(
-      { error: 'Failed to delete video' },
-      { status: 500 }
-    );
+    logger.error('DELETE /api/videos/[id] failed', error);
+    return handleApiError(error);
   }
 }

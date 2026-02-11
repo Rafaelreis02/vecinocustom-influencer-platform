@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { createShopifyCoupon, deleteShopifyCoupon } from '@/lib/shopify-oauth';
+import { handleApiError } from '@/lib/api-error';
+import { logger } from '@/lib/logger';
 
 /**
  * POST /api/influencers/[id]/coupon
@@ -81,7 +83,7 @@ export async function POST(
         discountPercent
       );
     } catch (error) {
-      console.error('Shopify coupon creation failed:', error);
+      logger.error('Shopify coupon creation failed', error);
       return NextResponse.json(
         {
           success: false,
@@ -114,14 +116,8 @@ export async function POST(
       message: ` Cupão ${code.toUpperCase()} criado com sucesso!`,
     });
   } catch (error) {
-    console.error('Error creating coupon:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Erro desconhecido',
-      },
-      { status: 500 }
-    );
+    logger.error('POST /api/influencers/[id]/coupon failed', error);
+    return handleApiError(error);
   }
 }
 
@@ -165,7 +161,7 @@ export async function DELETE(
       try {
         await deleteShopifyCoupon(coupon.shopifyPriceRuleId);
       } catch (error) {
-        console.error('Failed to delete from Shopify:', error);
+        logger.error('Failed to delete from Shopify', error);
         // Continue to delete from DB even if Shopify fails
       }
     }
@@ -180,13 +176,7 @@ export async function DELETE(
       message: 'Cupão apagado com sucesso',
     });
   } catch (error) {
-    console.error('Error deleting coupon:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Erro desconhecido',
-      },
-      { status: 500 }
-    );
+    logger.error('DELETE /api/influencers/[id]/coupon failed', error);
+    return handleApiError(error);
   }
 }

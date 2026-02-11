@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { createCoupon } from '@/lib/shopify';
+import { handleApiError } from '@/lib/api-error';
+import { logger } from '@/lib/logger';
 
 /**
  * POST /api/influencers/[id]/create-coupon
@@ -73,7 +75,7 @@ export async function POST(
     });
 
     // Send email to influencer (optional - requires email service configuration)
-    console.log(`Coupon ${code.toUpperCase()} created for influencer ${influencer.name}`);
+    logger.info(`Coupon ${code.toUpperCase()} created for influencer ${influencer.name}`);
 
     return NextResponse.json({
       success: true,
@@ -81,13 +83,7 @@ export async function POST(
       message: ` Cupom ${code.toUpperCase()} criado com sucesso!`,
     });
   } catch (error) {
-    console.error('Error creating coupon:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+    logger.error('POST /api/influencers/[id]/create-coupon failed', error);
+    return handleApiError(error);
   }
 }
