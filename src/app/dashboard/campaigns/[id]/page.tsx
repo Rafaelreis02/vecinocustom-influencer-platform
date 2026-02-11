@@ -23,6 +23,7 @@ import {
   ExternalLink,
   Plus,
   AlertCircle,
+  RefreshCw,
 } from 'lucide-react';
 import AddVideoModal from '@/components/AddVideoModal';
 import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog';
@@ -49,11 +50,13 @@ interface Campaign {
     likes: number | null;
     cost: number | null;
     publishedAt: string | null;
-    influencerId: string;
+    influencerId: string | null;
+    authorHandle: string | null;
+    authorDisplayName: string | null;
     influencer: {
       id: string;
       name: string;
-    };
+    } | null;
   }>;
   spent: number;
   totalViews: number;
@@ -85,6 +88,7 @@ export default function CampaignDetailPage() {
   const [showAddVideoModal, setShowAddVideoModal] = useState(false);
   const [editingCost, setEditingCost] = useState<string | null>(null);
   const [costValue, setCostValue] = useState<string>('');
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     fetchCampaign();
@@ -187,6 +191,36 @@ export default function CampaignDetailPage() {
     }
   };
 
+  const handleSync = async () => {
+    if (!campaign?.hashtag) {
+      addToast('Campanha não tem hashtag configurada', 'error');
+      return;
+    }
+
+    setSyncing(true);
+    try {
+      const res = await fetch(`/api/campaigns/${params.id}/sync`, {
+        method: 'POST',
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        addToast(
+          `Sincronização concluída: ${data.created} novos, ${data.updated} atualizados`,
+          'success'
+        );
+        fetchCampaign(); // Refresh data
+      } else {
+        const error = await res.json();
+        addToast(error.error || 'Erro ao sincronizar', 'error');
+      }
+    } catch (error) {
+      addToast('Erro ao sincronizar', 'error');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -216,8 +250,18 @@ export default function CampaignDetailPage() {
   const StatusIcon = statusInfo.icon;
   const budgetPercent = campaign.budget ? (campaign.spent / campaign.budget) * 100 : 0;
   
-  // Calculate unique influencers from videos
-  const uniqueInfluencers = new Set(campaign.videos.map(v => v.influencerId)).size;
+  // Calculate unique influencers: registered influencers + unique authorHandles
+  const influencerIds = new Set(
+    campaign.videos
+      .filter(v => v.influencerId)
+      .map(v => v.influencerId)
+  );
+  const authorHandles = new Set(
+    campaign.videos
+      .filter(v => !v.influencerId && v.authorHandle)
+      .map(v => v.authorHandle)
+  );
+  const uniqueInfluencers = influencerIds.size + authorHandles.size;
 
   return (
     <div className="space-y-6">
@@ -359,19 +403,32 @@ export default function CampaignDetailPage() {
 
       {/* Videos Section */}
       <div className="rounded-xl bg-white p-4 sm:p-6 border border-gray-200">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
           <h2 className="text-lg sm:text-xl font-semibold text-gray-900 flex items-center gap-2">
             <Video className="h-5 w-5 text-purple-600" />
             Vídeos ({campaign.videos.length})
           </h2>
-          <button
-            onClick={() => setShowAddVideoModal(true)}
-            className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-black text-white rounded-md text-xs sm:text-sm font-medium hover:bg-gray-800 transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">Adicionar Vídeo</span>
-            <span className="sm:hidden">Adicionar</span>
-          </button>
+          <div className="flex items-center gap-2">
+            {campaign.hashtag && campaign.platform === 'TIKTOK' && (
+              <button
+                onClick={handleSync}
+                disabled={syncing}
+                className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-purple-600 text-white rounded-md text-xs sm:text-sm font-medium hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">{syncing ? 'A sincronizar...' : 'Sincronizar'}</span>
+                <span className="sm:hidden">Sync</span>
+              </button>
+            )}
+            <button
+              onClick={() => setShowAddVideoModal(true)}
+              className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-black text-white rounded-md text-xs sm:text-sm font-medium hover:bg-gray-800 transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">Adicionar Vídeo</span>
+              <span className="sm:hidden">Adicionar</span>
+            </button>
+          </div>
         </div>
 
         {campaign.videos.length === 0 ? (
@@ -421,7 +478,7 @@ export default function CampaignDetailPage() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium text-gray-900 truncate">
-                        {video.influencer.name}
+                        {video.influencer ? video.influencer.name : (video.authorHandle ? `@${video.authorHandle}` : 'Desconhecido')}
                       </p>
                       <p className="text-xs text-gray-500">
                         {video.publishedAt ? new Date(video.publishedAt).toLocaleDateString('pt') : 'Data'}
