@@ -223,7 +223,7 @@ export default function InfluencerDetailPage() {
 
       fetchInfluencer();
       setCouponCode('');
-      addToast(`✅ Cupom ${data.coupon.code} criado com sucesso!`, 'success');
+      addToast(`Cupom ${data.coupon.code} criado com sucesso!`, 'success');
     } catch (error) {
       console.error('Error creating coupon:', error);
       addToast(
@@ -283,7 +283,7 @@ export default function InfluencerDetailPage() {
       }
 
       setPortalUrl(data.portalUrl);
-      addToast('✅ Link do portal gerado com sucesso!', 'success');
+      addToast('Link do portal gerado com sucesso', 'success');
     } catch (error) {
       console.error('Error generating portal link:', error);
       addToast(
@@ -319,7 +319,7 @@ export default function InfluencerDetailPage() {
       }
 
       setInfluencer(data);
-      addToast('✅ Campo guardado com sucesso!', 'success');
+      addToast('Campo guardado com sucesso', 'success');
     } catch (error) {
       console.error(`Error saving ${field}:`, error);
       addToast(
@@ -381,7 +381,7 @@ export default function InfluencerDetailPage() {
       }
 
       setInfluencer(data);
-      addToast(`✅ Status avançado para ${nextStatus}!`, 'success');
+      addToast(` Status avançado para ${nextStatus}!`, 'success');
     } catch (error) {
       console.error('Error advancing status:', error);
       addToast(
@@ -578,7 +578,7 @@ export default function InfluencerDetailPage() {
 
       {/* Collapsible Sections */}
       <div className="space-y-6">
-        {/* 📊 Estatísticas Gerais */}
+        {/* Estatísticas Gerais */}
         <CollapsibleSection title="Estatísticas Gerais" icon={BarChart3} defaultOpen={true}>
           <div className="pt-4 space-y-4">
             {/* Key Metrics Grid */}
@@ -662,7 +662,7 @@ export default function InfluencerDetailPage() {
           </div>
         </CollapsibleSection>
 
-        {/* 🎬 Histórico de Vídeos */}
+        {/* Histórico de Vídeos */}
         <CollapsibleSection 
           title={`Histórico de Vídeos${influencer.videos ? ` (${influencer.videos.length})` : ''}`} 
           icon={Video}
@@ -722,7 +722,7 @@ export default function InfluencerDetailPage() {
           </div>
         </CollapsibleSection>
 
-        {/* 💰 Cupão Associado */}
+        {/*  Cupão Associado */}
         <CollapsibleSection title="Cupão Associado" icon={DollarSign} defaultOpen={true}>
           <div className="pt-4 space-y-4">
             {/* Current Coupon Display */}
@@ -732,7 +732,7 @@ export default function InfluencerDetailPage() {
                   <h4 className="text-xs text-gray-600 font-semibold">CUPOM ATUAL</h4>
                   {influencer.coupons[0].shopifyPriceRuleId && (
                     <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700 flex items-center gap-1">
-                      Shopify ✓
+                      Shopify
                     </span>
                   )}
                 </div>
@@ -758,7 +758,7 @@ export default function InfluencerDetailPage() {
                   onClick={handleDeleteCoupon}
                   className="w-full px-3 py-2 rounded bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition"
                 >
-                  🗑️ Apagar Cupão
+                  Apagar Cupão
                 </button>
               </div>
             )}
@@ -812,14 +812,14 @@ export default function InfluencerDetailPage() {
                   disabled={creatingCoupon}
                   className="w-full px-3 py-2 rounded bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
-                  {creatingCoupon ? '⏳ Criando...' : '✅ Atribuir Cupom'}
+                  {creatingCoupon ? 'Criando...' : 'Atribuir Cupom'}
                 </button>
               </form>
             )}
           </div>
         </CollapsibleSection>
 
-        {/* 💵 Histórico de Comissões */}
+        {/* Histórico de Comissões */}
         <CollapsibleSection title="Histórico de Comissões" icon={Receipt} defaultOpen={false}>
           <div className="pt-4">
             {influencer.coupons && influencer.coupons.length > 0 && influencer.coupons[0].totalSales > 0 ? (
@@ -885,7 +885,7 @@ export default function InfluencerDetailPage() {
           </div>
         </CollapsibleSection>
 
-        {/* 🔗 Portal do Influencer */}
+        {/* Portal do Influencer */}
         <CollapsibleSection title="Portal do Influencer" icon={ExternalLink} defaultOpen={true}>
           <div className="pt-4 space-y-6">
             {/* Progress Bar */}
@@ -931,7 +931,7 @@ export default function InfluencerDetailPage() {
                   disabled={generatingLink}
                   className="w-full px-3 py-2 rounded bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
-                  {generatingLink ? '⏳ A gerar...' : '🔗 Gerar Link do Portal'}
+                  {generatingLink ? 'A gerar...' : 'Gerar Link do Portal'}
                 </button>
               </div>
             )}
@@ -955,7 +955,7 @@ export default function InfluencerDetailPage() {
                   disabled={savingField === 'agreedPrice'}
                   className="px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
-                  {savingField === 'agreedPrice' ? '⏳' : 'Guardar'}
+                  {savingField === 'agreedPrice' ? 'Guardando' : 'Guardar'}
                 </button>
               </div>
             </div>
@@ -1042,7 +1042,7 @@ export default function InfluencerDetailPage() {
                   disabled={savingField === 'chosenProduct'}
                   className="px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
-                  {savingField === 'chosenProduct' ? '⏳' : 'Guardar'}
+                  {savingField === 'chosenProduct' ? 'Guardando' : 'Guardar'}
                 </button>
               </div>
             </div>
@@ -1063,7 +1063,7 @@ export default function InfluencerDetailPage() {
                   disabled={savingField === 'trackingUrl'}
                   className="px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
-                  {savingField === 'trackingUrl' ? '⏳' : 'Guardar'}
+                  {savingField === 'trackingUrl' ? 'Guardando' : 'Guardar'}
                 </button>
               </div>
             </div>
@@ -1084,7 +1084,7 @@ export default function InfluencerDetailPage() {
                   </>
                 ) : (
                   <>
-                    🔄 {getAdvanceButtonText(influencer.status)}
+                    {getAdvanceButtonText(influencer.status)}
                   </>
                 )}
               </button>
@@ -1096,13 +1096,13 @@ export default function InfluencerDetailPage() {
             )}
             {influencer.status === 'SHIPPED' && (
               <p className="text-sm text-green-600 font-semibold text-center">
-                ✅ Encomenda enviada — Status final
+                 Encomenda enviada — Status final
               </p>
             )}
           </div>
         </CollapsibleSection>
 
-        {/* 📝 Notas */}
+        {/* Notas */}
         {influencer.notes && (
           <CollapsibleSection title="Notas Internas" icon={Sparkles} defaultOpen={false}>
             <div className="pt-4 text-sm text-gray-700 whitespace-pre-line">

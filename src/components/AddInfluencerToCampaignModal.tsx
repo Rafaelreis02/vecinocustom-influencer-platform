@@ -178,10 +178,10 @@ export default function AddInfluencerToCampaignModal({
                         <p className="text-sm font-medium text-gray-900">{inf.name}</p>
                         <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
                           {inf.instagramHandle && (
-                            <span>📷 @{inf.instagramHandle} {inf.instagramFollowers && `(${(inf.instagramFollowers / 1000).toFixed(1)}K)`}</span>
+                            <span>@@{inf.instagramHandle} {inf.instagramFollowers && `(${(inf.instagramFollowers / 1000).toFixed(1)}K)`}</span>
                           )}
                           {inf.tiktokHandle && (
-                            <span>🎵 @{inf.tiktokHandle} {inf.tiktokFollowers && `(${(inf.tiktokFollowers / 1000).toFixed(1)}K)`}</span>
+                            <span>@{inf.tiktokHandle} {inf.tiktokFollowers && `(${(inf.tiktokFollowers / 1000).toFixed(1)}K)`}</span>
                           )}
                         </div>
                       </div>

@@ -39,7 +39,7 @@ function SettingsContent() {
     const errorParam = searchParams.get('error');
 
     if (shopifyParam === 'connected') {
-      addToast('✅ Shopify conectado com sucesso!', 'success');
+      addToast('Shopify conectado com sucesso', 'success');
       window.history.replaceState({}, '', '/dashboard/settings');
     } else if (errorParam) {
       let errorMessage = 'Erro ao conectar ao Shopify';
@@ -90,9 +90,9 @@ function SettingsContent() {
       const data = await res.json();
       
       if (data.success) {
-        addToast('✅ Conexão Shopify OK!', 'success');
+        addToast('Conexão Shopify OK', 'success');
       } else {
-        addToast('❌ Falha no teste: ' + data.error, 'error');
+        addToast('Falha no teste: ' + data.error, 'error');
       }
     } catch (error) {
       addToast('Erro ao testar conexão', 'error');

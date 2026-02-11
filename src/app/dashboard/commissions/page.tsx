@@ -85,7 +85,7 @@ export default function CommissionsPage() {
     <div className={styles.container}>
       {/* Header */}
       <div className={styles.header}>
-        <h1>💰 Comissões - Fevereiro 2026</h1>
+        <h1>Comissões - Fevereiro 2026</h1>
         <div className={styles.total}>
           <p className={styles.totalLabel}>Total a Pagar</p>
           <p className={styles.totalAmount}>€{totalCommission.toFixed(2)}</p>
@@ -204,12 +204,12 @@ export default function CommissionsPage() {
                         )}
                         {order.status === 'approved' && (
                           <span className={`${styles.badge} ${styles.badgeApproved}`}>
-                            ✓ Aprovada
+                            Aprovada
                           </span>
                         )}
                         {order.status === 'rejected' && (
                           <span className={`${styles.badge} ${styles.badgeRejected}`}>
-                            ✗ Rejeitada
+                            Rejeitada
                           </span>
                         )}
                       </div>
@@ -243,7 +243,7 @@ export default function CommissionsPage() {
       {/* Footer Note */}
       <div className={styles.note}>
         <p>
-          💡 Clica em cada influencer para ver os detalhes das encomendas. Aprova ou rejeita com base no
+           Clica em cada influencer para ver os detalhes das encomendas. Aprova ou rejeita com base no
           cupom usado.
         </p>
       </div>

@@ -16,8 +16,6 @@ import {
   Send,
   Paperclip,
   Inbox,
-  CheckSquare,
-  Archive,
   Flag,
   Download,
 } from 'lucide-react';
@@ -43,8 +41,8 @@ interface EmailDetail extends Email {
   labels: string[];
 }
 
-type FilterType = 'inbox' | 'unread' | 'sent' | 'flagged';
-type StatusFilterType = 'all' | 'NEW' | 'NEGOTIATING' | 'AWAITING_PRODUCT' | 'PRODUCT_SENT' | 'COMPLETED' | 'CANCELLED';
+type FilterType = 'inbox' | 'unread' | 'flagged';
+type StatusFilterType = 'all' | string;
 
 export default function MessagesPage() {
   const { addToast } = useGlobalToast();
@@ -67,9 +65,21 @@ export default function MessagesPage() {
   const [influencerUsername, setInfluencerUsername] = useState('');
   const [influencerPlatform, setInfluencerPlatform] = useState<'TikTok' | 'Instagram'>('TikTok');
   const [addingInfluencer, setAddingInfluencer] = useState(false);
+  const [showComposeModal, setShowComposeModal] = useState(false);
+  const [composeTo, setComposeTo] = useState('');
+  const [composeSubject, setComposeSubject] = useState('');
+  const [composeBody, setComposeBody] = useState('');
+  const [sendingCompose, setSendingCompose] = useState(false);
 
   useEffect(() => {
     fetchEmails();
+    
+    // Auto-refresh every 60 seconds
+    const interval = setInterval(() => {
+      fetchEmails();
+    }, 60000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   async function fetchEmails() {
@@ -151,7 +161,7 @@ export default function MessagesPage() {
 
       if (!res.ok) throw new Error('Failed to send reply');
 
-      addToast('✅ Resposta enviada!', 'success');
+      addToast('Resposta enviada com sucesso', 'success');
       setReplyText('');
       setAttachmentFile(null);
       setShowReplyModal(false);
@@ -160,6 +170,38 @@ export default function MessagesPage() {
       addToast('Erro ao enviar: ' + error.message, 'error');
     } finally {
       setSendingReply(false);
+    }
+  }
+
+  async function handleSendCompose() {
+    if (!composeTo.trim() || !composeSubject.trim() || !composeBody.trim()) {
+      addToast('Preenche todos os campos obrigatórios', 'error');
+      return;
+    }
+
+    try {
+      setSendingCompose(true);
+      const res = await fetch('/api/emails/compose', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: composeTo,
+          subject: composeSubject,
+          body: composeBody,
+        }),
+      });
+
+      if (!res.ok) throw new Error('Failed to send email');
+
+      addToast('Email enviado com sucesso', 'success');
+      setComposeTo('');
+      setComposeSubject('');
+      setComposeBody('');
+      setShowComposeModal(false);
+    } catch (error: any) {
+      addToast('Erro ao enviar: ' + error.message, 'error');
+    } finally {
+      setSendingCompose(false);
     }
   }
 
@@ -174,7 +216,7 @@ export default function MessagesPage() {
         method: 'DELETE',
       });
 
-      addToast('✅ Email eliminado', 'success');
+      addToast('Email eliminado com sucesso', 'success');
       setSelectedEmail(null);
       fetchEmails();
     } catch (error: any) {
@@ -192,8 +234,8 @@ export default function MessagesPage() {
       const result = await res.json();
       addToast(
         result.influencer.isNew
-          ? `✅ Influenciador criado: ${result.influencer.name}`
-          : `✅ Ligado a: ${result.influencer.name}`,
+          ? `Influenciador criado: ${result.influencer.name}`
+          : `Ligado a: ${result.influencer.name}`,
         'success'
       );
       fetchEmails();
@@ -232,13 +274,36 @@ export default function MessagesPage() {
   }
 
   function getFileIcon(mimeType: string) {
-    if (mimeType.startsWith('image/')) return '🖼️';
-    if (mimeType.startsWith('video/')) return '🎬';
-    if (mimeType.startsWith('audio/')) return '🎵';
-    if (mimeType.includes('pdf')) return '📄';
-    if (mimeType.includes('word') || mimeType.includes('document')) return '📝';
-    if (mimeType.includes('sheet') || mimeType.includes('excel')) return '📊';
-    return '📎';
+    if (mimeType.startsWith('image/')) return 'Image';
+    if (mimeType.startsWith('video/')) return 'Video';
+    if (mimeType.startsWith('audio/')) return 'Audio';
+    if (mimeType.includes('pdf')) return 'PDF';
+    if (mimeType.includes('word') || mimeType.includes('document')) return 'Doc';
+    if (mimeType.includes('sheet') || mimeType.includes('excel')) return 'Sheet';
+    return 'File';
+  }
+
+  async function handleDownloadAttachment(attachmentId: string, filename: string) {
+    if (!selectedEmail) return;
+    try {
+      // Download attachment via Gmail API
+      const res = await fetch(`/api/emails/${selectedEmail.id}/attachments/${attachmentId}`);
+      if (!res.ok) throw new Error('Failed to download attachment');
+      
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      addToast('Anexo descarregado com sucesso', 'success');
+    } catch (error: any) {
+      addToast('Erro ao descarregar anexo: ' + error.message, 'error');
+    }
   }
 
   function getInitials(email: string) {
@@ -271,7 +336,7 @@ export default function MessagesPage() {
       const res = await fetch('/api/worker/sync-emails', { method: 'POST' });
       if (!res.ok) throw new Error('Sync failed');
       const data = await res.json();
-      addToast(`✅ Sincronizados ${data.synced} emails!`, 'success');
+      addToast(`Sincronizados ${data.synced} emails`, 'success');
       fetchEmails();
     } catch (error: any) {
       addToast('Erro ao sincronizar: ' + error.message, 'error');
@@ -283,7 +348,7 @@ export default function MessagesPage() {
 
   async function handleAddInfluencerWithUsername() {
     if (!selectedEmail || !influencerUsername.trim()) {
-      addToast('❌ Insere o @ do influenciador', 'error');
+      addToast('Insere o @ do influenciador', 'error');
       return;
     }
 
@@ -321,7 +386,7 @@ export default function MessagesPage() {
         body: JSON.stringify({ influencerId: newInfluencer.id }),
       });
 
-      addToast(`✅ Influenciador @${cleanUsername} adicionado! A analisar...`, 'success');
+      addToast(`Influenciador @${cleanUsername} adicionado! A analisar...`, 'success');
 
       // Close modal and refresh
       setShowAddInfluencerModal(false);
@@ -337,7 +402,7 @@ export default function MessagesPage() {
       }
 
     } catch (error: any) {
-      addToast('❌ Erro ao adicionar influenciador: ' + error.message, 'error');
+      addToast('Erro ao adicionar influenciador: ' + error.message, 'error');
     } finally {
       setAddingInfluencer(false);
     }
@@ -385,7 +450,14 @@ export default function MessagesPage() {
         showSidebar ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
       }`}>
         {/* Header */}
-        <div className="p-4 border-b border-gray-200">
+        <div className="p-4 border-b border-gray-200 space-y-2">
+          <button
+            onClick={() => setShowComposeModal(true)}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition text-sm"
+          >
+            <Mail className="h-4 w-4" />
+            Novo Email
+          </button>
           <button
             onClick={handleSyncNow}
             disabled={syncing}
@@ -654,6 +726,13 @@ export default function MessagesPage() {
                     }`}
                   />
                 </button>
+                <button
+                  onClick={handleDelete}
+                  className="p-2 hover:bg-red-100 rounded-lg transition"
+                  title="Eliminar email"
+                >
+                  <Trash2 className="h-5 w-5 text-gray-600 hover:text-red-600" />
+                </button>
               </div>
             </div>
           </div>
@@ -678,6 +757,7 @@ export default function MessagesPage() {
                     {selectedEmail.attachments.map((att, idx) => (
                       <div
                         key={idx}
+                        onClick={() => handleDownloadAttachment(att.attachmentId, att.filename)}
                         className="flex items-center gap-2 px-3 py-2 rounded border border-gray-200 hover:border-blue-400 transition cursor-pointer group flex-shrink-0 min-w-max bg-gray-50 hover:bg-blue-50"
                         title={`Baixar ${att.filename}`}
                       >
@@ -928,19 +1008,27 @@ export default function MessagesPage() {
                   </div>
                 ) : (
                   <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-                    <p className="text-sm font-semibold text-green-700 mb-2">✅ Influenciador Registado</p>
+                    <p className="text-sm font-semibold text-green-700 mb-2">Influenciador Registado</p>
                     <p className="text-lg font-bold text-gray-900 mb-2">{selectedEmail.influencer.name}</p>
                   </div>
                 )
               ) : (
                 <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
-                  <p className="text-sm text-amber-700 font-semibold mb-3">⚠️ Não Registado</p>
-                  <button
-                    onClick={() => setShowAddInfluencerModal(true)}
-                    className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition"
-                  >
-                    Adicionar como Influenciador
-                  </button>
+                  <p className="text-sm text-amber-700 font-semibold mb-3">Não Registado</p>
+                  <div className="flex flex-col gap-2">
+                    <button
+                      onClick={handleAutoDetect}
+                      className="w-full px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition"
+                    >
+                      Auto-detectar Influenciador
+                    </button>
+                    <button
+                      onClick={() => setShowAddInfluencerModal(true)}
+                      className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition"
+                    >
+                      Adicionar como Influenciador
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -1097,7 +1185,7 @@ export default function MessagesPage() {
               {/* Info Box */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <p className="text-xs text-blue-700 font-medium mb-1">
-                  🤖 Análise Automática
+                  Análise Automática
                 </p>
                 <p className="text-xs text-blue-600">
                   O sistema vai buscar o perfil do influenciador, analisar métricas e calcular fit score automaticamente.
@@ -1123,6 +1211,97 @@ export default function MessagesPage() {
                 className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition text-sm"
               >
                 {addingInfluencer ? 'A adicionar...' : 'Adicionar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Compose Modal */}
+      {showComposeModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end md:items-center md:justify-center">
+          <div className="bg-white rounded-t-2xl md:rounded-2xl w-full md:max-w-2xl md:max-h-[90vh] flex flex-col animate-slide-up md:animate-none">
+            {/* Header */}
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+              <h3 className="text-lg font-bold text-gray-900">Novo Email</h3>
+              <button
+                onClick={() => {
+                  setShowComposeModal(false);
+                  setComposeTo('');
+                  setComposeSubject('');
+                  setComposeBody('');
+                }}
+                className="p-2 hover:bg-gray-100 rounded-lg transition"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {/* To Field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Para
+                </label>
+                <input
+                  type="email"
+                  value={composeTo}
+                  onChange={(e) => setComposeTo(e.target.value)}
+                  placeholder="destinatario@exemplo.com"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                />
+              </div>
+
+              {/* Subject Field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Assunto
+                </label>
+                <input
+                  type="text"
+                  value={composeSubject}
+                  onChange={(e) => setComposeSubject(e.target.value)}
+                  placeholder="Assunto do email"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                />
+              </div>
+
+              {/* Body Field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Mensagem
+                </label>
+                <textarea
+                  value={composeBody}
+                  onChange={(e) => setComposeBody(e.target.value)}
+                  placeholder="Escreve a tua mensagem aqui..."
+                  rows={10}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm"
+                />
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-gray-200 flex gap-3 flex-shrink-0">
+              <button
+                onClick={() => {
+                  setShowComposeModal(false);
+                  setComposeTo('');
+                  setComposeSubject('');
+                  setComposeBody('');
+                }}
+                className="flex-1 md:flex-none px-6 py-2.5 text-gray-700 hover:bg-gray-100 rounded-lg transition border border-gray-300 text-sm font-medium"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSendCompose}
+                disabled={sendingCompose || !composeTo.trim() || !composeSubject.trim() || !composeBody.trim()}
+                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition text-sm"
+              >
+                <Send className="h-4 w-4" />
+                {sendingCompose ? 'Enviando...' : 'Enviar'}
               </button>
             </div>
           </div>

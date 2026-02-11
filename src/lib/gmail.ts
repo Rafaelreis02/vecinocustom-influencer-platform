@@ -178,11 +178,11 @@ export async function syncEmails(auth: any) {
         });
 
         totalSynced++;
-        console.log(`[GMAIL SYNC] ✅ Synced: ${emailData.subject} from ${emailData.from}`);
+        console.log(`[GMAIL SYNC] Synced: ${emailData.subject} from ${emailData.from}`);
       }
     }
 
-    console.log(`[GMAIL SYNC] ✅ Complete! Synced ${totalSynced} new emails.`);
+    console.log(`[GMAIL SYNC] Complete! Synced ${totalSynced} new emails.`);
     return totalSynced;
   } catch (error: any) {
     console.error('[GMAIL SYNC ERROR]', error.message);

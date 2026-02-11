@@ -78,7 +78,7 @@ export async function POST(
     return NextResponse.json({
       success: true,
       coupon,
-      message: `✅ Cupom ${code.toUpperCase()} criado com sucesso!`,
+      message: ` Cupom ${code.toUpperCase()} criado com sucesso!`,
     });
   } catch (error) {
     console.error('Error creating coupon:', error);

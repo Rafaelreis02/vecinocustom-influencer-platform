@@ -110,7 +110,7 @@ export default function CouponsPage() {
       });
       setShowForm(false);
 
-      addToast(`✅ Cupom ${data.coupon.code} criado com sucesso!`, 'success');
+      addToast(`Cupom ${data.coupon.code} criado com sucesso`, 'success');
     } catch (error) {
       console.error('Error creating coupon:', error);
       addToast(
@@ -138,12 +138,12 @@ export default function CouponsPage() {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <h1>💰 Cupões</h1>
+        <h1>Cupões</h1>
         <button
           className={styles.primaryBtn}
           onClick={() => setShowForm(!showForm)}
         >
-          {showForm ? '✖️ Cancelar' : '➕ Novo Cupom'}
+          {showForm ? 'Cancelar' : 'Novo Cupom'}
         </button>
       </div>
 
@@ -223,7 +223,7 @@ export default function CouponsPage() {
               className={styles.submitBtn}
               disabled={creating}
             >
-              {creating ? '⏳ Criando...' : '✅ Criar Cupom'}
+              {creating ? 'Criando...' : 'Criar Cupom'}
             </button>
           </form>
         </div>
@@ -233,7 +233,7 @@ export default function CouponsPage() {
       {coupons.length === 0 ? (
         <div className={styles.emptyState}>
           <p>Nenhum cupom criado ainda</p>
-          <p>Clica em "Novo Cupom" para começar 🚀</p>
+          <p>Clica em &quot;Novo Cupom&quot; para começar</p>
         </div>
       ) : (
         <div className={styles.grid}>
@@ -265,7 +265,7 @@ export default function CouponsPage() {
               </div>
 
               {coupon.shopifyId && (
-                <div className={styles.badge}>✅ Ativo na Shopify</div>
+                <div className={styles.badge}>Ativo na Shopify</div>
               )}
             </div>
           ))}

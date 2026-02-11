@@ -40,7 +40,7 @@ export async function POST(request: Request, { params }: any) {
         defaultUser = await prisma.user.create({
           data: {
             email: 'ai@vecinocustom.com',
-            name: 'AI Agent 🤖',
+            name: 'AI Agent',
             role: 'ADMIN',
           },
         });
@@ -55,12 +55,12 @@ export async function POST(request: Request, { params }: any) {
           email: email.from,
           status: 'IMPORT_PENDING',
           createdById: defaultUser.id,
-          notes: `🔔 Contactou-nos por email: ${email.subject}`,
+          notes: `Contactou-nos por email: ${email.subject}`,
         },
       });
 
       console.log(
-        `[AUTO-DETECT] ✅ Created influencer: ${influencer.name} (${influencer.id})`
+        `[AUTO-DETECT] Created influencer: ${influencer.name} (${influencer.id})`
       );
     }
 

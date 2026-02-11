@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     // Sync emails using Gmail API
     const totalSynced = await syncEmails(auth);
 
-    console.log(`[SYNC-EMAILS] ✅ Synced ${totalSynced} emails`);
+    console.log(`[SYNC-EMAILS] Synced ${totalSynced} emails`);
 
     return NextResponse.json({
       success: true,

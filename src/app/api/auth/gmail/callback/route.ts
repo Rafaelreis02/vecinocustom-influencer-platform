@@ -49,7 +49,7 @@ export async function GET(request: Request) {
     console.log('[GMAIL OAUTH] Exchanging code for tokens...');
     const { tokens } = await oauth2Client.getToken(code);
 
-    console.log('[GMAIL OAUTH] ✅ Got tokens');
+    console.log('[GMAIL OAUTH] Got tokens');
     console.log('[GMAIL OAUTH] Refresh Token:', tokens.refresh_token);
 
     // Return refresh token to user (need to save to .env)
@@ -57,7 +57,7 @@ export async function GET(request: Request) {
       success: true,
       message: 'Authorization successful!',
       refreshToken: tokens.refresh_token,
-      instruction: '📝 Add this to your .env.local: GOOGLE_REFRESH_TOKEN=' + tokens.refresh_token,
+      instruction: 'Add this to your .env.local: GOOGLE_REFRESH_TOKEN=' + tokens.refresh_token,
     });
   } catch (error: any) {
     console.error('[GMAIL OAUTH ERROR]', error.message);
