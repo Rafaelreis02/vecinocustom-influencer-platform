@@ -4,7 +4,7 @@
  * Run with: npx tsx test-apify.ts
  */
 
-import { parseProfile, scrapeHashtagVideos } from './src/lib/apify';
+import { parseProfile, scrapeHashtagVideos } from './src/lib/apify-fetch';
 
 async function main() {
   console.log('🧪 Testing Apify Integration\n');
@@ -32,12 +32,12 @@ async function main() {
     
     videos.forEach((video, index) => {
       console.log(`Video ${index + 1}:`);
-      console.log(`  Author: @${video.authorUsername}`);
-      console.log(`  URL: ${video.videoUrl}`);
-      console.log(`  Views: ${video.viewCount?.toLocaleString() || 'N/A'}`);
-      console.log(`  Likes: ${video.likeCount?.toLocaleString() || 'N/A'}`);
+      console.log(`  Author: @${video.authorMeta?.name || 'unknown'}`);
+      console.log(`  URL: ${video.webVideoUrl || 'N/A'}`);
+      console.log(`  Views: ${video.playCount?.toLocaleString() || 'N/A'}`);
+      console.log(`  Likes: ${video.diggCount?.toLocaleString() || 'N/A'}`);
       console.log(`  Comments: ${video.commentCount?.toLocaleString() || 'N/A'}`);
-      console.log(`  Published: ${video.publishedAt?.toISOString() || 'N/A'}`);
+      console.log(`  Published: ${video.createTimeISO || 'N/A'}`);
       console.log('');
     });
   } catch (error: any) {

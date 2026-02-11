@@ -601,7 +601,12 @@ export default function InfluencerDetailPage() {
                     <p className="text-xs text-gray-600">Engagement</p>
                     <TrendingUp className="h-3 w-3 text-slate-700" />
                   </div>
-                  <p className="text-lg font-bold text-slate-900">{influencer.engagementRate.toFixed(1)}%</p>
+                  <span className="relative group cursor-help">
+                    <p className="text-lg font-bold text-slate-900">{influencer.engagementRate.toFixed(1)}%</p>
+                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+                      Baseado nas últimas 10 publicações
+                    </span>
+                  </span>
                 </div>
               )}
 
