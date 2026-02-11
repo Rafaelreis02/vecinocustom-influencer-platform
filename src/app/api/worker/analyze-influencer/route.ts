@@ -163,7 +163,7 @@ export async function POST(request: Request) {
       handle: profile.handle,
       platform: profile.platform,
       followers: profile.followers,
-      totalLikes: profile.totalLikes ? Number(profile.totalLikes) : null,
+      totalLikes: profile.totalLikes,
       engagement: profile.engagementRate,
       averageViews: profile.averageViews,
       biography: profile.biography,

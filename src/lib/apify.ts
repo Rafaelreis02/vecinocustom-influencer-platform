@@ -13,7 +13,7 @@ export interface ParsedProfile {
   handle: string;
   platform: 'TIKTOK' | 'INSTAGRAM';
   followers: number | null;
-  totalLikes: bigint | null;
+  totalLikes: number | null;
   engagementRate: number | null;
   biography: string | null;
   estimatedPrice: number | null;
@@ -133,7 +133,7 @@ async function scrapeTikTokProfile(handle: string): Promise<ParsedProfile> {
     handle: cleanHandle,
     platform: 'TIKTOK',
     followers: estimatedFollowers > 0 ? estimatedFollowers : null,
-    totalLikes: totalLikes > 0 ? BigInt(totalLikes) : null,
+    totalLikes: totalLikes > 0 ? totalLikes : null,
     engagementRate: engagementRate,
     biography: (profileData.signature as string) || null,
     estimatedPrice: estimatedPrice || 150,
@@ -194,7 +194,7 @@ async function scrapeInstagramProfile(handle: string): Promise<ParsedProfile> {
     handle: cleanHandle,
     platform: 'INSTAGRAM',
     followers: followersCount > 0 ? followersCount : null,
-    totalLikes: likesCount > 0 ? BigInt(likesCount) : null,
+    totalLikes: likesCount > 0 ? likesCount : null,
     engagementRate: engagementRate,
     biography: (profile.biography as string) || null,
     estimatedPrice: estimatedPrice,
