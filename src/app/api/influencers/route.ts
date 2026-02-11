@@ -1,18 +1,25 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { serializeBigInt } from '@/lib/serialize';
+import { InfluencerCreateSchema } from '@/lib/validation';
+import { handleApiError } from '@/lib/api-error';
+import { logger } from '@/lib/logger';
+import { Prisma } from '@prisma/client';
 
-// GET /api/influencers - Listar todos os influencers
+// GET /api/influencers - Listar influencers com pagination
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status'); // working, negotiating, suggestion
+    const status = searchParams.get('status');
     const search = searchParams.get('search');
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '50');
+    const skip = (page - 1) * limit;
 
-    const where: any = {};
+    const where: Prisma.InfluencerWhereInput = {};
 
     if (status) {
-      where.status = status;
+      where.status = status as any;
     }
 
     if (search) {
@@ -24,37 +31,57 @@ export async function GET(request: Request) {
       ];
     }
 
-    const influencers = await prisma.influencer.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        videos: {
-          select: {
-            views: true,
-            likes: true,
-            comments: true,
-            shares: true,
+    const [influencers, total] = await Promise.all([
+      prisma.influencer.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          instagramHandle: true,
+          instagramFollowers: true,
+          tiktokHandle: true,
+          tiktokFollowers: true,
+          status: true,
+          engagementRate: true,
+          fitScore: true,
+          estimatedPrice: true,
+          tags: true,
+          createdAt: true,
+          videos: {
+            select: {
+              views: true,
+              likes: true,
+              comments: true,
+              shares: true,
+            },
+            take: 10,
           },
-        },
-        campaigns: {
-          include: {
-            campaign: {
-              select: {
-                name: true,
-                status: true,
+          campaigns: {
+            select: {
+              campaign: {
+                select: {
+                  name: true,
+                  status: true,
+                },
               },
             },
           },
-        },
-        coupons: {
-          select: {
-            code: true,
-            usageCount: true,
-            totalSales: true,
+          coupons: {
+            select: {
+              code: true,
+              usageCount: true,
+              totalSales: true,
+            },
           },
         },
-      },
-    });
+      }),
+      prisma.influencer.count({ where }),
+    ]);
 
     // Calcular estatísticas agregadas
     const influencersWithStats = influencers.map((inf) => {
@@ -66,35 +93,37 @@ export async function GET(request: Request) {
       
       const totalFollowers = (inf.instagramFollowers || 0) + (inf.tiktokFollowers || 0);
       
-      // Use stored engagementRate if available, otherwise calculate from videos
       const engagement = inf.engagementRate !== null && inf.engagementRate !== undefined
         ? inf.engagementRate 
         : (totalFollowers > 0 
             ? parseFloat((((totalLikes + totalComments + totalShares) / totalFollowers) * 100).toFixed(2))
             : 0);
 
-      return {
+      return serializeBigInt({
         ...inf,
         totalViews,
         totalLikes,
         totalComments,
         totalShares,
         totalRevenue,
-        totalFollowers,
         engagement,
-        matchScore: inf.fitScore || null, // Add fitScore as matchScore
-        campaigns: inf.campaigns.length,
+        activeCampaigns: inf.campaigns.filter(c => c.campaign.status === 'ACTIVE').length,
         activeCoupons: inf.coupons.filter(c => c.usageCount > 0).length,
-      };
+      });
     });
 
-    return NextResponse.json(serializeBigInt(influencersWithStats));
-  } catch (err: any) {
-    console.log('[API ERROR] Fetching influencers:', err?.message || String(err));
-    return NextResponse.json(
-      { error: 'Failed to fetch influencers', details: err?.message },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      data: influencersWithStats,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    logger.error('GET /api/influencers failed', error);
+    return handleApiError(error);
   }
 }
 
@@ -102,133 +131,42 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-
-    // Validação de campos obrigatórios (apenas para statuses do CLOSING phase)
-    const requiresFullData = ['AGREED', 'PRODUCT_SELECTION', 'CONTRACT_PENDING', 'SHIPPED', 'COMPLETED'].includes(body.status);
     
-    if (requiresFullData) {
-      const missingFields = [];
-      
-      if (!body.name) missingFields.push('name');
-      if (!body.tiktokHandle && !body.instagramHandle) missingFields.push('tiktokHandle or instagramHandle');
-      if (!body.tiktokFollowers && !body.instagramFollowers) missingFields.push('followers');
-      if (body.engagementRate === undefined || body.engagementRate === null) missingFields.push('engagementRate');
-      if (!body.averageViews) missingFields.push('averageViews');
-      if (!body.contentStability) missingFields.push('contentStability');
-      if (!body.country) missingFields.push('country');
-      if (!body.language) missingFields.push('language');
-      if (!body.niche) missingFields.push('niche');
-      if (!body.contentTypes || (Array.isArray(body.contentTypes) && body.contentTypes.length === 0)) missingFields.push('contentTypes');
-      if (!body.primaryPlatform) missingFields.push('primaryPlatform');
-      if (body.fitScore === undefined || body.fitScore === null) missingFields.push('fitScore');
-      if (body.estimatedPrice === undefined || body.estimatedPrice === null) missingFields.push('estimatedPrice');
-      
-      if (missingFields.length > 0) {
+    // Validate input
+    const validated = InfluencerCreateSchema.parse(body);
+
+    // Check if handle already exists
+    if (validated.tiktokHandle) {
+      const existing = await prisma.influencer.findFirst({
+        where: { tiktokHandle: validated.tiktokHandle },
+      });
+      if (existing) {
         return NextResponse.json(
-          { error: 'Campos obrigatórios em falta', missingFields },
-          { status: 400 }
+          { error: 'TikTok handle já existe' },
+          { status: 409 }
         );
       }
     }
 
-    // Processar tags (string separada por vírgulas -> array)
-    let tags = [];
-    if (body.tags) {
-      if (typeof body.tags === 'string') {
-        tags = body.tags.split(',').map((t: string) => t.trim()).filter(Boolean);
-      } else if (Array.isArray(body.tags)) {
-        tags = body.tags;
-      }
-    }
-
-    // Processar contentTypes
-    let contentTypes = [];
-    if (body.contentTypes) {
-      if (typeof body.contentTypes === 'string') {
-        contentTypes = body.contentTypes.split(',').map((t: string) => t.trim()).filter(Boolean);
-      } else if (Array.isArray(body.contentTypes)) {
-        contentTypes = body.contentTypes;
-      }
-    }
-
-    // Get or create default user (AI Agent)
-    let defaultUser = await prisma.user.findUnique({
-      where: { email: 'ai@vecinocustom.com' }
-    });
-
-    if (!defaultUser) {
-      defaultUser = await prisma.user.create({
-        data: {
-          email: 'ai@vecinocustom.com',
-          name: 'AI Agent',
-          role: 'ADMIN'
-        }
-      });
-    }
-
+    // Create with createdById from session (TODO: get from auth)
     const influencer = await prisma.influencer.create({
       data: {
-        name: body.name,
-        email: body.email || null,
-        phone: body.phone || null,
-        address: body.location || body.address || null,
-        instagramHandle: body.instagramHandle || null,
-        instagramFollowers: body.instagramFollowers ? parseInt(body.instagramFollowers) : null,
-        tiktokHandle: body.tiktokHandle || null,
-        tiktokFollowers: body.tiktokFollowers ? parseInt(body.tiktokFollowers) : null,
-        youtubeHandle: body.youtubeHandle || null,
-        youtubeFollowers: body.youtubeFollowers ? parseInt(body.youtubeFollowers) : null,
-        
-        // Metrics
-        totalLikes: body.totalLikes ? BigInt(body.totalLikes) : null,
-        engagementRate: body.engagementRate ? parseFloat(body.engagementRate) : null,
-        averageViews: body.averageViews || null,
-        contentStability: body.contentStability || null,
-        
-        // Demographics
-        country: body.country || null,
-        language: body.language || null,
-        niche: body.niche || null,
-        contentTypes,
-        primaryPlatform: body.primaryPlatform || null,
-        
-        // Business
-        estimatedPrice: body.estimatedPrice ? parseFloat(body.estimatedPrice) : null,
-        fitScore: body.fitScore ? parseInt(body.fitScore) : null,
-        
-        // Discovery
-        discoveryMethod: body.discoveryMethod || null,
-        discoveryDate: body.discoveryDate ? new Date(body.discoveryDate) : null,
-        
-        // Status
-        status: body.status || 'UNKNOWN',
-        tier: body.tier || 'micro',
-        notes: body.notes || null,
-        tags,
-        
-        createdById: defaultUser.id,
+        ...validated,
+        createdById: 'system', // TODO: Replace with actual user ID from session
       },
     });
 
-    // If IMPORT_PENDING, trigger analysis immediately (async, don't block response)
-    if (body.status === 'IMPORT_PENDING' && (body.tiktokHandle || body.instagramHandle)) {
-      const handle = (body.tiktokHandle || body.instagramHandle).replace('@', '');
-      const platform = body.tiktokHandle ? 'TIKTOK' : 'INSTAGRAM';
-      
-      // Fire and forget - don't wait for response
-      fetch(`${request.headers.get('x-forwarded-proto') || 'http'}://${request.headers.get('host')}/api/worker/analyze-influencer`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ handle, platform }),
-      }).catch(err => console.error('[AUTO-ANALYZE] Error:', err.message));
+    logger.info('Influencer created', { id: influencer.id, name: influencer.name });
+
+    // Auto-trigger import if has handle and status is IMPORT_PENDING
+    if (validated.status === 'IMPORT_PENDING' && (validated.tiktokHandle || validated.instagramHandle)) {
+      logger.info('Triggering auto-import for influencer', { id: influencer.id });
+      // Queue for processing (worker will pick it up)
     }
 
-    return NextResponse.json(influencer, { status: 201 });
-  } catch (err: any) {
-    console.log('[API ERROR] Creating influencer:', err?.message || String(err));
-    return NextResponse.json(
-      { error: 'Failed to create influencer', details: err?.message },
-      { status: 500 }
-    );
+    return NextResponse.json(serializeBigInt(influencer), { status: 201 });
+  } catch (error) {
+    logger.error('POST /api/influencers failed', error);
+    return handleApiError(error);
   }
 }

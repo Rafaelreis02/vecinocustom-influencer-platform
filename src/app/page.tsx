@@ -143,7 +143,15 @@ export default function Home() {
 }
 
 // Components
-function StatCard({ icon, title, value, subtitle, color }: any) {
+interface StatCardProps {
+  icon: React.ReactNode;
+  title: string;
+  value: string;
+  subtitle: string;
+  color: 'blue' | 'purple' | 'green' | 'orange';
+}
+
+function StatCard({ icon, title, value, subtitle, color }: StatCardProps) {
   const colors = {
     blue: 'from-blue-500 to-blue-600',
     purple: 'from-purple-500 to-purple-600',
@@ -163,7 +171,13 @@ function StatCard({ icon, title, value, subtitle, color }: any) {
   );
 }
 
-function FeatureCard({ icon, title, description }: any) {
+interface FeatureCardProps {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+}
+
+function FeatureCard({ icon, title, description }: FeatureCardProps) {
   return (
     <div className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition">
       <div className="inline-flex p-2 rounded-lg bg-blue-100 text-blue-600 mb-4">

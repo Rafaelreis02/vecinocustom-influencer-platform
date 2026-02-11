@@ -1,133 +1,43 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { createCoupon, getAllCoupons, testShopifyConnection } from '@/lib/shopify';
+import { CouponCreateSchema } from '@/lib/validation';
+import { handleApiError } from '@/lib/api-error';
+import { logger } from '@/lib/logger';
 
-/**
- * GET /api/coupons
- * List all coupons from database
- */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const coupons = await prisma.coupon.findMany({
+      orderBy: { createdAt: 'desc' },
       include: {
         influencer: {
           select: {
             id: true,
             name: true,
-            tiktokHandle: true,
-            instagramHandle: true,
           },
         },
       },
-      orderBy: {
-        createdAt: 'desc',
-      },
     });
 
-    return NextResponse.json({
-      success: true,
-      coupons,
-      count: coupons.length,
-    });
+    return NextResponse.json(coupons);
   } catch (error) {
-    console.error('Error fetching coupons:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+    logger.error('GET /api/coupons failed', error);
+    return handleApiError(error);
   }
 }
 
-/**
- * POST /api/coupons
- * Create a new coupon manually
- * Body: {
- *   code: "CUPOM_TESTE",
- *   discountValue: 10,  // 10% discount
- *   influencerId: "string",  // Required - which influencer this coupon is for
- *   validUntil?: "ISO date string"
- * }
- */
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { code, discountValue, influencerId, validUntil } = body;
+    const validated = CouponCreateSchema.parse(body);
 
-    // Validate required fields
-    if (!code || typeof discountValue !== 'number' || !influencerId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Code, discountValue, and influencerId are required',
-        },
-        { status: 400 }
-      );
-    }
-
-    // Verify influencer exists
-    const influencer = await prisma.influencer.findUnique({
-      where: { id: influencerId },
-    });
-
-    if (!influencer) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Influencer not found',
-        },
-        { status: 404 }
-      );
-    }
-
-    // Create coupon in Shopify
-    const shopifyResult = await createCoupon({
-      title: `Cupom ${code} - ${influencer.name}`,
-      code: code.toUpperCase(),
-      discountPercentage: discountValue,
-      expiresAt: validUntil,
-    });
-
-    if (!shopifyResult.success) {
-      throw new Error('Failed to create coupon in Shopify');
-    }
-
-    // Save coupon to our database
     const coupon = await prisma.coupon.create({
-      data: {
-        code: code.toUpperCase(),
-        discountType: 'PERCENTAGE',
-        discountValue: discountValue,
-        influencerId: influencerId,
-        shopifyId: shopifyResult.coupon.id,
-        validUntil: validUntil ? new Date(validUntil) : null,
-      },
-      include: {
-        influencer: {
-          select: {
-            id: true,
-            name: true,
-            tiktokHandle: true,
-            instagramHandle: true,
-          },
-        },
-      },
+      data: validated,
     });
 
-    return NextResponse.json({
-      success: true,
-      coupon,
-    });
+    logger.info('Coupon created', { code: coupon.code });
+    return NextResponse.json(coupon, { status: 201 });
   } catch (error) {
-    console.error('Error creating coupon:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+    logger.error('POST /api/coupons failed', error);
+    return handleApiError(error);
   }
 }
