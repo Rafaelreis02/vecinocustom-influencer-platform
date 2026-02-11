@@ -63,66 +63,68 @@ async function scrapeTikTokProfile(handle: string): Promise<ParsedProfile> {
   
   console.log(`[APIFY] Scraping TikTok profile: @${cleanHandle}`);
   
-  // Get videos for engagement/views metrics AND author profile data
-  const videos = await runActorAndWait('GdWCkxBtKWOsKjdch', {
-    profiles: [`https://www.tiktok.com/@${cleanHandle}`],
-    resultsPerPage: 100,
-    shouldDownloadVideos: false,
-    shouldDownloadCovers: false,
-  });
-
-  console.log(`[APIFY] Got ${videos?.length || 0} videos from @${cleanHandle}`);
-
-  if (!videos || videos.length === 0) {
-    // No videos from scraper - try Profile Actor as fallback
-    console.log(`[APIFY] No videos from scraper, trying Profile Actor for @${cleanHandle}`);
+  // STRATEGY: Try Profile Actor first (direct profile data), fallback to Video Scraper
+  
+  // Try 1: Profile Actor (fast, direct profile stats)
+  try {
+    console.log(`[APIFY] Trying Profile Actor for @${cleanHandle}`);
+    const profileResults = await runActorAndWait('iH5tKMhpc9Z8vL3m4', {
+      profiles: [`https://www.tiktok.com/@${cleanHandle}`],
+    });
     
-    try {
-      const profileResults = await runActorAndWait('iH5tKMhpc9Z8vL3m4', {
-        profiles: [`https://www.tiktok.com/@${cleanHandle}`],
+    if (profileResults && profileResults.length > 0) {
+      const profileData = profileResults[0];
+      console.log(`[APIFY] Profile Actor success:`, {
+        followers: profileData.followerCount,
+        hearts: profileData.heartCount,
+        verified: profileData.verified,
       });
       
-      if (profileResults && profileResults.length > 0) {
-        const profileData = profileResults[0];
-        console.log(`[APIFY] Profile Actor success for @${cleanHandle}:`, {
-          followers: profileData.followerCount,
-          verified: profileData.verified,
-        });
-        
-        return {
-          handle: cleanHandle,
-          platform: 'TIKTOK',
-          followers: profileData.followerCount || 5000,
-          totalLikes: null,
-          engagementRate: null,
-          biography: profileData.description || null,
-          estimatedPrice: 150,
-          averageViews: null,
-          verified: profileData.verified || false,
-          rawData: { profileData, source: 'profile-actor' },
-        };
-      }
-    } catch (e) {
-      console.log(`[APIFY] Profile Actor also failed:`, e);
+      const followers = profileData.followerCount || 5000;
+      const hearts = profileData.heartCount || 0;
+      
+      // Estimate price based on followers
+      let estimatedPrice = 150;
+      if (followers < 10000) estimatedPrice = 50;
+      else if (followers < 50000) estimatedPrice = 150;
+      else if (followers < 200000) estimatedPrice = 300;
+      else if (followers < 500000) estimatedPrice = 800;
+      else estimatedPrice = 2000;
+      
+      return {
+        handle: cleanHandle,
+        platform: 'TIKTOK',
+        followers: followers,
+        totalLikes: hearts > 0 ? hearts : null,
+        engagementRate: null, // Profile actor doesn't give views, can't calculate
+        biography: profileData.description || null,
+        estimatedPrice,
+        averageViews: null,
+        verified: profileData.verified || false,
+        rawData: { profileData, source: 'profile-actor' },
+      };
+    }
+  } catch (e) {
+    console.log(`[APIFY] Profile Actor failed for @${cleanHandle}, trying Video Scraper fallback:`, e);
+  }
+  
+  // Try 2: Video Scraper (slower, but gives engagement metrics)
+  try {
+    console.log(`[APIFY] Trying Video Scraper for @${cleanHandle}`);
+    const videos = await runActorAndWait('GdWCkxBtKWOsKjdch', {
+      profiles: [`https://www.tiktok.com/@${cleanHandle}`],
+      resultsPerPage: 100,
+      shouldDownloadVideos: false,
+      shouldDownloadCovers: false,
+    });
+
+    console.log(`[APIFY] Got ${videos?.length || 0} videos from @${cleanHandle}`);
+
+    if (!videos || videos.length === 0) {
+      throw new Error('No videos found');
     }
     
-    // Both failed - return minimal data
-    console.log(`[APIFY] Could not extract data for @${cleanHandle} from any source`);
-    return {
-      handle: cleanHandle,
-      platform: 'TIKTOK',
-      followers: 5000, // Safe fallback
-      totalLikes: null,
-      engagementRate: null,
-      biography: null,
-      estimatedPrice: 150,
-      averageViews: null,
-      verified: false,
-      rawData: { message: 'No data available - profile may be private, deleted, or have no public content' },
-    };
-  }
-
-  const author = videos[0]?.author || {};
+    const author = videos[0]?.author || {};
   
   console.log(`[APIFY] Author data from first video:`, {
     keys: Object.keys(author),
@@ -166,17 +168,35 @@ async function scrapeTikTokProfile(handle: string): Promise<ParsedProfile> {
     engagementRate: engagementRate?.toFixed(2) + '%',
   });
 
+    return {
+      handle: cleanHandle,
+      platform: 'TIKTOK',
+      followers: followers,
+      totalLikes: totalLikes > 0 ? totalLikes : null,
+      engagementRate,
+      biography: author.signature || null,
+      estimatedPrice,
+      averageViews: avgViews > 0 ? Math.round(avgViews).toString() : null,
+      verified: author.verified || false,
+      rawData: { videos, totalLikes, totalViews, author, source: 'video-scraper' },
+    };
+  } catch (e) {
+    console.log(`[APIFY] Video Scraper also failed for @${cleanHandle}:`, e);
+  }
+  
+  // Both methods failed - return minimal safe data
+  console.log(`[APIFY] Could not extract data for @${cleanHandle} from any Apify source`);
   return {
     handle: cleanHandle,
     platform: 'TIKTOK',
-    followers: followers,
-    totalLikes: totalLikes > 0 ? totalLikes : null,
-    engagementRate,
-    biography: author.signature || null,
-    estimatedPrice,
-    averageViews: avgViews > 0 ? Math.round(avgViews).toString() : null,
-    verified: author.verified || false,
-    rawData: { videos, totalLikes, totalViews, author },
+    followers: 5000,
+    totalLikes: null,
+    engagementRate: null,
+    biography: null,
+    estimatedPrice: 150,
+    averageViews: null,
+    verified: false,
+    rawData: { message: 'Profile may be private, deleted, or have no public content', source: 'fallback' },
   };
 }
 
