@@ -168,6 +168,14 @@ async function scrapeTikTokProfile(handle: string): Promise<ParsedProfile> {
 
   console.log(`[APIFY] Received ${allItems?.length || 0} total items from Apify`);
   
+  // DEBUG: Show first item structure to understand format
+  if (allItems && allItems.length > 0) {
+    console.log('[APIFY] First item keys:', Object.keys(allItems[0]));
+    console.log('[APIFY] First item sample:', JSON.stringify(allItems[0]).substring(0, 800));
+    console.log('[APIFY] Has authorMeta.fans?', allItems[0]['authorMeta.fans']);
+    console.log('[APIFY] Has webVideoUrl?', allItems[0].webVideoUrl);
+  }
+  
   // CRITICAL: Separate Authors vs Posts
   // Authors have 'authorMeta.fans', Posts have 'webVideoUrl'
   const authors = allItems.filter((item: any) => item['authorMeta.fans'] !== undefined);
