@@ -283,16 +283,16 @@ export default function EditInfluencerPage() {
                 onChange={handleChange}
                 className="w-full rounded-md border border-gray-200 px-4 py-2 text-sm focus:border-gray-900 focus:outline-none"
               >
-                <optgroup label="🔍 Prospeção">
+                <optgroup label=" Prospeção">
                   <option value="UNKNOWN">Desconhecido</option>
                   <option value="SUGGESTION">Sugestão</option>
                   <option value="IMPORT_PENDING">A Importar</option>
                 </optgroup>
-                <optgroup label="💬 A Negociar">
+                <optgroup label=" A Negociar">
                   <option value="ANALYZING">Em Análise</option>
                   <option value="COUNTER_PROPOSAL">Contraproposta</option>
                 </optgroup>
-                <optgroup label="✅ Em Curso">
+                <optgroup label="Em Curso">
                   <option value="AGREED">Acordado</option>
                   <option value="PRODUCT_SELECTION">Seleção Produto</option>
                   <option value="CONTRACT_PENDING">Contrato Pendente</option>

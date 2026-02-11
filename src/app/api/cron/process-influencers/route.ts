@@ -71,7 +71,7 @@ export async function GET(request: Request) {
     const processData = await processRes.json();
 
     if (processData.success) {
-      console.log(`[CRON] ✅ Processed: ${processData.influencer.name}`);
+      console.log(`[CRON]  Processed: ${processData.influencer.name}`);
       return NextResponse.json({
         success: true,
         influencer: processData.influencer.name,

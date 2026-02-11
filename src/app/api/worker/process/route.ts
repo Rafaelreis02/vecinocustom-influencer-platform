@@ -158,7 +158,7 @@ IMPORTANTE:
       data: updateData
     });
 
-    console.log(`[WORKER] ✅ Influencer processado: ${updated.name}`);
+    console.log(`[WORKER]  Influencer processado: ${updated.name}`);
 
     // Converter BigInt para string para JSON
     const influencerData = JSON.parse(JSON.stringify(updated, (key, value) =>

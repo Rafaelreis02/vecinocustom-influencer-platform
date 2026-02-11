@@ -45,7 +45,7 @@ export async function POST(req: Request) {
       platform as 'TIKTOK' | 'INSTAGRAM'
     );
 
-    console.log(`[APIFY] ✅ Extracted:`, {
+    console.log(`[APIFY]  Extracted:`, {
       followers: profileData.followers,
       engagement: profileData.engagementRate,
       likes: profileData.totalLikes,
@@ -113,7 +113,7 @@ AVALIAR E RETORNAR APENAS JSON (sem markdown, sem explicação adicional):
       }
     }
 
-    console.log(`[SONNET] ✅ Evaluation complete:`, evaluation);
+    console.log(`[SONNET]  Evaluation complete:`, evaluation);
 
     // Combine Apify data with Sonnet evaluation
     const enrichedData = {

@@ -111,7 +111,7 @@ export default function NewInfluencerPage() {
           niche: analysisData.niche,
           estimatedPrice: analysisData.estimatedPrice,
           status: 'suggestion',
-          notes: `✅ Análise automática realizada:\n\nFit: ${analysisData.fitScore}/5\nNível: ${analysisData.tier}\nNiche: ${analysisData.niche}\n\nPontos Fortes: ${analysisData.strengths?.join(', ') || 'N/A'}\n\nOportunidades: ${analysisData.opportunities?.join(', ') || 'N/A'}`,
+          notes: `Análise automática realizada:\n\nFit: ${analysisData.fitScore}/5\nNível: ${analysisData.tier}\nNiche: ${analysisData.niche}\n\nPontos Fortes: ${analysisData.strengths?.join(', ') || 'N/A'}\n\nOportunidades: ${analysisData.opportunities?.join(', ') || 'N/A'}`,
           country: analysisData.country || '',
           language: 'PT',
           primaryPlatform: importPlatform.toUpperCase(),
@@ -119,7 +119,7 @@ export default function NewInfluencerPage() {
       });
 
       if (createRes.ok) {
-        addToast(`✅ ${importHandle} analisado e importado com sucesso!`, 'success');
+        addToast(`${importHandle} analisado e importado com sucesso`, 'success');
         setShowSuccessDialog(true);
         setTimeout(() => {
           router.push('/dashboard/influencers');

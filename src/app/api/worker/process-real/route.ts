@@ -127,7 +127,7 @@ export async function POST() {
     // 5. Atualizar influencer no DB
     const updateData: any = {
       status: 'SUGGESTION',
-      notes: `✅ Dados REAIS extraídos via Browser em ${new Date().toLocaleString('pt-PT')}.\n\nBio: ${profileData.bio}`,
+      notes: ` Dados REAIS extraídos via Browser em ${new Date().toLocaleString('pt-PT')}.\n\nBio: ${profileData.bio}`,
       name: profileData.name,
       tiktokFollowers: profileData.followers,
       totalLikes: BigInt(profileData.totalLikes),
@@ -176,7 +176,7 @@ export async function POST() {
       data: updateData
     });
 
-    console.log(`[WORKER-REAL] ✅ Processado: ${updated.name}`);
+    console.log(`[WORKER-REAL]  Processado: ${updated.name}`);
     console.log(`[WORKER-REAL] 📊 Followers: ${updated.tiktokFollowers} | Engagement: ${updated.engagementRate}% | Price: €${updated.estimatedPrice}`);
 
     // Converter BigInt para string para JSON

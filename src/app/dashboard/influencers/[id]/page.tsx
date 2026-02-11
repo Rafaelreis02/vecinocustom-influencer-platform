@@ -223,7 +223,7 @@ export default function InfluencerDetailPage() {
 
       fetchInfluencer();
       setCouponCode('');
-      addToast(`✅ Cupom ${data.coupon.code} criado com sucesso!`, 'success');
+      addToast(`Cupom ${data.coupon.code} criado com sucesso!`, 'success');
     } catch (error) {
       console.error('Error creating coupon:', error);
       addToast(
@@ -283,7 +283,7 @@ export default function InfluencerDetailPage() {
       }
 
       setPortalUrl(data.portalUrl);
-      addToast('✅ Link do portal gerado com sucesso!', 'success');
+      addToast('Link do portal gerado com sucesso', 'success');
     } catch (error) {
       console.error('Error generating portal link:', error);
       addToast(
@@ -319,7 +319,7 @@ export default function InfluencerDetailPage() {
       }
 
       setInfluencer(data);
-      addToast('✅ Campo guardado com sucesso!', 'success');
+      addToast('Campo guardado com sucesso', 'success');
     } catch (error) {
       console.error(`Error saving ${field}:`, error);
       addToast(
@@ -381,7 +381,7 @@ export default function InfluencerDetailPage() {
       }
 
       setInfluencer(data);
-      addToast(`✅ Status avançado para ${nextStatus}!`, 'success');
+      addToast(` Status avançado para ${nextStatus}!`, 'success');
     } catch (error) {
       console.error('Error advancing status:', error);
       addToast(
@@ -722,7 +722,7 @@ export default function InfluencerDetailPage() {
           </div>
         </CollapsibleSection>
 
-        {/* 💰 Cupão Associado */}
+        {/*  Cupão Associado */}
         <CollapsibleSection title="Cupão Associado" icon={DollarSign} defaultOpen={true}>
           <div className="pt-4 space-y-4">
             {/* Current Coupon Display */}
@@ -812,7 +812,7 @@ export default function InfluencerDetailPage() {
                   disabled={creatingCoupon}
                   className="w-full px-3 py-2 rounded bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
-                  {creatingCoupon ? '⏳ Criando...' : '✅ Atribuir Cupom'}
+                  {creatingCoupon ? '⏳ Criando...' : ' Atribuir Cupom'}
                 </button>
               </form>
             )}
@@ -1096,7 +1096,7 @@ export default function InfluencerDetailPage() {
             )}
             {influencer.status === 'SHIPPED' && (
               <p className="text-sm text-green-600 font-semibold text-center">
-                ✅ Encomenda enviada — Status final
+                 Encomenda enviada — Status final
               </p>
             )}
           </div>
