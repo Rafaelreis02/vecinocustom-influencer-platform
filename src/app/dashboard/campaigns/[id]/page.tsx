@@ -253,12 +253,12 @@ export default function CampaignDetailPage() {
   // Calculate unique influencers: registered influencers + unique authorHandles
   const influencerIds = new Set(
     campaign.videos
-      .filter(v => v.influencerId)
+      .filter((v): v is typeof v & { influencerId: string } => v.influencerId !== null)
       .map(v => v.influencerId)
   );
   const authorHandles = new Set(
     campaign.videos
-      .filter(v => !v.influencerId && v.authorHandle)
+      .filter((v): v is typeof v & { authorHandle: string } => !v.influencerId && v.authorHandle !== null)
       .map(v => v.authorHandle)
   );
   const uniqueInfluencers = influencerIds.size + authorHandles.size;

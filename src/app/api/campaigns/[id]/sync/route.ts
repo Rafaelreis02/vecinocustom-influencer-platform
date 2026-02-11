@@ -71,9 +71,16 @@ export async function POST(
         const comments = apifyVideo.commentCount || 0;
         const shares = apifyVideo.shareCount || 0;
         const description = apifyVideo.text || null;
-        const publishedAt = apifyVideo.createTimeISO 
-          ? new Date(apifyVideo.createTimeISO) 
-          : (apifyVideo.createTime ? new Date(apifyVideo.createTime * 1000) : new Date());
+        
+        let publishedAt: Date;
+        if (apifyVideo.createTimeISO) {
+          publishedAt = new Date(apifyVideo.createTimeISO);
+        } else if (apifyVideo.createTime) {
+          publishedAt = new Date(apifyVideo.createTime * 1000);
+        } else {
+          logger.warn(`[SYNC] No publishedAt data for video ${url}, using current date`);
+          publishedAt = new Date();
+        }
 
         if (!url) {
           continue;
