@@ -54,9 +54,14 @@ export default function DashboardPage() {
           throw new Error('Falha ao carregar dados');
         }
 
-        const influencers = await influencersRes.json();
-        const campaigns = await campaignsRes.json();
-        const coupons = await couponsRes.json();
+        const influencersData = await influencersRes.json();
+        const campaignsData = await campaignsRes.json();
+        const couponsData = await couponsRes.json();
+
+        // Ensure we have arrays (APIs might return { data: [...] } or just [...])
+        const influencers = Array.isArray(influencersData) ? influencersData : (influencersData.data || []);
+        const campaigns = Array.isArray(campaignsData) ? campaignsData : (campaignsData.data || []);
+        const coupons = Array.isArray(couponsData) ? couponsData : (couponsData.data || []);
 
         // Calculate stats
         const totalViews = influencers.reduce((sum: number, inf: any) => {
