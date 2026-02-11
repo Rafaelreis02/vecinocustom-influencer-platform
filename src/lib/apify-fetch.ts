@@ -168,12 +168,19 @@ async function scrapeTikTokProfile(handle: string): Promise<ParsedProfile> {
 
   console.log(`[APIFY] Received ${allItems?.length || 0} total items from Apify`);
   
-  // DEBUG: Show first item structure to understand format
+  // DEBUG: Show FULL dataset structure for Rafael to inspect
+  console.log('[APIFY] FULL DATASET (all items):', JSON.stringify(allItems, null, 2));
+  
+  // DEBUG: Show summary of each item
   if (allItems && allItems.length > 0) {
-    console.log('[APIFY] First item keys:', Object.keys(allItems[0]));
-    console.log('[APIFY] First item sample:', JSON.stringify(allItems[0]).substring(0, 800));
-    console.log('[APIFY] Has authorMeta.fans?', allItems[0]['authorMeta.fans']);
-    console.log('[APIFY] Has webVideoUrl?', allItems[0].webVideoUrl);
+    console.log('[APIFY] Items summary:', allItems.map((item: any, i: number) => ({
+      index: i,
+      hasAuthorMetaFlat: item['authorMeta.fans'] !== undefined,
+      hasAuthorMetaNested: item.authorMeta !== undefined,
+      authorMetaNestedKeys: item.authorMeta ? Object.keys(item.authorMeta) : null,
+      hasWebVideoUrl: item.webVideoUrl !== undefined,
+      topLevelKeys: Object.keys(item).slice(0, 8)
+    })));
   }
   
   // CRITICAL: Separate Authors vs Posts
