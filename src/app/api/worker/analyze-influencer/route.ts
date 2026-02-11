@@ -35,13 +35,14 @@ async function analyzeWithGemini(
   profile: ParsedProfile
 ): Promise<SonnetAnalysis> {
   const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || '');
-  const model = genAI.getGenerativeModel({ model: 'gemini-3.0-flash' });
+  // Using gemini-2.0-flash-exp (latest experimental model with video support)
+  // Note: gemini-3.0-flash not yet available in public API v1beta (404 error)
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
 
-  // Build video descriptions with URLs
-  const videoInfo = profile.rawData?.videos
-    ? profile.rawData.videos.slice(0, 5).map((v: Record<string, unknown>, i: number) => {
-        const url = v.webVideoUrl || v.videoUrl || `https://www.tiktok.com/@${handle}/video/${v.id}`;
-        return `${i + 1}. URL: ${url}\n   Caption: "${(v.text as string) || 'sem descrição'}"\n   ${(v.playCount as number)?.toLocaleString() || '?'} views, ${(v.diggCount as number)?.toLocaleString() || '?'} likes`;
+  // Build video descriptions with URLs from posts (max 5 for Gemini)
+  const videoInfo = profile.rawData?.posts && profile.rawData.posts.length > 0
+    ? profile.rawData.posts.slice(0, 5).map((post: any, i: number) => {
+        return `${i + 1}. URL: ${post.webVideoUrl}\n   Caption: "${post.text || 'sem descrição'}"\n   ${post.playCount?.toLocaleString() || '?'} views, ${post.diggCount?.toLocaleString() || '?'} likes`;
       }).join('\n\n')
     : 'Sem vídeos disponíveis';
 

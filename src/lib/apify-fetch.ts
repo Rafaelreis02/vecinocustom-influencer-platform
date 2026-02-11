@@ -1,13 +1,26 @@
 /**
- * Apify Integration - Pure Fetch
- * Uses direct HTTP calls instead of ApifyClient (which has header bugs on Vercel)
+ * Apify TikTok Scraper Integration
+ * 
+ * CRITICAL: Apify returns MIXED item types for profiles:
+ * - Posts (videos) - have webVideoUrl
+ * - Authors (profile data) - have authorMeta.fans
+ * 
+ * Fields use FLAT strings with dots (e.g., 'authorMeta.fans'), not nested objects!
+ * 
+ * See APIFY_SPEC.md for full documentation.
  */
 
 const APIFY_TOKEN = process.env.APIFY_TOKEN?.trim();
 const APIFY_API = 'https://api.apify.com/v2';
+const ACTOR_ID = 'GdWCkxBtKWOsKjdch'; // TikTok Scraper
+
+// ============================================
+// TYPES
+// ============================================
 
 export interface ParsedProfile {
   handle: string;
+  name: string;
   platform: 'TIKTOK' | 'INSTAGRAM';
   followers: number | null;
   totalLikes: number | null;
@@ -16,8 +29,45 @@ export interface ParsedProfile {
   estimatedPrice: number | null;
   averageViews: string | null;
   verified: boolean;
-  rawData: any;
+  videoCount: number | null;
+  avatar: string | null;
+  bioLink: string | null;
+  rawData: {
+    author: any;
+    posts: any[];
+  };
 }
+
+interface ApifyAuthorItem {
+  'authorMeta.name': string;
+  'authorMeta.nickName'?: string;
+  'authorMeta.fans'?: number;
+  'authorMeta.verified'?: boolean;
+  'authorMeta.signature'?: string;
+  'authorMeta.video'?: number;
+  'authorMeta.avatar'?: string;
+  'authorMeta.bioLink'?: string;
+  'authorMeta.id'?: string;
+  'authorMeta.privateAccount'?: boolean;
+}
+
+interface ApifyPostItem {
+  webVideoUrl: string;
+  text?: string;
+  diggCount?: number;
+  shareCount?: number;
+  playCount?: number;
+  commentCount?: number;
+  'videoMeta.duration'?: number;
+  'videoMeta.coverUrl'?: string;
+  createTimeISO?: string;
+  hashtags?: any[];
+  'authorMeta.name'?: string;
+}
+
+// ============================================
+// ACTOR RUNNER
+// ============================================
 
 async function runActorAndWait(actorId: string, input: any): Promise<any[]> {
   if (!APIFY_TOKEN) {
@@ -98,72 +148,67 @@ async function runActorAndWait(actorId: string, input: any): Promise<any[]> {
   throw new Error('Actor run timeout (60s)');
 }
 
+// ============================================
+// PROFILE PARSER
+// ============================================
+
 async function scrapeTikTokProfile(handle: string): Promise<ParsedProfile> {
   const cleanHandle = handle.replace('@', '');
   const profileUrl = `https://www.tiktok.com/@${cleanHandle}`;
   
   console.log(`[APIFY] Scraping TikTok profile: @${cleanHandle} (URL: ${profileUrl})`);
   
-  // Use GdWCkxBtKWOsKjdch actor - it handles profiles, hashtags, and videos
-  const videos = await runActorAndWait('GdWCkxBtKWOsKjdch', {
+  // Query Apify for profile
+  const allItems = await runActorAndWait(ACTOR_ID, {
     profiles: [profileUrl],
-    resultsPerPage: 10, // Only fetch last 10 videos for Sonnet analysis
+    resultsPerPage: 10,
     shouldDownloadVideos: false,
     shouldDownloadCovers: false,
   });
 
-  console.log(`[APIFY] Got ${videos?.length || 0} videos from @${cleanHandle}`);
+  console.log(`[APIFY] Received ${allItems?.length || 0} total items from Apify`);
   
-  // Log first video author data for debugging
-  if (videos && videos.length > 0) {
-    const author = videos[0]?.author || {};
-    console.log(`[APIFY] First video author data:`, JSON.stringify({
-      id: author.id,
-      uniqueId: author.uniqueId,
-      nickname: author.nickname,
-      followerCount: author.followerCount,
-      fans: author.fans,
-      heartCount: author.heartCount,
-      videoCount: author.videoCount,
-      verified: author.verified,
-    }));
-  }
-
-  if (!videos || videos.length === 0) {
-    console.log(`[APIFY] No videos found for @${cleanHandle} - profile may be private or empty`);
-    throw new Error(`No videos found for @${cleanHandle} - cannot analyze profile without video data`);
-  }
-
-  const author = videos[0]?.author || {};
+  // CRITICAL: Separate Authors vs Posts
+  // Authors have 'authorMeta.fans', Posts have 'webVideoUrl'
+  const authors = allItems.filter((item: any) => item['authorMeta.fans'] !== undefined);
+  const posts = allItems.filter((item: any) => item.webVideoUrl !== undefined);
   
-  console.log(`[APIFY] Author data:`, {
-    followerCount: author.followerCount,
-    fans: author.fans,
-    heartCount: author.heartCount,
-  });
-
-  // Calculate metrics from videos
+  console.log(`[APIFY] Separated: ${authors.length} author items, ${posts.length} post items`);
+  
+  // Validate we got author data
+  if (authors.length === 0) {
+    throw new Error(`No author data returned by Apify for @${cleanHandle}. Profile may be private or deleted.`);
+  }
+  
+  // Get first author (they're all identical)
+  const authorData = authors[0] as ApifyAuthorItem;
+  
+  console.log(`[APIFY] Author data extracted:`, JSON.stringify({
+    handle: authorData['authorMeta.name'],
+    nickname: authorData['authorMeta.nickName'],
+    fans: authorData['authorMeta.fans'],
+    videos: authorData['authorMeta.video'],
+    verified: authorData['authorMeta.verified'],
+  }));
+  
+  // Extract author fields (FLAT strings with dots!)
+  const followers = authorData['authorMeta.fans'] || null;
+  const verified = authorData['authorMeta.verified'] || false;
+  const biography = authorData['authorMeta.signature'] || null;
+  const videoCount = authorData['authorMeta.video'] || null;
+  const avatar = authorData['authorMeta.avatar'] || null;
+  const bioLink = authorData['authorMeta.bioLink'] || null;
+  const displayName = authorData['authorMeta.nickName'] || authorData['authorMeta.name'];
+  
+  // Calculate metrics from posts
   let totalLikes = 0, totalViews = 0;
-  videos.forEach((v: any) => {
-    totalLikes += v.diggCount || 0;
-    totalViews += v.playCount || 0;
+  posts.forEach((post: any) => {
+    totalLikes += post.diggCount || 0;
+    totalViews += post.playCount || 0;
   });
-
-  const avgViews = videos.length > 0 ? totalViews / videos.length : 0;
-  const engagementRate = totalViews > 0 ? (totalLikes / totalViews) * 100 : null;
-
-  // Get followers from Apify data (NO ESTIMATION!)
-  // Only use what Apify returns - followerCount or fans fields
-  const followers = author.followerCount || author.fans || null;
   
-  if (followers) {
-    console.log(`[APIFY] Real follower count from Apify: ${followers}`);
-  } else {
-    console.log(`[APIFY] WARNING: No follower data from Apify for @${cleanHandle}`);
-  }
-
-  // NO price estimation - we don't have reliable data for this
-  const estimatedPrice = null;
+  const avgViews = posts.length > 0 ? totalViews / posts.length : 0;
+  const engagementRate = totalViews > 0 ? (totalLikes / totalViews) * 100 : null;
 
   console.log(`[APIFY] Profile complete:`, {
     handle: cleanHandle,
@@ -171,36 +216,64 @@ async function scrapeTikTokProfile(handle: string): Promise<ParsedProfile> {
     totalLikes,
     avgViews: Math.round(avgViews),
     engagementRate: engagementRate?.toFixed(2) + '%',
+    verified,
+    postsFound: posts.length,
   });
 
   return {
     handle: cleanHandle,
+    name: displayName,
     platform: 'TIKTOK',
     followers: followers,
     totalLikes: totalLikes > 0 ? totalLikes : null,
     engagementRate,
-    biography: author.signature || null,
-    estimatedPrice,
+    biography: biography,
+    estimatedPrice: null, // NO estimation - we don't have reliable data
     averageViews: avgViews > 0 ? Math.round(avgViews).toString() : null,
-    verified: author.verified || false,
-    rawData: { videos, totalLikes, totalViews, author, source: 'apify' },
+    verified: verified,
+    videoCount: videoCount,
+    avatar: avatar,
+    bioLink: bioLink,
+    rawData: {
+      author: authorData,
+      posts: posts.slice(0, 10), // Keep max 10 for Gemini
+    },
   };
 }
 
-export async function parseProfile(
-  handle: string,
-  platform: 'TIKTOK' | 'INSTAGRAM'
-): Promise<ParsedProfile> {
-  if (platform === 'TIKTOK') return scrapeTikTokProfile(handle);
-  throw new Error(`Platform ${platform} not supported yet`);
-}
+// ============================================
+// HASHTAG SCRAPER (for future use)
+// ============================================
 
 export async function scrapeHashtagVideos(hashtag: string, maxVideos = 30): Promise<any[]> {
   const cleanTag = hashtag.replace('#', '');
-  return runActorAndWait('GdWCkxBtKWOsKjdch', {
+  console.log(`[APIFY] Scraping hashtag: #${cleanTag}`);
+  
+  return runActorAndWait(ACTOR_ID, {
     hashtags: [cleanTag],
     resultsPerPage: maxVideos,
     shouldDownloadVideos: false,
     shouldDownloadCovers: false,
   });
+}
+
+// ============================================
+// PUBLIC API
+// ============================================
+
+/**
+ * Parse a TikTok profile
+ * @param handle - Username (with or without @)
+ * @param platform - 'TIKTOK' or 'INSTAGRAM'
+ * @returns Structured profile data with NO estimations
+ */
+export async function parseProfile(
+  handle: string,
+  platform: 'TIKTOK' | 'INSTAGRAM'
+): Promise<ParsedProfile> {
+  if (platform === 'TIKTOK') {
+    return scrapeTikTokProfile(handle);
+  }
+  
+  throw new Error(`Platform ${platform} not implemented yet`);
 }
