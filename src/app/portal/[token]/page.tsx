@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
+import { Loader2, XCircle, CheckCircle, FileText } from 'lucide-react';
 
 // Constants
 const VALIDATION_ERROR_DISPLAY_DURATION = 4000; // 4 seconds
@@ -132,7 +132,7 @@ export default function PortalPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
         <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
-          <div className="text-6xl mb-4">❌</div>
+          <XCircle className="h-16 w-16 mx-auto mb-4 text-red-500" />
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Page Not Found</h1>
           <p className="text-gray-600 mb-6">{error || 'This portal link is invalid or has expired.'}</p>
           <button
@@ -392,7 +392,7 @@ function Step1({ data, token, onUpdate, onNext }: StepProps) {
       {isAnalyzing && (
         <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
           <p className="text-sm text-green-800 font-semibold">
-            ✅ Your proposal is already with our team to be analyzed
+            Your proposal is already with our team to be analyzed
           </p>
         </div>
       )}
@@ -828,7 +828,7 @@ function Step3() {
       <h2 className="text-xl font-bold text-[#0E1E37] mb-6 uppercase">Preparing</h2>
       
       <div className="p-6 bg-green-50 border-2 border-green-200 rounded-lg text-center">
-        <div className="text-4xl mb-4">✅</div>
+        <CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-600" />
         <h3 className="text-lg font-bold text-green-800 mb-3">We are preparing your piece</h3>
         <p className="text-sm text-green-700">
           From now on all communication will be through WhatsApp. We will send over the product we chose along with previews of the pieces.
@@ -844,7 +844,7 @@ function Step4() {
       <h2 className="text-xl font-bold text-[#0E1E37] mb-6 uppercase">Contract</h2>
       
       <div className="p-6 bg-blue-50 border-2 border-blue-200 rounded-lg text-center">
-        <div className="text-4xl mb-4">📝</div>
+        <FileText className="h-12 w-12 mx-auto mb-4 text-blue-600" />
         <h3 className="text-lg font-bold text-blue-800 mb-3">Just one step away</h3>
         <p className="text-sm text-blue-700">
           We&apos;ve sent the contract via e-mail and WhatsApp. Please sign it to move forward.

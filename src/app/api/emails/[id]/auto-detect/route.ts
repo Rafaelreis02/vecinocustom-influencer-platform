@@ -60,7 +60,7 @@ export async function POST(request: Request, { params }: any) {
       });
 
       console.log(
-        `[AUTO-DETECT] ✅ Created influencer: ${influencer.name} (${influencer.id})`
+        `[AUTO-DETECT] Created influencer: ${influencer.name} (${influencer.id})`
       );
     }
 

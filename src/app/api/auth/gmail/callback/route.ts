@@ -49,7 +49,7 @@ export async function GET(request: Request) {
     console.log('[GMAIL OAUTH] Exchanging code for tokens...');
     const { tokens } = await oauth2Client.getToken(code);
 
-    console.log('[GMAIL OAUTH] ✅ Got tokens');
+    console.log('[GMAIL OAUTH] Got tokens');
     console.log('[GMAIL OAUTH] Refresh Token:', tokens.refresh_token);
 
     // Return refresh token to user (need to save to .env)

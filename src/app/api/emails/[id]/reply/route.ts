@@ -50,7 +50,7 @@ export async function POST(
       threadId: email.gmailThreadId || '',
     });
 
-    console.log(`[EMAIL REPLY] ✅ Replied to ${email.from}: ${email.subject}`);
+    console.log(`[EMAIL REPLY] Replied to ${email.from}: ${email.subject}`);
 
     return NextResponse.json({
       success: true,

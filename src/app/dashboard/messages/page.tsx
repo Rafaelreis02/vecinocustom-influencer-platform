@@ -16,8 +16,6 @@ import {
   Send,
   Paperclip,
   Inbox,
-  CheckSquare,
-  Archive,
   Flag,
   Download,
 } from 'lucide-react';
@@ -43,8 +41,8 @@ interface EmailDetail extends Email {
   labels: string[];
 }
 
-type FilterType = 'inbox' | 'unread' | 'sent' | 'flagged';
-type StatusFilterType = 'all' | 'NEW' | 'NEGOTIATING' | 'AWAITING_PRODUCT' | 'PRODUCT_SENT' | 'COMPLETED' | 'CANCELLED';
+type FilterType = 'inbox' | 'unread' | 'flagged';
+type StatusFilterType = 'all' | string;
 
 export default function MessagesPage() {
   const { addToast } = useGlobalToast();
@@ -151,7 +149,7 @@ export default function MessagesPage() {
 
       if (!res.ok) throw new Error('Failed to send reply');
 
-      addToast('✅ Resposta enviada!', 'success');
+      addToast('Resposta enviada com sucesso', 'success');
       setReplyText('');
       setAttachmentFile(null);
       setShowReplyModal(false);
@@ -174,7 +172,7 @@ export default function MessagesPage() {
         method: 'DELETE',
       });
 
-      addToast('✅ Email eliminado', 'success');
+      addToast('Email eliminado com sucesso', 'success');
       setSelectedEmail(null);
       fetchEmails();
     } catch (error: any) {
@@ -192,8 +190,8 @@ export default function MessagesPage() {
       const result = await res.json();
       addToast(
         result.influencer.isNew
-          ? `✅ Influenciador criado: ${result.influencer.name}`
-          : `✅ Ligado a: ${result.influencer.name}`,
+          ? `Influenciador criado: ${result.influencer.name}`
+          : `Ligado a: ${result.influencer.name}`,
         'success'
       );
       fetchEmails();
@@ -232,13 +230,13 @@ export default function MessagesPage() {
   }
 
   function getFileIcon(mimeType: string) {
-    if (mimeType.startsWith('image/')) return '🖼️';
-    if (mimeType.startsWith('video/')) return '🎬';
-    if (mimeType.startsWith('audio/')) return '🎵';
-    if (mimeType.includes('pdf')) return '📄';
-    if (mimeType.includes('word') || mimeType.includes('document')) return '📝';
-    if (mimeType.includes('sheet') || mimeType.includes('excel')) return '📊';
-    return '📎';
+    if (mimeType.startsWith('image/')) return 'Image';
+    if (mimeType.startsWith('video/')) return 'Video';
+    if (mimeType.startsWith('audio/')) return 'Audio';
+    if (mimeType.includes('pdf')) return 'PDF';
+    if (mimeType.includes('word') || mimeType.includes('document')) return 'Doc';
+    if (mimeType.includes('sheet') || mimeType.includes('excel')) return 'Sheet';
+    return 'File';
   }
 
   function getInitials(email: string) {
@@ -271,7 +269,7 @@ export default function MessagesPage() {
       const res = await fetch('/api/worker/sync-emails', { method: 'POST' });
       if (!res.ok) throw new Error('Sync failed');
       const data = await res.json();
-      addToast(`✅ Sincronizados ${data.synced} emails!`, 'success');
+      addToast(`Sincronizados ${data.synced} emails`, 'success');
       fetchEmails();
     } catch (error: any) {
       addToast('Erro ao sincronizar: ' + error.message, 'error');
@@ -283,7 +281,7 @@ export default function MessagesPage() {
 
   async function handleAddInfluencerWithUsername() {
     if (!selectedEmail || !influencerUsername.trim()) {
-      addToast('❌ Insere o @ do influenciador', 'error');
+      addToast('Insere o @ do influenciador', 'error');
       return;
     }
 
@@ -321,7 +319,7 @@ export default function MessagesPage() {
         body: JSON.stringify({ influencerId: newInfluencer.id }),
       });
 
-      addToast(`✅ Influenciador @${cleanUsername} adicionado! A analisar...`, 'success');
+      addToast(`Influenciador @${cleanUsername} adicionado! A analisar...`, 'success');
 
       // Close modal and refresh
       setShowAddInfluencerModal(false);
@@ -337,7 +335,7 @@ export default function MessagesPage() {
       }
 
     } catch (error: any) {
-      addToast('❌ Erro ao adicionar influenciador: ' + error.message, 'error');
+      addToast('Erro ao adicionar influenciador: ' + error.message, 'error');
     } finally {
       setAddingInfluencer(false);
     }
@@ -654,6 +652,13 @@ export default function MessagesPage() {
                     }`}
                   />
                 </button>
+                <button
+                  onClick={handleDelete}
+                  className="p-2 hover:bg-red-100 rounded-lg transition"
+                  title="Eliminar email"
+                >
+                  <Trash2 className="h-5 w-5 text-gray-600 hover:text-red-600" />
+                </button>
               </div>
             </div>
           </div>
@@ -928,19 +933,27 @@ export default function MessagesPage() {
                   </div>
                 ) : (
                   <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-                    <p className="text-sm font-semibold text-green-700 mb-2">✅ Influenciador Registado</p>
+                    <p className="text-sm font-semibold text-green-700 mb-2">Influenciador Registado</p>
                     <p className="text-lg font-bold text-gray-900 mb-2">{selectedEmail.influencer.name}</p>
                   </div>
                 )
               ) : (
                 <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
-                  <p className="text-sm text-amber-700 font-semibold mb-3">⚠️ Não Registado</p>
-                  <button
-                    onClick={() => setShowAddInfluencerModal(true)}
-                    className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition"
-                  >
-                    Adicionar como Influenciador
-                  </button>
+                  <p className="text-sm text-amber-700 font-semibold mb-3">Não Registado</p>
+                  <div className="flex flex-col gap-2">
+                    <button
+                      onClick={handleAutoDetect}
+                      className="w-full px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition"
+                    >
+                      Auto-detectar Influenciador
+                    </button>
+                    <button
+                      onClick={() => setShowAddInfluencerModal(true)}
+                      className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition"
+                    >
+                      Adicionar como Influenciador
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
