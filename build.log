@@ -1,0 +1,101 @@
+
+> vecinocustom-influencer-platform@0.1.0 build
+> prisma generate && next build
+
+Environment variables loaded from .env
+Prisma schema loaded from prisma/schema.prisma
+
+✔ Generated Prisma Client (v5.22.0) to ./node_modules/@prisma/client in 271ms
+
+Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+
+Tip: Want real-time updates to your database without manual polling? Discover how with Pulse: https://pris.ly/tip-0-pulse
+
+   ▲ Next.js 15.5.12
+   - Environments: .env
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 7.3s
+   Skipping linting
+   Checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/38) ...
+   Generating static pages (9/38) 
+   Generating static pages (18/38) 
+   Generating static pages (28/38) 
+ ✓ Generating static pages (38/38)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                      Size  First Load JS
+┌ ○ /                                           165 B         106 kB
+├ ○ /_not-found                                 996 B         103 kB
+├ ƒ /api/admin/cleanup-brand-videos             232 B         102 kB
+├ ƒ /api/auth/[...nextauth]                     232 B         102 kB
+├ ƒ /api/auth/gmail/authorize                   232 B         102 kB
+├ ƒ /api/auth/gmail/callback                    232 B         102 kB
+├ ƒ /api/campaigns                              232 B         102 kB
+├ ƒ /api/campaigns/[id]                         232 B         102 kB
+├ ƒ /api/campaigns/[id]/influencers             232 B         102 kB
+├ ƒ /api/campaigns/[id]/influencers/[linkId]    232 B         102 kB
+├ ƒ /api/coupons                                232 B         102 kB
+├ ƒ /api/cron/process-influencers               232 B         102 kB
+├ ƒ /api/cron/sync-commissions                  232 B         102 kB
+├ ƒ /api/emails                                 232 B         102 kB
+├ ƒ /api/emails/[id]                            232 B         102 kB
+├ ƒ /api/emails/[id]/auto-detect                232 B         102 kB
+├ ƒ /api/emails/[id]/reply                      232 B         102 kB
+├ ƒ /api/emails/compose                         232 B         102 kB
+├ ƒ /api/influencers                            232 B         102 kB
+├ ƒ /api/influencers/[id]                       232 B         102 kB
+├ ƒ /api/influencers/[id]/coupon                232 B         102 kB
+├ ƒ /api/influencers/[id]/create-coupon         232 B         102 kB
+├ ƒ /api/influencers/[id]/generate-link         232 B         102 kB
+├ ƒ /api/influencers/[id]/portal-fields         232 B         102 kB
+├ ƒ /api/influencers/[id]/update                232 B         102 kB
+├ ƒ /api/influencers/import                     232 B         102 kB
+├ ƒ /api/portal/[token]                         232 B         102 kB
+├ ƒ /api/portal/[token]/products                232 B         102 kB
+├ ƒ /api/shopify/auth                           232 B         102 kB
+├ ƒ /api/shopify/callback                       232 B         102 kB
+├ ƒ /api/shopify/disconnect                     232 B         102 kB
+├ ƒ /api/shopify/status                         232 B         102 kB
+├ ƒ /api/shopify/test                           232 B         102 kB
+├ ƒ /api/videos                                 232 B         102 kB
+├ ƒ /api/videos/[id]                            232 B         102 kB
+├ ƒ /api/worker/add-videos                      232 B         102 kB
+├ ƒ /api/worker/analyze-hashtag                 232 B         102 kB
+├ ƒ /api/worker/analyze-influencer              232 B         102 kB
+├ ƒ /api/worker/pending                         232 B         102 kB
+├ ƒ /api/worker/process                         232 B         102 kB
+├ ƒ /api/worker/process-real                    232 B         102 kB
+├ ƒ /api/worker/sync-emails                     232 B         102 kB
+├ ○ /dashboard                                 3.9 kB         109 kB
+├ ○ /dashboard/campaigns                      5.01 kB         111 kB
+├ ƒ /dashboard/campaigns/[id]                 8.63 kB         114 kB
+├ ƒ /dashboard/campaigns/[id]/edit             4.6 kB         110 kB
+├ ○ /dashboard/campaigns/new                  4.12 kB         110 kB
+├ ○ /dashboard/commissions                    2.83 kB         105 kB
+├ ○ /dashboard/coupons                        3.43 kB         106 kB
+├ ○ /dashboard/influencers                      232 B         102 kB
+├ ƒ /dashboard/influencers/[id]               11.7 kB         117 kB
+├ ƒ /dashboard/influencers/[id]/edit          4.69 kB         110 kB
+├ ○ /dashboard/influencers/closing              128 B         111 kB
+├ ○ /dashboard/influencers/negotiating          128 B         111 kB
+├ ○ /dashboard/influencers/new                6.82 kB         112 kB
+├ ○ /dashboard/influencers/prospecting          128 B         111 kB
+├ ○ /dashboard/messages                       10.9 kB         113 kB
+├ ○ /dashboard/settings                       3.82 kB         106 kB
+├ ○ /login                                    1.24 kB         112 kB
+└ ƒ /portal/[token]                           5.14 kB         107 kB
++ First Load JS shared by all                  102 kB
+  ├ chunks/1255-a390e12b70b4a9fb.js             46 kB
+  ├ chunks/4bd1b696-f785427dddbba9fb.js       54.2 kB
+  └ other shared chunks (total)               1.94 kB
+
+
+ƒ Middleware                                  61.6 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
