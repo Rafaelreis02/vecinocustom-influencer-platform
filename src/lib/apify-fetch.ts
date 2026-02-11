@@ -20,7 +20,11 @@ export interface ParsedProfile {
 }
 
 async function runActorAndWait(actorId: string, input: any): Promise<any[]> {
-  if (!APIFY_TOKEN) throw new Error('APIFY_TOKEN not set');
+  if (!APIFY_TOKEN) {
+    throw new Error('APIFY_TOKEN not set in environment variables');
+  }
+  
+  console.log(`[APIFY] Starting actor ${actorId} with token ${APIFY_TOKEN.substring(0, 10)}...`);
 
   // Start run
   const runRes = await fetch(`${APIFY_API}/acts/${actorId}/runs?token=${APIFY_TOKEN}`, {
@@ -31,10 +35,22 @@ async function runActorAndWait(actorId: string, input: any): Promise<any[]> {
 
   if (!runRes.ok) {
     const err = await runRes.text();
-    throw new Error(`Failed to start actor: ${runRes.status} ${err}`);
+    throw new Error(`Failed to start actor: ${runRes.status} ${err.substring(0, 200)}`);
   }
 
-  const { data: run } = await runRes.json();
+  const runText = await runRes.text();
+  let run;
+  try {
+    const parsed = JSON.parse(runText);
+    run = parsed.data;
+  } catch (e) {
+    throw new Error(`Apify returned invalid JSON: ${runText.substring(0, 200)}`);
+  }
+  
+  if (!run?.id) {
+    throw new Error(`Apify run missing ID: ${runText.substring(0, 200)}`);
+  }
+  
   console.log(`[APIFY] Run ${run.id} started, waiting...`);
 
   // Poll for completion (max 60s)
@@ -42,14 +58,38 @@ async function runActorAndWait(actorId: string, input: any): Promise<any[]> {
     await new Promise(r => setTimeout(r, 1000));
 
     const statusRes = await fetch(`${APIFY_API}/actor-runs/${run.id}?token=${APIFY_TOKEN}`);
-    const { data: status } = await statusRes.json();
+    
+    if (!statusRes.ok) {
+      const errText = await statusRes.text();
+      throw new Error(`Failed to get run status: ${statusRes.status} ${errText.substring(0, 200)}`);
+    }
+    
+    const statusText = await statusRes.text();
+    let status;
+    try {
+      const parsed = JSON.parse(statusText);
+      status = parsed.data;
+    } catch (e) {
+      throw new Error(`Apify status returned invalid JSON: ${statusText.substring(0, 200)}`);
+    }
 
     if (status.status === 'SUCCEEDED') {
       console.log(`[APIFY] Run completed`);
       
       // Get dataset
       const dataRes = await fetch(`${APIFY_API}/datasets/${run.defaultDatasetId}/items?token=${APIFY_TOKEN}`);
-      return await dataRes.json();
+      
+      if (!dataRes.ok) {
+        const errText = await dataRes.text();
+        throw new Error(`Failed to get dataset: ${dataRes.status} ${errText.substring(0, 200)}`);
+      }
+      
+      const dataText = await dataRes.text();
+      try {
+        return JSON.parse(dataText);
+      } catch (e) {
+        throw new Error(`Dataset returned invalid JSON: ${dataText.substring(0, 200)}`);
+      }
     } else if (['FAILED', 'ABORTED', 'TIMED-OUT'].includes(status.status)) {
       throw new Error(`Actor run ${status.status}`);
     }
