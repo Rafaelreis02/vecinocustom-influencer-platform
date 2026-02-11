@@ -25,6 +25,7 @@ export async function PUT(
 
     // Define status order for validation
     const statusOrder = [
+      'UNKNOWN',
       'COUNTER_PROPOSAL',
       'ANALYZING',
       'AGREED',

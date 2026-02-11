@@ -239,8 +239,21 @@ export default function PhasePageLayout({ phaseId }: PhasePageLayoutProps) {
                   </div>
                 </div>
 
-                {/* Center: Stats */}
+                {/* Center: Stats + Status */}
                 <div className="hidden lg:flex items-center gap-8 px-8">
+                  {/* Status Badge */}
+                  <div className="text-center">
+                    <p className="text-xs text-gray-500 mb-1">Status</p>
+                    {(() => {
+                      const statusConfig = getStatusConfig(influencer.status);
+                      return (
+                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium border ${statusConfig.color}`}>
+                          <span>{statusConfig.icon}</span>
+                          <span>{statusConfig.label}</span>
+                        </span>
+                      );
+                    })()}
+                  </div>
                   <div className="text-center">
                     <p className="text-xs text-gray-500 mb-1">Followers</p>
                     <p className="font-semibold text-gray-900">
