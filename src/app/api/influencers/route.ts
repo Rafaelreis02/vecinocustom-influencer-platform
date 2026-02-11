@@ -5,6 +5,8 @@ import { InfluencerCreateSchema } from '@/lib/validation';
 import { handleApiError } from '@/lib/api-error';
 import { logger } from '@/lib/logger';
 import { Prisma } from '@prisma/client';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 
 // GET /api/influencers - Listar influencers com pagination
 export async function GET(request: Request) {
@@ -148,11 +150,27 @@ export async function POST(request: Request) {
       }
     }
 
-    // Create with createdById from session (TODO: get from auth)
+    // Get user from session or fallback to first user in DB
+    const session = await getServerSession(authOptions);
+    let createdById = session?.user?.id;
+    
+    if (!createdById) {
+      // Fallback: use first user in database
+      const firstUser = await prisma.user.findFirst();
+      if (!firstUser) {
+        return NextResponse.json(
+          { error: 'Nenhum user encontrado. Execute o seed script.' },
+          { status: 500 }
+        );
+      }
+      createdById = firstUser.id;
+    }
+
+    // Create influencer
     const influencer = await prisma.influencer.create({
       data: {
         ...validated,
-        createdById: 'system', // TODO: Replace with actual user ID from session
+        createdById,
       },
     });
 
