@@ -73,7 +73,7 @@ export function StatusDropdown({ influencerId, currentStatus, onStatusChange, si
         disabled={updating}
         className={`flex items-center gap-2 transition hover:opacity-80 disabled:opacity-50 ${buttonSizeClasses[size]}`}
       >
-        <StatusBadge status={currentStatus} size={size} showDot showIcon={false} />
+        <StatusBadge status={currentStatus} size={size} showDot />
         <ChevronDown className={`h-4 w-4 text-gray-500 transition ${isOpen ? 'rotate-180' : ''}`} />
       </button>
       
@@ -87,9 +87,8 @@ export function StatusDropdown({ influencerId, currentStatus, onStatusChange, si
           {Object.values(PHASES).map((phase) => (
             <div key={phase.id}>
               <div className="px-3 py-2 border-b border-gray-100 bg-gray-50">
-                <p className="text-xs font-medium text-gray-600 flex items-center gap-1">
-                  <span>{phase.icon}</span>
-                  <span>{phase.label}</span>
+                <p className="text-xs font-medium text-gray-600">
+                  {phase.label}
                 </p>
               </div>
               {phase.statuses.map((status) => {

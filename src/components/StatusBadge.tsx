@@ -3,11 +3,10 @@ import { getStatusConfig, type InfluencerStatus } from '@/lib/influencer-status'
 interface StatusBadgeProps {
   status: string | null | undefined;
   size?: 'sm' | 'md' | 'lg';
-  showIcon?: boolean;
   showDot?: boolean;
 }
 
-export function StatusBadge({ status, size = 'md', showIcon = false, showDot = true }: StatusBadgeProps) {
+export function StatusBadge({ status, size = 'md', showDot = true }: StatusBadgeProps) {
   const config = getStatusConfig(status);
   
   const sizeClasses = {
@@ -29,7 +28,6 @@ export function StatusBadge({ status, size = 'md', showIcon = false, showDot = t
       {showDot && (
         <span className={`rounded-full ${config.dotColor} ${dotSizeClasses[size]}`} />
       )}
-      {showIcon && <span className="text-xs">{config.icon}</span>}
       {config.label}
     </span>
   );

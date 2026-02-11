@@ -8,21 +8,21 @@ export const PHASES = {
   PROSPECTING: {
     id: 'prospecting' as const,
     label: 'Prospeção',
-    
+    icon: undefined,
     href: '/dashboard/influencers/prospecting',
     statuses: ['UNKNOWN', 'SUGGESTION', 'IMPORT_PENDING'],
   },
   NEGOTIATING: {
     id: 'negotiating' as const,
     label: 'A Negociar',
-    
+    icon: undefined,
     href: '/dashboard/influencers/negotiating',
     statuses: ['ANALYZING', 'COUNTER_PROPOSAL'],
   },
   CLOSING: {
     id: 'closing' as const,
     label: 'Em Curso',
-    
+    icon: undefined,
     href: '/dashboard/influencers/closing',
     statuses: ['AGREED', 'PRODUCT_SELECTION', 'CONTRACT_PENDING', 'SHIPPED', 'COMPLETED'],
   },
@@ -40,7 +40,7 @@ export const INFLUENCER_STATUS_CONFIG = {
     label: 'Desconhecido',
     color: 'bg-gray-100 text-gray-700 border-gray-300',
     dotColor: 'bg-gray-400',
-    
+    icon: undefined,
     phase: 'PROSPECTING' as PhaseId,
   },
   SUGGESTION: {
@@ -48,6 +48,7 @@ export const INFLUENCER_STATUS_CONFIG = {
     color: 'bg-indigo-100 text-indigo-700 border-indigo-300',
     dotColor: 'bg-indigo-500',
     
+    icon: undefined,
     phase: 'PROSPECTING' as PhaseId,
   },
   IMPORT_PENDING: {
@@ -55,6 +56,7 @@ export const INFLUENCER_STATUS_CONFIG = {
     color: 'bg-purple-100 text-purple-700 border-purple-300',
     dotColor: 'bg-purple-500',
     
+    icon: undefined,
     phase: 'PROSPECTING' as PhaseId,
   },
 
@@ -64,6 +66,7 @@ export const INFLUENCER_STATUS_CONFIG = {
     color: 'bg-blue-100 text-blue-700 border-blue-300',
     dotColor: 'bg-blue-500',
     
+    icon: undefined,
     phase: 'NEGOTIATING' as PhaseId,
   },
   COUNTER_PROPOSAL: {
@@ -71,6 +74,7 @@ export const INFLUENCER_STATUS_CONFIG = {
     color: 'bg-cyan-100 text-cyan-700 border-cyan-300',
     dotColor: 'bg-cyan-500',
     
+    icon: undefined,
     phase: 'NEGOTIATING' as PhaseId,
   },
 
@@ -80,6 +84,7 @@ export const INFLUENCER_STATUS_CONFIG = {
     color: 'bg-emerald-100 text-emerald-700 border-emerald-300',
     dotColor: 'bg-emerald-500',
     
+    icon: undefined,
     phase: 'CLOSING' as PhaseId,
   },
   PRODUCT_SELECTION: {
@@ -87,6 +92,7 @@ export const INFLUENCER_STATUS_CONFIG = {
     color: 'bg-amber-100 text-amber-700 border-amber-300',
     dotColor: 'bg-amber-500',
     
+    icon: undefined,
     phase: 'CLOSING' as PhaseId,
   },
   CONTRACT_PENDING: {
@@ -94,6 +100,7 @@ export const INFLUENCER_STATUS_CONFIG = {
     color: 'bg-yellow-100 text-yellow-700 border-yellow-300',
     dotColor: 'bg-yellow-500',
     
+    icon: undefined,
     phase: 'CLOSING' as PhaseId,
   },
   SHIPPED: {
@@ -101,6 +108,7 @@ export const INFLUENCER_STATUS_CONFIG = {
     color: 'bg-orange-100 text-orange-700 border-orange-300',
     dotColor: 'bg-orange-500',
     
+    icon: undefined,
     phase: 'CLOSING' as PhaseId,
   },
   COMPLETED: {
@@ -108,6 +116,7 @@ export const INFLUENCER_STATUS_CONFIG = {
     color: 'bg-green-100 text-green-700 border-green-300',
     dotColor: 'bg-green-500',
     
+    icon: undefined,
     phase: 'CLOSING' as PhaseId,
   },
 
@@ -117,6 +126,7 @@ export const INFLUENCER_STATUS_CONFIG = {
     color: 'bg-red-100 text-red-700 border-red-300',
     dotColor: 'bg-red-500',
     
+    icon: undefined,
     phase: null,
   },
   BLACKLISTED: {
@@ -124,6 +134,7 @@ export const INFLUENCER_STATUS_CONFIG = {
     color: 'bg-black text-white border-black',
     dotColor: 'bg-black',
     
+    icon: undefined,
     phase: null,
   },
 } as const;
