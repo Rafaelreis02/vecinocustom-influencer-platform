@@ -578,7 +578,7 @@ export default function InfluencerDetailPage() {
 
       {/* Collapsible Sections */}
       <div className="space-y-6">
-        {/* 📊 Estatísticas Gerais */}
+        {/* Estatísticas Gerais */}
         <CollapsibleSection title="Estatísticas Gerais" icon={BarChart3} defaultOpen={true}>
           <div className="pt-4 space-y-4">
             {/* Key Metrics Grid */}
@@ -662,7 +662,7 @@ export default function InfluencerDetailPage() {
           </div>
         </CollapsibleSection>
 
-        {/* 🎬 Histórico de Vídeos */}
+        {/* Histórico de Vídeos */}
         <CollapsibleSection 
           title={`Histórico de Vídeos${influencer.videos ? ` (${influencer.videos.length})` : ''}`} 
           icon={Video}
@@ -812,7 +812,7 @@ export default function InfluencerDetailPage() {
                   disabled={creatingCoupon}
                   className="w-full px-3 py-2 rounded bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
-                  {creatingCoupon ? '⏳ Criando...' : ' Atribuir Cupom'}
+                  {creatingCoupon ? 'Criando...' : 'Atribuir Cupom'}
                 </button>
               </form>
             )}
@@ -885,7 +885,7 @@ export default function InfluencerDetailPage() {
           </div>
         </CollapsibleSection>
 
-        {/* 🔗 Portal do Influencer */}
+        {/* Portal do Influencer */}
         <CollapsibleSection title="Portal do Influencer" icon={ExternalLink} defaultOpen={true}>
           <div className="pt-4 space-y-6">
             {/* Progress Bar */}
@@ -931,7 +931,7 @@ export default function InfluencerDetailPage() {
                   disabled={generatingLink}
                   className="w-full px-3 py-2 rounded bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
-                  {generatingLink ? '⏳ A gerar...' : '🔗 Gerar Link do Portal'}
+                  {generatingLink ? 'A gerar...' : 'Gerar Link do Portal'}
                 </button>
               </div>
             )}
@@ -955,7 +955,7 @@ export default function InfluencerDetailPage() {
                   disabled={savingField === 'agreedPrice'}
                   className="px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
-                  {savingField === 'agreedPrice' ? '⏳' : 'Guardar'}
+                  {savingField === 'agreedPrice' ? 'Guardando' : 'Guardar'}
                 </button>
               </div>
             </div>
@@ -1042,7 +1042,7 @@ export default function InfluencerDetailPage() {
                   disabled={savingField === 'chosenProduct'}
                   className="px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
-                  {savingField === 'chosenProduct' ? '⏳' : 'Guardar'}
+                  {savingField === 'chosenProduct' ? 'Guardando' : 'Guardar'}
                 </button>
               </div>
             </div>
@@ -1063,7 +1063,7 @@ export default function InfluencerDetailPage() {
                   disabled={savingField === 'trackingUrl'}
                   className="px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
-                  {savingField === 'trackingUrl' ? '⏳' : 'Guardar'}
+                  {savingField === 'trackingUrl' ? 'Guardando' : 'Guardar'}
                 </button>
               </div>
             </div>
@@ -1102,7 +1102,7 @@ export default function InfluencerDetailPage() {
           </div>
         </CollapsibleSection>
 
-        {/* 📝 Notas */}
+        {/* Notas */}
         {influencer.notes && (
           <CollapsibleSection title="Notas Internas" icon={Sparkles} defaultOpen={false}>
             <div className="pt-4 text-sm text-gray-700 whitespace-pre-line">

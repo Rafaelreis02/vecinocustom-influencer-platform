@@ -40,7 +40,7 @@ export async function POST(request: Request, { params }: any) {
         defaultUser = await prisma.user.create({
           data: {
             email: 'ai@vecinocustom.com',
-            name: 'AI Agent 🤖',
+            name: 'AI Agent',
             role: 'ADMIN',
           },
         });

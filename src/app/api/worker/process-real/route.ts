@@ -177,7 +177,7 @@ export async function POST() {
     });
 
     console.log(`[WORKER-REAL]  Processado: ${updated.name}`);
-    console.log(`[WORKER-REAL] 📊 Followers: ${updated.tiktokFollowers} | Engagement: ${updated.engagementRate}% | Price: €${updated.estimatedPrice}`);
+    console.log(`[WORKER-REAL] Followers: ${updated.tiktokFollowers} | Engagement: ${updated.engagementRate}% | Price: €${updated.estimatedPrice}`);
 
     // Converter BigInt para string para JSON
     const influencerData = JSON.parse(JSON.stringify(updated, (key, value) =>

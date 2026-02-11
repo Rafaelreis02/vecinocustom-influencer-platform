@@ -181,7 +181,7 @@ export default function AddInfluencerToCampaignModal({
                             <span>📷 @{inf.instagramHandle} {inf.instagramFollowers && `(${(inf.instagramFollowers / 1000).toFixed(1)}K)`}</span>
                           )}
                           {inf.tiktokHandle && (
-                            <span>🎵 @{inf.tiktokHandle} {inf.tiktokFollowers && `(${(inf.tiktokFollowers / 1000).toFixed(1)}K)`}</span>
+                            <span>@{inf.tiktokHandle} {inf.tiktokFollowers && `(${(inf.tiktokFollowers / 1000).toFixed(1)}K)`}</span>
                           )}
                         </div>
                       </div>

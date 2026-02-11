@@ -57,7 +57,7 @@ export async function GET(request: Request) {
       success: true,
       message: 'Authorization successful!',
       refreshToken: tokens.refresh_token,
-      instruction: '📝 Add this to your .env.local: GOOGLE_REFRESH_TOKEN=' + tokens.refresh_token,
+      instruction: 'Add this to your .env.local: GOOGLE_REFRESH_TOKEN=' + tokens.refresh_token,
     });
   } catch (error: any) {
     console.error('[GMAIL OAUTH ERROR]', error.message);

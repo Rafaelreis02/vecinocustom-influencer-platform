@@ -233,7 +233,7 @@ export default function CouponsPage() {
       {coupons.length === 0 ? (
         <div className={styles.emptyState}>
           <p>Nenhum cupom criado ainda</p>
-          <p>Clica em "Novo Cupom" para começar</p>
+          <p>Clica em &quot;Novo Cupom&quot; para começar</p>
         </div>
       ) : (
         <div className={styles.grid}>
