@@ -3,13 +3,21 @@
  * Syncs emails from brand@vecinocustom.com to the CRM
  */
 
-import { google } from 'googleapis';
+import { google, gmail_v1 } from 'googleapis';
 import { prisma } from './prisma';
 
 // Initialize Gmail API
 const gmail = google.gmail({
   version: 'v1',
 });
+
+// Type for Gmail list response
+interface GmailListResponse {
+  data: {
+    messages?: Array<{ id?: string | null; threadId?: string | null }>;
+    nextPageToken?: string | null;
+  };
+}
 
 // ============================================
 // OAUTH2 SETUP (when credentials available)
@@ -41,13 +49,13 @@ export async function fetchEmails(auth: any, maxPages: number = 5) {
     let pageToken: string | undefined = undefined;
 
     for (let page = 0; page < maxPages; page++) {
-      const res: any = await gmail.users.messages.list({
+      const res = await gmail.users.messages.list({
         userId: 'me',
         auth,
         q: 'is:unread',
         maxResults: 50,
         pageToken,
-      });
+      }) as GmailListResponse;
 
       const messages = res.data.messages || [];
       
