@@ -15,11 +15,29 @@ export const InfluencerCreateSchema = z.object({
   youtubeHandle: z.string().optional().nullable(),
   youtubeFollowers: z.number().int().optional().nullable(),
   
+  // Metrics & Performance
+  totalLikes: z.number().int().optional().nullable(),
+  engagementRate: z.number().optional().nullable(),
+  averageViews: z.string().optional().nullable(),
+  videoCount: z.number().int().optional().nullable(),
+  
+  // Profile Data
+  biography: z.string().optional().nullable(),
+  verified: z.boolean().optional().nullable(),
+  
+  // Demographics & Content
+  country: z.string().optional().nullable(),
+  language: z.string().optional().nullable(),
+  niche: z.string().optional().nullable(),
+  primaryPlatform: z.string().optional().nullable(),
+  
   // Business
   nif: z.string().optional().nullable(),
   address: z.string().optional().nullable(),
   paymentMethod: z.nativeEnum(PaymentMethod).optional().nullable(),
   estimatedPrice: z.number().optional().nullable(),
+  fitScore: z.number().int().optional().nullable(),
+  tier: z.string().optional().nullable(),
   
   // Status & Metadata
   status: z.nativeEnum(InfluencerStatus).default(InfluencerStatus.UNKNOWN),
