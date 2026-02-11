@@ -7,11 +7,11 @@ async function main() {
   console.log('🌱 Seeding database...');
 
   // Check if admin already exists
-  const existing = await prisma.user.findUnique({
+  const existingAdmin = await prisma.user.findUnique({
     where: { email: 'admin@vecinocustom.com' },
   });
 
-  if (existing) {
+  if (existingAdmin) {
     console.log('✅ Admin user already exists');
     return;
   }
@@ -28,15 +28,15 @@ async function main() {
     },
   });
 
-  console.log('✅ Admin user created:');
-  console.log('   Email: admin@vecinocustom.com');
-  console.log('   Password: admin123');
-  console.log('   🔒 CHANGE THIS PASSWORD AFTER FIRST LOGIN!');
+  console.log('✅ Admin user created:', admin.email);
+  console.log('📧 Email: admin@vecinocustom.com');
+  console.log('🔑 Password: admin123');
+  console.log('⚠️  Please change the password after first login!');
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Seed failed:', e);
+    console.error('❌ Error seeding database:', e);
     process.exit(1);
   })
   .finally(async () => {
