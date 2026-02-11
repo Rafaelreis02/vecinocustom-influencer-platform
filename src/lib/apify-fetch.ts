@@ -131,18 +131,7 @@ async function scrapeTikTokProfile(handle: string): Promise<ParsedProfile> {
 
   if (!videos || videos.length === 0) {
     console.log(`[APIFY] No videos found for @${cleanHandle} - profile may be private or empty`);
-    return {
-      handle: cleanHandle,
-      platform: 'TIKTOK',
-      followers: 5000,
-      totalLikes: null,
-      engagementRate: null,
-      biography: null,
-      estimatedPrice: 150,
-      averageViews: null,
-      verified: false,
-      rawData: { message: 'No public videos found', source: 'apify' },
-    };
+    throw new Error(`No videos found for @${cleanHandle} - cannot analyze profile without video data`);
   }
 
   const author = videos[0]?.author || {};
@@ -163,24 +152,18 @@ async function scrapeTikTokProfile(handle: string): Promise<ParsedProfile> {
   const avgViews = videos.length > 0 ? totalViews / videos.length : 0;
   const engagementRate = totalViews > 0 ? (totalLikes / totalViews) * 100 : null;
 
-  // Get followers (try multiple fields)
-  let followers = author.followerCount || author.fans || null;
+  // Get followers from Apify data (NO ESTIMATION!)
+  // Only use what Apify returns - followerCount or fans fields
+  const followers = author.followerCount || author.fans || null;
   
-  if (!followers) {
-    // Fallback: estimate from average views
-    followers = Math.max(Math.round(avgViews * 0.1), 1000);
-    console.log(`[APIFY] Estimating followers from avgViews: ${followers}`);
+  if (followers) {
+    console.log(`[APIFY] Real follower count from Apify: ${followers}`);
   } else {
-    console.log(`[APIFY] Real follower count: ${followers}`);
+    console.log(`[APIFY] WARNING: No follower data from Apify for @${cleanHandle}`);
   }
 
-  // Estimate price based on average views
-  let estimatedPrice = 150;
-  if (avgViews < 5000) estimatedPrice = 50;
-  else if (avgViews < 50000) estimatedPrice = 150;
-  else if (avgViews < 200000) estimatedPrice = 300;
-  else if (avgViews < 500000) estimatedPrice = 800;
-  else estimatedPrice = 2000;
+  // NO price estimation - we don't have reliable data for this
+  const estimatedPrice = null;
 
   console.log(`[APIFY] Profile complete:`, {
     handle: cleanHandle,
