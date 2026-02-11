@@ -80,12 +80,15 @@ export const VideoCreateSchema = z.object({
   description: z.string().optional().nullable(),
   url: z.string().url('URL inválido'),
   platform: z.nativeEnum(Platform),
-  influencerId: z.string().min(1),
+  influencerId: z.string().optional().nullable(),    // ALTERADO: era obrigatório
+  authorHandle: z.string().optional().nullable(),     // NOVO
+  authorDisplayName: z.string().optional().nullable(), // NOVO
   campaignId: z.string().optional().nullable(),
   views: z.number().int().optional().nullable(),
   likes: z.number().int().optional().nullable(),
   comments: z.number().int().optional().nullable(),
   shares: z.number().int().optional().nullable(),
+  cost: z.number().optional().nullable(),             // Já existia
   publishedAt: z.string().datetime().optional().nullable(),
 });
 

@@ -182,6 +182,7 @@ model Campaign {
   influencers       CampaignInfluencer[]
   videos            Video[]
   files             File[]
+  snapshots         CampaignVideoSnapshot[]
   
   @@map("campaigns")
 }
@@ -239,8 +240,13 @@ model Video {
   campaignId      String?
   campaign        Campaign?   @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   
-  influencerId    String
-  influencer      Influencer  @relation(fields: [influencerId], references: [id], onDelete: Cascade)
+  // ALTERADO: influencerId agora é OPCIONAL
+  influencerId    String?
+  influencer      Influencer?  @relation(fields: [influencerId], references: [id], onDelete: SetNull)
+  
+  // NOVOS CAMPOS - para identificar o autor mesmo sem influencer registado
+  authorHandle      String?     // @handle do TikTok/Instagram do autor
+  authorDisplayName String?     // Nome de display do autor
   
   // Metrics
   views           Int?
@@ -256,6 +262,9 @@ model Video {
   publishedAt     DateTime?
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
+  
+  // Nova relação
+  snapshots       CampaignVideoSnapshot[]
   
   @@map("videos")
 }
@@ -431,6 +440,35 @@ model Email {
   @@index([influencerId])
   @@index([gmailThreadId])
   @@index([from])
+}
+
+// ============================================
+// CAMPAIGN VIDEO SNAPSHOTS - Histórico diário
+// ============================================
+
+model CampaignVideoSnapshot {
+  id              String      @id @default(cuid())
+  
+  videoId         String
+  video           Video       @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  
+  campaignId      String
+  campaign        Campaign    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  
+  // Métricas do snapshot
+  views           Int         @default(0)
+  likes           Int         @default(0)
+  comments        Int         @default(0)
+  shares          Int         @default(0)
+  
+  snapshotDate    DateTime    @db.Date
+  
+  createdAt       DateTime    @default(now())
+  
+  @@unique([videoId, snapshotDate])
+  @@index([campaignId, snapshotDate])
+  @@index([videoId])
+  @@map("campaign_video_snapshots")
 }
 
 // ============================================
