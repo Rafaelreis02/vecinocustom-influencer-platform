@@ -624,7 +624,40 @@ export default function InfluencerDetailPage() {
                   <p className="text-lg font-bold text-slate-900">€{influencer.estimatedPrice}</p>
                 </div>
               )}
+
+              {influencer.videoCount !== null && influencer.videoCount !== undefined && (
+                <div className="p-3 rounded-lg border border-gray-200 bg-white">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-xs text-gray-600">Total Vídeos</p>
+                    <Video className="h-3 w-3 text-slate-700" />
+                  </div>
+                  <p className="text-lg font-bold text-slate-900">{influencer.videoCount}</p>
+                </div>
+              )}
+
+              {influencer.verified !== null && influencer.verified !== undefined && (
+                <div className="p-3 rounded-lg border border-gray-200 bg-white">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-xs text-gray-600">Verificado</p>
+                    <Award className="h-3 w-3 text-slate-700" />
+                  </div>
+                  <p className="text-lg font-bold text-slate-900">
+                    {influencer.verified ? '✅ Sim' : '❌ Não'}
+                  </p>
+                </div>
+              )}
             </div>
+
+            {/* Biography */}
+            {influencer.biography && (
+              <div className="pt-2">
+                <h4 className="text-xs font-semibold text-gray-600 mb-2">BIOGRAFIA</h4>
+                <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded border border-gray-200">
+                  {influencer.biography}
+                </p>
+              </div>
+            )}
+            
 
             {/* Tags */}
             {influencer.tags && influencer.tags.length > 0 && (
