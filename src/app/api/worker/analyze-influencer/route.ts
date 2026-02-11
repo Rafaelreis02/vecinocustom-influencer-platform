@@ -125,15 +125,37 @@ export async function POST(request: Request) {
     const { handle, platform } = AnalyzeSchema.parse(body);
 
     logger.info('Starting influencer analysis', { handle, platform });
+    
+    // Validate environment variables
+    if (!process.env.APIFY_TOKEN) {
+      logger.error('APIFY_TOKEN not configured');
+      return NextResponse.json(
+        { error: 'Apify token não configurado' },
+        { status: 500 }
+      );
+    }
+    
+    if (!process.env.ANTHROPIC_API_KEY) {
+      logger.warn('ANTHROPIC_API_KEY not configured, will skip AI analysis');
+    }
 
     // Step 1: Fetch profile data from Apify
     logger.info('Fetching profile from Apify...', { handle });
-    const profile = await parseProfile(handle, platform);
-    logger.info('Apify data received', { 
-      handle, 
-      followers: profile.followers,
-      engagement: profile.engagementRate,
-    });
+    let profile: ParsedProfile;
+    try {
+      profile = await parseProfile(handle, platform);
+      logger.info('Apify data received', { 
+        handle, 
+        followers: profile.followers,
+        engagement: profile.engagementRate,
+      });
+    } catch (apifyError: any) {
+      logger.error('Apify fetch failed', { handle, error: apifyError.message });
+      return NextResponse.json(
+        { error: `Erro ao buscar perfil TikTok: ${apifyError.message}` },
+        { status: 502 }
+      );
+    }
 
     // Step 2: Analyze with Sonnet
     logger.info('Starting Sonnet analysis...', { handle });
