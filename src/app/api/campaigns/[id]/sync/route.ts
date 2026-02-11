@@ -2,70 +2,67 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { scrapeHashtagVideos } from '@/lib/apify-fetch';
 import { logger } from '@/lib/logger';
-import { handleApiError } from '@/lib/api-error';
+import { handleApiError, ApiError } from '@/lib/api-error';
 
-// POST /api/worker/analyze-hashtag - Extrai vídeos de hashtag com Apify
-export async function POST(request: Request) {
+// POST /api/campaigns/[id]/sync - Manual sync of campaign videos from hashtag
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const { campaignId, hashtag, platform, excludeAccounts } = await request.json();
+    const { id } = await params;
 
-    if (!campaignId || !hashtag) {
-      return NextResponse.json(
-        { error: 'Missing campaignId or hashtag' },
-        { status: 400 }
-      );
+    // 1. Fetch campaign and validate
+    const campaign = await prisma.campaign.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        hashtag: true,
+        platform: true,
+      }
+    });
+
+    if (!campaign) {
+      throw new ApiError(404, 'Campanha não encontrada');
     }
 
-    // Only support TikTok for now (Apify hashtag scraper is TikTok-only)
-    if (platform !== 'TIKTOK') {
-      return NextResponse.json(
-        { error: 'Only TikTok hashtag scraping is supported' },
-        { status: 400 }
-      );
+    if (!campaign.hashtag) {
+      throw new ApiError(400, 'Campanha não tem hashtag configurada');
     }
 
-    logger.info(`[ANALYZE HASHTAG] Starting scrape: #${hashtag} for campaign ${campaignId}`);
+    if (campaign.platform !== 'TIKTOK') {
+      throw new ApiError(400, 'Apenas plataforma TikTok é suportada');
+    }
 
-    // 1. Scrape hashtag videos using Apify
+    logger.info(`[SYNC] Starting manual sync for campaign ${id}, hashtag: ${campaign.hashtag}`);
+
+    // 2. Scrape hashtag videos
     let apifyVideos;
     try {
-      apifyVideos = await scrapeHashtagVideos(hashtag, 30);
-      logger.info(`[ANALYZE HASHTAG] Found ${apifyVideos.length} videos from Apify`);
+      apifyVideos = await scrapeHashtagVideos(campaign.hashtag, 30);
+      logger.info(`[SYNC] Found ${apifyVideos.length} videos from Apify`);
     } catch (error: any) {
-      logger.error('[APIFY ERROR]', error);
-      return NextResponse.json(
-        { error: 'Failed to scrape hashtag', details: error.message },
-        { status: 500 }
-      );
+      logger.error('[SYNC] Apify error', error);
+      throw new ApiError(500, 'Erro ao obter vídeos do TikTok', error.message);
     }
 
-    if (apifyVideos.length === 0) {
-      return NextResponse.json({
-        created: 0,
-        updated: 0,
-        excluded: 0,
-        total: 0,
-        message: 'No videos found for hashtag'
-      });
-    }
-
-    // 2. Filter out vecino.custom brand account (case-insensitive)
-    const brandAccountsLower = ['vecino.custom', ...(excludeAccounts || [])].map((a: string) => a.toLowerCase());
+    // 3. Filter out vecino.custom brand account
+    const brandAccountsLower = ['vecino.custom'];
     const filteredVideos = apifyVideos.filter((v: any) => {
       const authorHandle = v.authorMeta?.name?.toLowerCase() || '';
       return !brandAccountsLower.includes(authorHandle);
     });
-    const brandExcludedCount = apifyVideos.length - filteredVideos.length;
-    
-    logger.info(`[ANALYZE HASHTAG] After brand filter: ${filteredVideos.length} videos (excluded ${brandExcludedCount})`);
+    const excludedCount = apifyVideos.length - filteredVideos.length;
 
-    // 3. Process each video
+    logger.info(`[SYNC] After filter: ${filteredVideos.length} videos (excluded ${excludedCount})`);
+
+    // 4. Process each video
     let createdCount = 0;
     let updatedCount = 0;
 
     for (const apifyVideo of filteredVideos) {
       try {
-        // Extract data with CORRECT field mappings from Apify
+        // Extract data with correct Apify field mappings
         const url = apifyVideo.webVideoUrl;
         const authorHandle = apifyVideo.authorMeta?.name || null;
         const authorDisplayName = apifyVideo.authorMeta?.nickName || apifyVideo.authorMeta?.name || null;
@@ -79,17 +76,16 @@ export async function POST(request: Request) {
           : (apifyVideo.createTime ? new Date(apifyVideo.createTime * 1000) : new Date());
 
         if (!url) {
-          logger.warn('[ANALYZE HASHTAG] Skipping video without URL');
           continue;
         }
 
-        // Check if video already exists (by URL)
+        // Check if video exists
         const existingVideo = await prisma.video.findFirst({
           where: { url }
         });
 
         if (existingVideo) {
-          // UPDATE existing video metrics
+          // UPDATE metrics
           await prisma.video.update({
             where: { id: existingVideo.id },
             data: {
@@ -101,10 +97,9 @@ export async function POST(request: Request) {
             }
           });
           updatedCount++;
-          logger.info(`[ANALYZE HASHTAG] Updated video: ${url}`);
         } else {
           // CREATE new video
-          // Try to find existing influencer by tiktokHandle
+          // Try to find influencer by tiktokHandle
           let influencerId: string | null = null;
           if (authorHandle) {
             const existingInfluencer = await prisma.influencer.findFirst({
@@ -119,7 +114,7 @@ export async function POST(request: Request) {
             data: {
               url,
               platform: 'TIKTOK',
-              campaignId,
+              campaignId: id,
               influencerId,
               authorHandle,
               authorDisplayName,
@@ -132,35 +127,33 @@ export async function POST(request: Request) {
             }
           });
           createdCount++;
-          logger.info(`[ANALYZE HASHTAG] Created video: ${url} by @${authorHandle}`);
         }
 
       } catch (err: any) {
-        logger.error('[VIDEO PROCESS ERROR]', err);
+        logger.error('[SYNC] Video process error', err);
         // Continue processing others
       }
     }
 
-    // 4. Create snapshots for ALL videos in the campaign
-    await createDailySnapshots(campaignId);
+    // 5. Create snapshots for ALL campaign videos
+    await createDailySnapshots(id);
 
-    logger.info(`[ANALYZE HASHTAG] Complete: ${createdCount} created, ${updatedCount} updated, ${brandExcludedCount} excluded`);
+    logger.info(`[SYNC] Complete: ${createdCount} created, ${updatedCount} updated, ${excludedCount} excluded`);
 
     return NextResponse.json({
       created: createdCount,
       updated: updatedCount,
-      excluded: brandExcludedCount,
+      excluded: excludedCount,
       total: filteredVideos.length,
-      source: 'apify'
     });
 
-  } catch (err: any) {
-    logger.error('[ANALYZE HASHTAG ERROR]', err);
-    return handleApiError(err);
+  } catch (error) {
+    logger.error('[SYNC] Error', error);
+    return handleApiError(error);
   }
 }
 
-// Helper: Create daily snapshots for all videos in a campaign
+// Helper: Create daily snapshots
 async function createDailySnapshots(campaignId: string) {
   try {
     const today = new Date();
@@ -176,8 +169,6 @@ async function createDailySnapshots(campaignId: string) {
         shares: true,
       }
     });
-
-    logger.info(`[SNAPSHOTS] Creating snapshots for ${campaignVideos.length} videos`);
 
     for (const video of campaignVideos) {
       await prisma.campaignVideoSnapshot.upsert({
@@ -205,9 +196,9 @@ async function createDailySnapshots(campaignId: string) {
       });
     }
 
-    logger.info(`[SNAPSHOTS] Snapshots created successfully`);
+    logger.info(`[SYNC] Snapshots created for ${campaignVideos.length} videos`);
   } catch (error: any) {
-    logger.error('[SNAPSHOTS ERROR]', error);
-    // Don't throw - snapshots are non-critical
+    logger.error('[SYNC] Snapshot error', error);
+    // Non-critical, don't throw
   }
 }

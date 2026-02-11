@@ -40,7 +40,27 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const validated = VideoCreateSchema.parse(body);
+    
+    // Handle tiktokHandle if provided (from AddVideoModal)
+    if (body.tiktokHandle && !body.influencerId) {
+      // Try to find existing influencer by tiktokHandle
+      const existingInfluencer = await prisma.influencer.findFirst({
+        where: { tiktokHandle: body.tiktokHandle }
+      });
+      
+      if (existingInfluencer) {
+        body.influencerId = existingInfluencer.id;
+      } else {
+        // Set authorHandle but don't create influencer
+        body.authorHandle = body.tiktokHandle;
+        body.authorDisplayName = body.influencerName || body.tiktokHandle;
+      }
+    }
+    
+    // Remove non-schema fields before validation
+    const { tiktokHandle, influencerName, ...validationData } = body;
+    
+    const validated = VideoCreateSchema.parse(validationData);
 
     const video = await prisma.video.create({
       data: validated,

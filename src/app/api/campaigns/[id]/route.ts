@@ -29,6 +29,14 @@ export async function GET(
         },
         videos: {
           orderBy: { publishedAt: 'desc' },
+          include: {
+            influencer: {
+              select: {
+                id: true,
+                name: true,
+              }
+            }
+          }
         },
       },
     });
@@ -40,9 +48,26 @@ export async function GET(
     // Calculate stats
     const totalViews = campaign.videos.reduce((sum, v) => sum + (v.views || 0), 0);
     const totalLikes = campaign.videos.reduce((sum, v) => sum + (v.likes || 0), 0);
+    const spent = campaign.videos.reduce((sum, v) => sum + (v.cost || 0), 0);
+    
+    // Count unique influencers (both registered influencers and unique authorHandles)
+    const influencerIds = new Set(
+      campaign.videos
+        .filter(v => v.influencerId)
+        .map(v => v.influencerId)
+    );
+    const authorHandles = new Set(
+      campaign.videos
+        .filter(v => !v.influencerId && v.authorHandle)
+        .map(v => v.authorHandle)
+    );
+    const influencersCount = influencerIds.size + authorHandles.size;
 
     return NextResponse.json({
       ...campaign,
+      spent,
+      totalViews,
+      influencersCount,
       stats: {
         totalInfluencers: campaign.influencers.length,
         totalVideos: campaign.videos.length,

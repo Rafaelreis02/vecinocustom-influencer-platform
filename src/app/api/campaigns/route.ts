@@ -28,12 +28,43 @@ export async function GET(request: Request) {
           select: {
             views: true,
             likes: true,
+            cost: true,
+            influencerId: true,
+            authorHandle: true,
           },
         },
       },
     });
 
-    return NextResponse.json(campaigns);
+    // Calculate stats for each campaign
+    const campaignsWithStats = campaigns.map(campaign => {
+      const totalViews = campaign.videos.reduce((sum, v) => sum + (v.views || 0), 0);
+      const spent = campaign.videos.reduce((sum, v) => sum + (v.cost || 0), 0);
+      const videosCount = campaign.videos.length;
+      
+      // Count unique influencers (both registered and unique authorHandles)
+      const influencerIds = new Set(
+        campaign.videos
+          .filter(v => v.influencerId)
+          .map(v => v.influencerId)
+      );
+      const authorHandles = new Set(
+        campaign.videos
+          .filter(v => !v.influencerId && v.authorHandle)
+          .map(v => v.authorHandle)
+      );
+      const influencersCount = influencerIds.size + authorHandles.size;
+
+      return {
+        ...campaign,
+        totalViews,
+        spent,
+        videosCount,
+        influencersCount,
+      };
+    });
+
+    return NextResponse.json(campaignsWithStats);
   } catch (error) {
     logger.error('GET /api/campaigns failed', error);
     return handleApiError(error);
