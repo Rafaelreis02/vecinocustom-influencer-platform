@@ -10,12 +10,17 @@ export default withAuth(
       authorized: ({ token, req }) => {
         const { pathname } = req.nextUrl;
 
-        // Public routes
-        if (pathname === '/' || pathname === '/login' || pathname.startsWith('/api/portal')) {
+        // Public routes - always allow
+        if (
+          pathname === '/' || 
+          pathname === '/login' || 
+          pathname.startsWith('/api/auth') ||  // NextAuth endpoints
+          pathname.startsWith('/api/portal')    // Portal public routes
+        ) {
           return true;
         }
 
-        // Protected routes require token
+        // Protected routes - require token
         if (pathname.startsWith('/dashboard') || pathname.startsWith('/api')) {
           return !!token;
         }
