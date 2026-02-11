@@ -11,8 +11,9 @@ const envSchema = z.object({
   // APIs
   ANTHROPIC_API_KEY: z.string().optional(),
   APIFY_TOKEN: z.string().optional(),
+  GOOGLE_API_KEY: z.string().optional(),
   
-  // Google
+  // Google OAuth (Gmail)
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   GOOGLE_REFRESH_TOKEN: z.string().optional(),

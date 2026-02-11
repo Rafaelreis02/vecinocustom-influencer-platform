@@ -3,7 +3,7 @@ import { handleApiError } from '@/lib/api-error';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 import { parseProfile, type ParsedProfile } from '@/lib/apify-fetch';
-import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // Vercel hobby plan limit
@@ -30,61 +30,66 @@ interface SonnetAnalysis {
   summary: string;        // 2-3 paragraph assessment in Portuguese
 }
 
-async function analyzeWithSonnet(
+async function analyzeWithGemini(
   handle: string,
   profile: ParsedProfile
 ): Promise<SonnetAnalysis> {
-  const anthropic = new Anthropic({
-    apiKey: process.env.ANTHROPIC_API_KEY,
-  });
+  const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || '');
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
 
-  const videoSummary = profile.rawData?.videos
-    ? profile.rawData.videos.slice(0, 10).map((v: Record<string, unknown>, i: number) => 
-        `${i + 1}. "${(v.text as string) || 'sem descrição'}" - ${(v.playCount as number)?.toLocaleString() || '?'} views, ${(v.diggCount as number)?.toLocaleString() || '?'} likes`
-      ).join('\n')
+  // Build video descriptions with URLs
+  const videoInfo = profile.rawData?.videos
+    ? profile.rawData.videos.slice(0, 5).map((v: Record<string, unknown>, i: number) => {
+        const url = v.webVideoUrl || v.videoUrl || `https://www.tiktok.com/@${handle}/video/${v.id}`;
+        return `${i + 1}. URL: ${url}\n   Caption: "${(v.text as string) || 'sem descrição'}"\n   ${(v.playCount as number)?.toLocaleString() || '?'} views, ${(v.diggCount as number)?.toLocaleString() || '?'} likes`;
+      }).join('\n\n')
     : 'Sem vídeos disponíveis';
 
   const prompt = `Analisa este influencer TikTok para a marca VecinoCustom (joias personalizadas portuguesas).
 
-**Perfil:**
+**Perfil TikTok:**
 - Handle: @${handle}
+- URL: https://www.tiktok.com/@${handle}
 - Seguidores: ${profile.followers?.toLocaleString() || 'desconhecido'}
 - Engagement Rate: ${profile.engagementRate?.toFixed(2) || 'desconhecido'}%
 - Média Views: ${profile.averageViews || 'desconhecido'}
 - Bio: ${profile.biography || 'sem bio'}
-- Verificado: ${profile.verified ? 'Sim' : 'Não'}
+- Verificado: ${profile.verified ? 'Sim ✓' : 'Não'}
 
-**Últimos vídeos:**
-${videoSummary}
+**Últimos 5 vídeos:**
+${videoInfo}
 
 **Sobre a VecinoCustom:**
-- Joias personalizadas (colares, pulseiras, anéis com nomes/iniciais)
-- Target: Mulheres 18-35, fashion-conscious, mercado PT/ES/BR
-- Valores: Personalização, qualidade, conexão emocional
-- Estilo: Elegante, trendy, ideal para presente
+- Produto: Joias personalizadas (colares, pulseiras, anéis com nomes/iniciais/datas)
+- Target: Mulheres 18-35 anos, fashion-conscious
+- Mercados: Portugal, Espanha, Brasil
+- Valores: Personalização, qualidade, conexão emocional, presentes especiais
+- Estilo: Elegante, trendy, moderno, acessível
 
-**Analisa e responde APENAS em JSON válido:**
+**Tarefa:**
+Avalia o FIT deste influencer com a VecinoCustom. Considera:
+1. Estilo de conteúdo (fashion, lifestyle, unboxing, jewelry?)
+2. Audiência (demografia, interesses)
+3. Estética dos vídeos (qualidade, vibe)
+4. Autenticidade e engagement
+5. Potencial para promover joias personalizadas
+
+**Responde APENAS com JSON válido (sem markdown):**
 {
   "fitScore": <1-5, onde 5 é match perfeito>,
-  "niche": "<nicho principal do influencer>",
-  "tier": "<nano|micro|macro|mega>",
+  "niche": "<nicho principal: Fashion, Lifestyle, Beauty, etc>",
+  "tier": "<nano|micro|macro|mega baseado em followers>",
   "strengths": ["<ponto forte 1>", "<ponto forte 2>", "<ponto forte 3>"],
-  "opportunities": ["<oportunidade/risco 1>", "<oportunidade/risco 2>"],
-  "summary": "<2-3 parágrafos em português sobre o influencer, fit com a marca, e recomendação>"
+  "opportunities": ["<consideração/risco 1>", "<consideração/risco 2>"],
+  "summary": "<2-3 parágrafos em português: descrição do influencer, análise de fit com VecinoCustom, recomendação>"
 }`;
 
-  const response = await anthropic.messages.create({
-    model: 'claude-sonnet-3-5-20241022', // Latest Sonnet 3.5
-    max_tokens: 1500,
-    temperature: 0.5,
-    messages: [{ role: 'user', content: prompt }],
-  });
-
-  const text = response.content[0].type === 'text' ? response.content[0].text : '';
+  const result = await model.generateContent(prompt);
+  const text = result.response.text();
   
-  // Extract JSON from response (handle markdown code blocks)
-  const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/```\n([\s\S]*?)\n```/);
-  const jsonText = jsonMatch ? jsonMatch[1] : text;
+  // Extract JSON from response
+  const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/```\n([\s\S]*?)\n```/) || text.match(/\{[\s\S]*\}/);
+  const jsonText = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : text;
 
   try {
     const parsed = JSON.parse(jsonText.trim());
@@ -96,8 +101,8 @@ ${videoSummary}
       opportunities: Array.isArray(parsed.opportunities) ? parsed.opportunities : [],
       summary: parsed.summary || 'Análise não disponível',
     };
-  } catch {
-    logger.warn('Failed to parse Sonnet JSON, using defaults', { handle, text });
+  } catch (e) {
+    logger.warn('Failed to parse Gemini JSON, using defaults', { handle, text, error: e });
     return {
       fitScore: 3,
       niche: 'Desconhecido',
@@ -135,8 +140,8 @@ export async function POST(request: Request) {
       );
     }
     
-    if (!process.env.ANTHROPIC_API_KEY) {
-      logger.warn('ANTHROPIC_API_KEY not configured, will skip AI analysis');
+    if (!process.env.GOOGLE_API_KEY) {
+      logger.warn('GOOGLE_API_KEY not configured, will skip AI analysis');
     }
 
     // Step 1: Fetch profile data from Apify
@@ -157,19 +162,19 @@ export async function POST(request: Request) {
       );
     }
 
-    // Step 2: Analyze with Sonnet
-    logger.info('Starting Sonnet analysis...', { handle });
+    // Step 2: Analyze with Gemini
+    logger.info('Starting Gemini analysis...', { handle });
     let analysis: SonnetAnalysis;
     try {
-      analysis = await analyzeWithSonnet(handle, profile);
-      logger.info('Sonnet analysis complete', { 
+      analysis = await analyzeWithGemini(handle, profile);
+      logger.info('Gemini analysis complete', { 
         handle, 
         fitScore: analysis.fitScore,
         tier: analysis.tier,
       });
-    } catch (sonnetError: any) {
-      logger.error('Sonnet analysis failed, continuing with Apify data only', { handle, error: sonnetError });
-      const errorMsg = sonnetError?.message || 'Erro desconhecido';
+    } catch (geminiError: any) {
+      logger.error('Gemini analysis failed, continuing with Apify data only', { handle, error: geminiError });
+      const errorMsg = geminiError?.message || 'Erro desconhecido';
       analysis = {
         fitScore: 3,
         niche: 'Desconhecido',
