@@ -167,15 +167,16 @@ export async function POST(request: Request) {
         fitScore: analysis.fitScore,
         tier: analysis.tier,
       });
-    } catch (sonnetError) {
+    } catch (sonnetError: any) {
       logger.error('Sonnet analysis failed, continuing with Apify data only', { handle, error: sonnetError });
+      const errorMsg = sonnetError?.message || 'Erro desconhecido';
       analysis = {
         fitScore: 3,
         niche: 'Desconhecido',
         tier: 'micro',
         strengths: ['Dados do Apify disponíveis'],
-        opportunities: ['Análise AI falhou - requer revisão manual'],
-        summary: 'Análise AI indisponível. Dados básicos importados do TikTok.',
+        opportunities: [`Análise AI falhou: ${errorMsg}`, 'Requer revisão manual'],
+        summary: `Análise AI indisponível (erro: ${errorMsg}). Dados básicos importados do TikTok via Apify.`,
       };
     }
 

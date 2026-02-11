@@ -100,18 +100,34 @@ async function runActorAndWait(actorId: string, input: any): Promise<any[]> {
 
 async function scrapeTikTokProfile(handle: string): Promise<ParsedProfile> {
   const cleanHandle = handle.replace('@', '');
+  const profileUrl = `https://www.tiktok.com/@${cleanHandle}`;
   
-  console.log(`[APIFY] Scraping TikTok profile: @${cleanHandle}`);
+  console.log(`[APIFY] Scraping TikTok profile: @${cleanHandle} (URL: ${profileUrl})`);
   
   // Use GdWCkxBtKWOsKjdch actor - it handles profiles, hashtags, and videos
   const videos = await runActorAndWait('GdWCkxBtKWOsKjdch', {
-    profiles: [`https://www.tiktok.com/@${cleanHandle}`],
+    profiles: [profileUrl],
     resultsPerPage: 10, // Only fetch last 10 videos for Sonnet analysis
     shouldDownloadVideos: false,
     shouldDownloadCovers: false,
   });
 
   console.log(`[APIFY] Got ${videos?.length || 0} videos from @${cleanHandle}`);
+  
+  // Log first video author data for debugging
+  if (videos && videos.length > 0) {
+    const author = videos[0]?.author || {};
+    console.log(`[APIFY] First video author data:`, JSON.stringify({
+      id: author.id,
+      uniqueId: author.uniqueId,
+      nickname: author.nickname,
+      followerCount: author.followerCount,
+      fans: author.fans,
+      heartCount: author.heartCount,
+      videoCount: author.videoCount,
+      verified: author.verified,
+    }));
+  }
 
   if (!videos || videos.length === 0) {
     console.log(`[APIFY] No videos found for @${cleanHandle} - profile may be private or empty`);
