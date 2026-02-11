@@ -41,7 +41,7 @@ export async function fetchEmails(auth: any, maxPages: number = 5) {
     let pageToken: string | undefined = undefined;
 
     for (let page = 0; page < maxPages; page++) {
-      const res = await gmail.users.messages.list({
+      const res: any = await gmail.users.messages.list({
         userId: 'me',
         auth,
         q: 'is:unread',
@@ -53,7 +53,7 @@ export async function fetchEmails(auth: any, maxPages: number = 5) {
       
       // Fetch details for each message
       const emailsData = await Promise.all(
-        messages.map(msg => getMessageDetails(auth, msg.id!))
+        messages.map((msg: any) => getMessageDetails(auth, msg.id!))
       );
       
       allEmails.push(...emailsData);
