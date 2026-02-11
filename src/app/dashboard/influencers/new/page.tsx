@@ -123,6 +123,7 @@ export default function NewInfluencerPage() {
         setShowSuccessDialog(true);
         setTimeout(() => {
           router.push('/dashboard/influencers');
+          router.refresh(); // Force revalidate
         }, 2000);
       } else {
         const error = await createRes.json();
