@@ -74,7 +74,7 @@ ${videoSummary}
 }`;
 
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5-20250514',
+    model: 'claude-sonnet-3-5-20241022', // Latest Sonnet 3.5
     max_tokens: 1500,
     temperature: 0.5,
     messages: [{ role: 'user', content: prompt }],
