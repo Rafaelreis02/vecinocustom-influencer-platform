@@ -1,131 +1,101 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { CampaignUpdateSchema } from '@/lib/validation';
+import { handleApiError, ApiError } from '@/lib/api-error';
+import { logger } from '@/lib/logger';
 
-// GET /api/campaigns/[id] - Get single campaign
+// GET /api/campaigns/[id]
 export async function GET(
   request: Request,
-  context: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await context.params;
+    const { id } = await params;
 
     const campaign = await prisma.campaign.findUnique({
       where: { id },
       include: {
-        videos: {
-          select: {
-            id: true,
-            title: true,
-            url: true,
-            platform: true,
-            views: true,
-            likes: true,
-            comments: true,
-            shares: true,
-            cost: true,
-            publishedAt: true,
-            influencerId: true,
+        influencers: {
+          include: {
             influencer: {
               select: {
                 id: true,
                 name: true,
+                tiktokHandle: true,
+                tiktokFollowers: true,
               },
             },
           },
-          orderBy: {
-            publishedAt: 'desc',
-          },
         },
-        createdBy: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
+        videos: {
+          orderBy: { publishedAt: 'desc' },
         },
       },
     });
 
     if (!campaign) {
-      return NextResponse.json(
-        { error: 'Campaign not found' },
-        { status: 404 }
-      );
+      throw new ApiError(404, 'Campanha não encontrada');
     }
 
     // Calculate stats
     const totalViews = campaign.videos.reduce((sum, v) => sum + (v.views || 0), 0);
-    const spent = campaign.videos.reduce((sum, v) => sum + (v.cost || 0), 0);
-    const uniqueInfluencers = new Set(campaign.videos.map(v => v.influencerId)).size;
+    const totalLikes = campaign.videos.reduce((sum, v) => sum + (v.likes || 0), 0);
 
     return NextResponse.json({
       ...campaign,
-      totalViews,
-      spent,
-      influencersCount: uniqueInfluencers,
+      stats: {
+        totalInfluencers: campaign.influencers.length,
+        totalVideos: campaign.videos.length,
+        totalViews,
+        totalLikes,
+      },
     });
-  } catch (err: any) {
-    console.error('[API ERROR] Fetching campaign:', err);
-    return NextResponse.json(
-      { error: 'Failed to fetch campaign', details: err?.message },
-      { status: 500 }
-    );
+  } catch (error) {
+    logger.error('GET /api/campaigns/[id] failed', error);
+    return handleApiError(error);
   }
 }
 
-// PUT /api/campaigns/[id] - Update campaign
-export async function PUT(
+// PATCH /api/campaigns/[id]
+export async function PATCH(
   request: Request,
-  context: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await context.params;
+    const { id } = await params;
     const body = await request.json();
+    
+    const validated = CampaignUpdateSchema.parse(body);
 
     const campaign = await prisma.campaign.update({
       where: { id },
-      data: {
-        name: body.name,
-        description: body.description || null,
-        platform: body.platform || null,
-        hashtag: body.hashtag || null,
-        startDate: body.startDate ? new Date(body.startDate) : null,
-        endDate: body.endDate ? new Date(body.endDate) : null,
-        budget: body.budget ? parseFloat(body.budget) : null,
-        targetViews: body.targetViews ? parseInt(body.targetViews) : null,
-        targetSales: body.targetSales ? parseInt(body.targetSales) : null,
-        status: body.status || 'DRAFT',
-      },
+      data: validated,
     });
 
+    logger.info('Campaign updated', { id });
     return NextResponse.json(campaign);
-  } catch (err: any) {
-    console.error('[API ERROR] Updating campaign:', err);
-    return NextResponse.json(
-      { error: 'Failed to update campaign', details: err?.message },
-      { status: 500 }
-    );
+  } catch (error) {
+    logger.error('PATCH /api/campaigns/[id] failed', error);
+    return handleApiError(error);
   }
 }
 
-// DELETE /api/campaigns/[id] - Delete campaign
+// DELETE /api/campaigns/[id]
 export async function DELETE(
   request: Request,
-  context: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await context.params;
+    const { id } = await params;
 
     await prisma.campaign.delete({
       where: { id },
     });
 
+    logger.info('Campaign deleted', { id });
     return NextResponse.json({ success: true });
-  } catch (err: any) {
-    console.error('[API ERROR] Deleting campaign:', err);
-    return NextResponse.json(
-      { error: 'Failed to delete campaign', details: err?.message },
-      { status: 500 }
-    );
+  } catch (error) {
+    logger.error('DELETE /api/campaigns/[id] failed', error);
+    return handleApiError(error);
   }
 }
