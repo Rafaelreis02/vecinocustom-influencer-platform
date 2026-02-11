@@ -3,13 +3,21 @@
  * Syncs emails from brand@vecinocustom.com to the CRM
  */
 
-import { google } from 'googleapis';
+import { google, gmail_v1 } from 'googleapis';
 import { prisma } from './prisma';
 
 // Initialize Gmail API
 const gmail = google.gmail({
   version: 'v1',
 });
+
+// Type for Gmail list response
+interface GmailListResponse {
+  data: {
+    messages?: Array<{ id?: string | null; threadId?: string | null }>;
+    nextPageToken?: string | null;
+  };
+}
 
 // ============================================
 // OAUTH2 SETUP (when credentials available)
@@ -35,24 +43,35 @@ export function getAuthClient() {
 // FETCH EMAILS
 // ============================================
 
-export async function fetchEmails(auth: any) {
+export async function fetchEmails(auth: any, maxPages: number = 5) {
   try {
-    const res = await gmail.users.messages.list({
-      userId: 'me',
-      auth,
-      q: 'is:unread', // Only unread emails (easier to sync)
-      maxResults: 10,
-    });
+    const allEmails: any[] = [];
+    let pageToken: string | undefined = undefined;
 
-    const messages = res.data.messages || [];
-    
-    // Fetch full message content for each
-    const emailsData = await Promise.all(
-      messages.map(msg => getMessageDetails(auth, msg.id!))
-    );
+    for (let page = 0; page < maxPages; page++) {
+      const res = await gmail.users.messages.list({
+        userId: 'me',
+        auth,
+        q: 'is:unread',
+        maxResults: 50,
+        pageToken,
+      }) as GmailListResponse;
+
+      const messages = res.data.messages || [];
+      
+      // Fetch details for each message
+      const emailsData = await Promise.all(
+        messages.map((msg: any) => getMessageDetails(auth, msg.id!))
+      );
+      
+      allEmails.push(...emailsData);
+
+      if (!res.data.nextPageToken) break;
+      pageToken = res.data.nextPageToken;
+    }
 
     return {
-      emails: emailsData,
+      emails: allEmails,
     };
   } catch (error: any) {
     console.error('[GMAIL ERROR] Fetching emails:', error.message);
@@ -235,17 +254,25 @@ export async function sendEmail(auth: any, options: {
   subject: string;
   body: string;
   inReplyTo?: string; // Gmail message ID for threading
+  references?: string; // Reference header for threading
   threadId?: string;
 }) {
   try {
-    const message = [
+    const headers = [
       `To: ${options.to}`,
       `Subject: ${options.subject}`,
-      `In-Reply-To: ${options.inReplyTo || ''}`,
-      'Content-Type: text/plain; charset=utf-8',
-      '',
-      options.body
-    ].join('\r\n');
+    ];
+
+    if (options.inReplyTo) {
+      headers.push(`In-Reply-To: <${options.inReplyTo}>`);
+    }
+    if (options.references) {
+      headers.push(`References: <${options.references}>`);
+    }
+
+    headers.push('Content-Type: text/plain; charset=utf-8');
+
+    const message = [...headers, '', options.body].join('\r\n');
 
     const encodedMessage = Buffer.from(message)
       .toString('base64')

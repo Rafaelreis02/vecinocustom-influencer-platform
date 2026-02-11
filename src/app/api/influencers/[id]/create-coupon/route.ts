@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { createCoupon } from '@/lib/shopify';
+import { createShopifyCoupon } from '@/lib/shopify-oauth';
 import { handleApiError } from '@/lib/api-error';
 import { logger } from '@/lib/logger';
 
@@ -50,15 +50,10 @@ export async function POST(
     }
 
     // Create coupon in Shopify (10% discount)
-    const shopifyResult = await createCoupon({
-      title: `Cupom ${code} - ${influencer.name}`,
-      code: code.toUpperCase(),
-      discountPercentage: 10,
-    });
-
-    if (!shopifyResult.success) {
-      throw new Error('Failed to create coupon in Shopify');
-    }
+    const shopifyResult = await createShopifyCoupon(
+      code.toUpperCase(),
+      10
+    );
 
     // Save coupon to database
     const coupon = await prisma.coupon.create({
@@ -67,7 +62,8 @@ export async function POST(
         discountType: 'PERCENTAGE',
         discountValue: 10,
         influencerId: id,
-        shopifyId: shopifyResult.coupon.id,
+        shopifyPriceRuleId: shopifyResult.priceRuleId,
+        shopifyDiscountCodeId: shopifyResult.discountCodeId,
       },
       include: {
         influencer: true,

@@ -11,7 +11,7 @@ const SHOPIFY_CLIENT_ID = process.env.SHOPIFY_CLIENT_ID || '';
 const SHOPIFY_CLIENT_SECRET = process.env.SHOPIFY_CLIENT_SECRET || '';
 
 // Shopify REST API version
-const API_VERSION = '2024-01';
+const API_VERSION = '2025-01';
 
 interface ShopifyOrder {
   id: string;

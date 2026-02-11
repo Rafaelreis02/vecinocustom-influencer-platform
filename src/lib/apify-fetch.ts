@@ -53,24 +53,7 @@ interface ApifyAuthorMeta {
   profileUrl?: string;
 }
 
-interface ApifyPostItem {
-  id: string;
-  webVideoUrl: string;
-  text?: string;
-  diggCount?: number;
-  shareCount?: number;
-  playCount?: number;
-  commentCount?: number;
-  createTimeISO?: string;
-  hashtags?: any[];
-  authorMeta: ApifyAuthorMeta; // Nested object with author data
-  videoMeta?: {
-    duration?: number;
-    coverUrl?: string;
-    height?: number;
-    width?: number;
-  };
-}
+
 
 // ============================================
 // ACTOR RUNNER
@@ -81,7 +64,7 @@ async function runActorAndWait(actorId: string, input: any): Promise<any[]> {
     throw new Error('APIFY_TOKEN not set in environment variables');
   }
   
-  console.log(`[APIFY] Starting actor ${actorId} with token ${APIFY_TOKEN.substring(0, 10)}...`);
+  console.log(`[APIFY] Starting actor ${actorId}...`);
 
   // Start run
   const runRes = await fetch(`${APIFY_API}/acts/${actorId}/runs?token=${APIFY_TOKEN}`, {
@@ -160,7 +143,7 @@ async function runActorAndWait(actorId: string, input: any): Promise<any[]> {
 // ============================================
 
 async function scrapeTikTokProfile(handle: string): Promise<ParsedProfile> {
-  const cleanHandle = handle.replace('@', '');
+  const cleanHandle = handle.replace(/^@+/, '');
   const profileUrl = `https://www.tiktok.com/@${cleanHandle}`;
   
   console.log(`[APIFY] Scraping TikTok profile: @${cleanHandle} (URL: ${profileUrl})`);
@@ -216,13 +199,18 @@ async function scrapeTikTokProfile(handle: string): Promise<ParsedProfile> {
   const totalLikes = authorData.heart || null;
   
   // Calculate metrics from posts (all items are posts)
-  let totalViews = 0;
+  let postLikes = 0, postComments = 0, postShares = 0, postViews = 0;
   allItems.forEach((post: any) => {
-    totalViews += post.playCount || 0;
+    postLikes += post.diggCount || 0;
+    postComments += post.commentCount || 0;
+    postShares += post.shareCount || 0;
+    postViews += post.playCount || 0;
   });
   
-  const avgViews = allItems.length > 0 ? totalViews / allItems.length : 0;
-  const engagementRate = totalViews > 0 && totalLikes ? (totalLikes / totalViews) * 100 : null;
+  const avgViews = allItems.length > 0 ? postViews / allItems.length : 0;
+  const engagementRate = postViews > 0
+    ? ((postLikes + postComments + postShares) / postViews) * 100
+    : null;
 
   console.log(`[APIFY] Profile complete:`, {
     handle: cleanHandle,
@@ -250,7 +238,7 @@ async function scrapeTikTokProfile(handle: string): Promise<ParsedProfile> {
     bioLink: bioLink,
     rawData: {
       author: authorData,
-      posts: allItems.slice(0, 10), // Keep max 10 for Gemini
+      posts: allItems.slice(0, 10), // Keep max 10 for AI analysis
     },
   };
 }
@@ -260,7 +248,7 @@ async function scrapeTikTokProfile(handle: string): Promise<ParsedProfile> {
 // ============================================
 
 export async function scrapeHashtagVideos(hashtag: string, maxVideos = 30): Promise<any[]> {
-  const cleanTag = hashtag.replace('#', '');
+  const cleanTag = hashtag.replace(/^#+/, '');
   console.log(`[APIFY] Scraping hashtag: #${cleanTag}`);
   
   return runActorAndWait(ACTOR_ID, {
