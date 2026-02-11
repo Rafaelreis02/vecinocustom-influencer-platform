@@ -38,31 +38,38 @@ export interface ParsedProfile {
   };
 }
 
-interface ApifyAuthorItem {
-  'authorMeta.name': string;
-  'authorMeta.nickName'?: string;
-  'authorMeta.fans'?: number;
-  'authorMeta.verified'?: boolean;
-  'authorMeta.signature'?: string;
-  'authorMeta.video'?: number;
-  'authorMeta.avatar'?: string;
-  'authorMeta.bioLink'?: string;
-  'authorMeta.id'?: string;
-  'authorMeta.privateAccount'?: boolean;
+interface ApifyAuthorMeta {
+  id: string;
+  name: string;
+  nickName?: string;
+  fans?: number;
+  verified?: boolean;
+  signature?: string;
+  video?: number;
+  avatar?: string;
+  heart?: number;
+  following?: number;
+  privateAccount?: boolean;
+  profileUrl?: string;
 }
 
 interface ApifyPostItem {
+  id: string;
   webVideoUrl: string;
   text?: string;
   diggCount?: number;
   shareCount?: number;
   playCount?: number;
   commentCount?: number;
-  'videoMeta.duration'?: number;
-  'videoMeta.coverUrl'?: string;
   createTimeISO?: string;
   hashtags?: any[];
-  'authorMeta.name'?: string;
+  authorMeta: ApifyAuthorMeta; // Nested object with author data
+  videoMeta?: {
+    duration?: number;
+    coverUrl?: string;
+    height?: number;
+    width?: number;
+  };
 }
 
 // ============================================
@@ -168,67 +175,54 @@ async function scrapeTikTokProfile(handle: string): Promise<ParsedProfile> {
 
   console.log(`[APIFY] Received ${allItems?.length || 0} total items from Apify`);
   
-  // DEBUG: Show each item separately so Rafael can see the structure
-  console.log('[APIFY] ========== SHOWING ALL ITEMS ==========');
-  allItems.forEach((item: any, index: number) => {
-    console.log(`[APIFY] ----- Item ${index} -----`);
-    console.log(JSON.stringify(item, null, 2));
-  });
-  console.log('[APIFY] ========== END OF ITEMS ==========');
-  
-  // DEBUG: Show summary
-  if (allItems && allItems.length > 0) {
-    console.log('[APIFY] Items summary:', JSON.stringify(allItems.map((item: any, i: number) => ({
-      index: i,
-      hasAuthorMetaFlat: item['authorMeta.fans'] !== undefined,
-      hasAuthorMetaNested: item.authorMeta !== undefined,
-      authorMetaNestedKeys: item.authorMeta ? Object.keys(item.authorMeta) : null,
-      hasWebVideoUrl: item.webVideoUrl !== undefined,
-      topLevelKeys: Object.keys(item).slice(0, 8)
-    })), null, 2));
+  // Validate we got data
+  if (!allItems || allItems.length === 0) {
+    throw new Error(`No data returned by Apify for @${cleanHandle}. Profile may be private, deleted, or has no videos.`);
   }
   
-  // CRITICAL: Separate Authors vs Posts
-  // Authors have 'authorMeta.fans', Posts have 'webVideoUrl'
-  const authors = allItems.filter((item: any) => item['authorMeta.fans'] !== undefined);
-  const posts = allItems.filter((item: any) => item.webVideoUrl !== undefined);
+  // CRITICAL FIX: authorMeta is NESTED inside each post, not flat!
+  // Each post item has: { authorMeta: { fans, video, verified, ... }, webVideoUrl, ... }
+  // So ALL items are posts, and they ALL have the same authorMeta nested
   
-  console.log(`[APIFY] Separated: ${authors.length} author items, ${posts.length} post items`);
+  const firstItem = allItems[0];
   
-  // Validate we got author data
-  if (authors.length === 0) {
-    throw new Error(`No author data returned by Apify for @${cleanHandle}. Profile may be private or deleted.`);
+  console.log('[APIFY] First item authorMeta:', JSON.stringify(firstItem.authorMeta, null, 2));
+  
+  // Validate authorMeta exists
+  if (!firstItem.authorMeta) {
+    throw new Error(`No author metadata in Apify response for @${cleanHandle}`);
   }
   
-  // Get first author (they're all identical)
-  const authorData = authors[0] as ApifyAuthorItem;
+  // Extract author data from nested authorMeta (all items have the same author)
+  const authorData = firstItem.authorMeta;
   
   console.log(`[APIFY] Author data extracted:`, JSON.stringify({
-    handle: authorData['authorMeta.name'],
-    nickname: authorData['authorMeta.nickName'],
-    fans: authorData['authorMeta.fans'],
-    videos: authorData['authorMeta.video'],
-    verified: authorData['authorMeta.verified'],
+    handle: authorData.name,
+    nickname: authorData.nickName,
+    fans: authorData.fans,
+    videos: authorData.video,
+    verified: authorData.verified,
+    heart: authorData.heart,
   }));
   
-  // Extract author fields (FLAT strings with dots!)
-  const followers = authorData['authorMeta.fans'] || null;
-  const verified = authorData['authorMeta.verified'] || false;
-  const biography = authorData['authorMeta.signature'] || null;
-  const videoCount = authorData['authorMeta.video'] || null;
-  const avatar = authorData['authorMeta.avatar'] || null;
-  const bioLink = authorData['authorMeta.bioLink'] || null;
-  const displayName = authorData['authorMeta.nickName'] || authorData['authorMeta.name'];
+  // Extract author fields from nested object
+  const followers = authorData.fans || null;
+  const verified = authorData.verified || false;
+  const biography = authorData.signature || null;
+  const videoCount = authorData.video || null;
+  const avatar = authorData.avatar || null;
+  const bioLink = null; // Not in this structure
+  const displayName = authorData.nickName || authorData.name;
+  const totalLikes = authorData.heart || null;
   
-  // Calculate metrics from posts
-  let totalLikes = 0, totalViews = 0;
-  posts.forEach((post: any) => {
-    totalLikes += post.diggCount || 0;
+  // Calculate metrics from posts (all items are posts)
+  let totalViews = 0;
+  allItems.forEach((post: any) => {
     totalViews += post.playCount || 0;
   });
   
-  const avgViews = posts.length > 0 ? totalViews / posts.length : 0;
-  const engagementRate = totalViews > 0 ? (totalLikes / totalViews) * 100 : null;
+  const avgViews = allItems.length > 0 ? totalViews / allItems.length : 0;
+  const engagementRate = totalViews > 0 && totalLikes ? (totalLikes / totalViews) * 100 : null;
 
   console.log(`[APIFY] Profile complete:`, {
     handle: cleanHandle,
@@ -237,7 +231,7 @@ async function scrapeTikTokProfile(handle: string): Promise<ParsedProfile> {
     avgViews: Math.round(avgViews),
     engagementRate: engagementRate?.toFixed(2) + '%',
     verified,
-    postsFound: posts.length,
+    postsFound: allItems.length,
   });
 
   return {
@@ -245,7 +239,7 @@ async function scrapeTikTokProfile(handle: string): Promise<ParsedProfile> {
     name: displayName,
     platform: 'TIKTOK',
     followers: followers,
-    totalLikes: totalLikes > 0 ? totalLikes : null,
+    totalLikes: totalLikes,
     engagementRate,
     biography: biography,
     estimatedPrice: null, // NO estimation - we don't have reliable data
@@ -256,7 +250,7 @@ async function scrapeTikTokProfile(handle: string): Promise<ParsedProfile> {
     bioLink: bioLink,
     rawData: {
       author: authorData,
-      posts: posts.slice(0, 10), // Keep max 10 for Gemini
+      posts: allItems.slice(0, 10), // Keep max 10 for Gemini
     },
   };
 }
