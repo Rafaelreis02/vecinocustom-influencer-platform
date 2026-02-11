@@ -732,7 +732,7 @@ export default function InfluencerDetailPage() {
                   <h4 className="text-xs text-gray-600 font-semibold">CUPOM ATUAL</h4>
                   {influencer.coupons[0].shopifyPriceRuleId && (
                     <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700 flex items-center gap-1">
-                      Shopify ✓
+                      Shopify
                     </span>
                   )}
                 </div>
@@ -758,7 +758,7 @@ export default function InfluencerDetailPage() {
                   onClick={handleDeleteCoupon}
                   className="w-full px-3 py-2 rounded bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition"
                 >
-                  🗑️ Apagar Cupão
+                  Apagar Cupão
                 </button>
               </div>
             )}
@@ -819,7 +819,7 @@ export default function InfluencerDetailPage() {
           </div>
         </CollapsibleSection>
 
-        {/* 💵 Histórico de Comissões */}
+        {/* Histórico de Comissões */}
         <CollapsibleSection title="Histórico de Comissões" icon={Receipt} defaultOpen={false}>
           <div className="pt-4">
             {influencer.coupons && influencer.coupons.length > 0 && influencer.coupons[0].totalSales > 0 ? (
@@ -1084,7 +1084,7 @@ export default function InfluencerDetailPage() {
                   </>
                 ) : (
                   <>
-                    🔄 {getAdvanceButtonText(influencer.status)}
+                    {getAdvanceButtonText(influencer.status)}
                   </>
                 )}
               </button>

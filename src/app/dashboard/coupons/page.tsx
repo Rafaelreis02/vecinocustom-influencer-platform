@@ -143,7 +143,7 @@ export default function CouponsPage() {
           className={styles.primaryBtn}
           onClick={() => setShowForm(!showForm)}
         >
-          {showForm ? '✖️ Cancelar' : '➕ Novo Cupom'}
+          {showForm ? 'Cancelar' : 'Novo Cupom'}
         </button>
       </div>
 

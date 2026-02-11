@@ -55,7 +55,7 @@ export async function POST(request: Request, { params }: any) {
           email: email.from,
           status: 'IMPORT_PENDING',
           createdById: defaultUser.id,
-          notes: `🔔 Contactou-nos por email: ${email.subject}`,
+          notes: `Contactou-nos por email: ${email.subject}`,
         },
       });
 

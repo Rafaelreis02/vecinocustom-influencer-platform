@@ -454,7 +454,7 @@ export default function CampaignDetailPage() {
                         onClick={() => handleUpdateCost(video.id)}
                         className="px-2 py-1 text-xs bg-black text-white rounded hover:bg-gray-800"
                       >
-                        ✓
+                        
                       </button>
                     </div>
                   ) : (

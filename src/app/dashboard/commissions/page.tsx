@@ -204,12 +204,12 @@ export default function CommissionsPage() {
                         )}
                         {order.status === 'approved' && (
                           <span className={`${styles.badge} ${styles.badgeApproved}`}>
-                            ✓ Aprovada
+                            Aprovada
                           </span>
                         )}
                         {order.status === 'rejected' && (
                           <span className={`${styles.badge} ${styles.badgeRejected}`}>
-                            ✗ Rejeitada
+                            Rejeitada
                           </span>
                         )}
                       </div>

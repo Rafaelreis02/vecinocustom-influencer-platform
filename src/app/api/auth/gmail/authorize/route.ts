@@ -51,7 +51,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       success: true,
       authUrl: authorizeUrl,
-      instruction: '👉 Click the link below to authorize Gmail access:',
+      instruction: 'Click the link below to authorize Gmail access:',
     });
   } catch (error: any) {
     console.error('[GMAIL OAUTH ERROR]', error.message);
