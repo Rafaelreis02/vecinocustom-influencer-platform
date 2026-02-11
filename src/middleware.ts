@@ -1,34 +1,33 @@
+import { withAuth } from 'next-auth/middleware';
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
 
-// Simple auth middleware - protect dashboard and API routes
-export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-
-  // Public routes (allow without auth)
-  const publicRoutes = [
-    '/',
-    '/login',
-    '/api/portal', // Portal routes are public (use token auth)
-  ];
-
-  const isPublic = publicRoutes.some(route => pathname.startsWith(route));
-  
-  if (isPublic) {
+export default withAuth(
+  function middleware(req) {
     return NextResponse.next();
+  },
+  {
+    callbacks: {
+      authorized: ({ token, req }) => {
+        const { pathname } = req.nextUrl;
+
+        // Public routes
+        if (pathname === '/' || pathname === '/login' || pathname.startsWith('/api/portal')) {
+          return true;
+        }
+
+        // Protected routes require token
+        if (pathname.startsWith('/dashboard') || pathname.startsWith('/api')) {
+          return !!token;
+        }
+
+        return true;
+      },
+    },
+    pages: {
+      signIn: '/login',
+    },
   }
-
-  // For now, allow all requests (TODO: implement proper auth)
-  // Once NextAuth is set up, check for session here
-  
-  // Example with NextAuth:
-  // const token = request.cookies.get('next-auth.session-token');
-  // if (!token && pathname.startsWith('/dashboard')) {
-  //   return NextResponse.redirect(new URL('/login', request.url));
-  // }
-
-  return NextResponse.next();
-}
+);
 
 export const config = {
   matcher: [
