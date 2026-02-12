@@ -1,6 +1,5 @@
 'use client';
 
-import { Badge } from '@/components/ui/badge';
 import { MessageCircle, Users, Video, Award, Gift, FileText, X } from 'lucide-react';
 
 interface InfluencerPanelProps {
@@ -40,7 +39,7 @@ export function InfluencerPanel({ influencer, onClose }: InfluencerPanelProps) {
       {/* Status */}
       <div className="space-y-2">
         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status</p>
-        <Badge className="bg-blue-100 text-blue-600 border-0">{influencer.status || 'Não definido'}</Badge>
+        <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-blue-100 text-blue-600 text-xs font-semibold">{influencer.status || 'Não definido'}</span>
       </div>
 
       {/* Redes Sociais */}
