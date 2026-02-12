@@ -226,6 +226,8 @@ export default function MessagesPage() {
   async function associateInfluencer(influencerId: string, influencerEmail?: string | null) {
     if (!selectedEmail) return;
     
+    let shouldUpdateEmail = false;
+    
     // Verificar se influencer já tem email diferente
     if (influencerEmail && influencerEmail !== selectedEmail.from) {
       const shouldReplace = window.confirm(
@@ -234,6 +236,10 @@ export default function MessagesPage() {
         `SIM = Substituir\nNÃO = Cancelar`
       );
       if (!shouldReplace) return;
+      shouldUpdateEmail = true; // User confirmou substituição
+    } else if (!influencerEmail) {
+      // Influencer não tem email, vamos adicionar
+      shouldUpdateEmail = true;
     }
     
     try {
@@ -245,15 +251,21 @@ export default function MessagesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ influencerId }),
       });
-      if (!res.ok) throw new Error('Failed to associate');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to associate');
+      }
       
-      // 2. Se influencer não tinha email, atualizar com email do remetente
-      if (!influencerEmail) {
-        await fetch(`/api/influencers/${influencerId}`, {
+      // 2. Atualizar email do influencer se necessário
+      if (shouldUpdateEmail) {
+        const updateRes = await fetch(`/api/influencers/${influencerId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: selectedEmail.from }),
         });
+        if (!updateRes.ok) {
+          console.warn('Failed to update influencer email, but association succeeded');
+        }
       }
       
       // 3. Refresh email details
@@ -267,7 +279,7 @@ export default function MessagesPage() {
       setInfluencerSearchQuery('');
     } catch (error) {
       console.error('Error associating influencer:', error);
-      addToast('Erro ao associar influencer', 'error');
+      addToast(`Erro ao associar influencer: ${error instanceof Error ? error.message : 'Erro desconhecido'}`, 'error');
     } finally {
       setAssociatingInfluencer(false);
     }
@@ -280,6 +292,7 @@ export default function MessagesPage() {
       setImportingInfluencer(true);
       
       // 1. Analisar perfil
+      addToast('A analisar perfil...', 'info');
       const analyzeRes = await fetch('/api/worker/analyze-influencer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -289,44 +302,69 @@ export default function MessagesPage() {
         }),
       });
       
-      if (!analyzeRes.ok) throw new Error('Failed to analyze');
+      if (!analyzeRes.ok) {
+        const errorData = await analyzeRes.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Falha ao analisar perfil');
+      }
       const analysisData = await analyzeRes.json();
       
       // 2. Criar influencer com email do remetente
+      addToast('A criar influencer...', 'info');
+      
+      // Build data object dynamically to avoid empty strings
+      const influencerData: any = {
+        name: analysisData.handle || newInfluencerHandle,
+        email: selectedEmail.from,
+        engagementRate: analysisData.engagement,
+        averageViews: analysisData.averageViews,
+        totalLikes: analysisData.totalLikes,
+        fitScore: analysisData.fitScore,
+        tier: analysisData.tier,
+        niche: analysisData.niche,
+        status: 'ANALYZING',
+        primaryPlatform: newInfluencerPlatform,
+        language: 'PT',
+      };
+      
+      // Only add avatar if exists
+      if (analysisData.avatar) {
+        influencerData.avatarUrl = analysisData.avatar;
+      }
+      
+      // Only add the correct platform handle
+      if (newInfluencerPlatform === 'TIKTOK') {
+        influencerData.tiktokHandle = newInfluencerHandle;
+      } else if (newInfluencerPlatform === 'INSTAGRAM') {
+        influencerData.instagramHandle = newInfluencerHandle;
+      }
+      
       const createRes = await fetch('/api/influencers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: newInfluencerHandle,
-          email: selectedEmail.from,
-          tiktokHandle: newInfluencerPlatform === 'TIKTOK' ? newInfluencerHandle : '',
-          instagramHandle: newInfluencerPlatform === 'INSTAGRAM' ? newInfluencerHandle : '',
-          avatarUrl: analysisData.avatar,
-          engagementRate: analysisData.engagement,
-          averageViews: analysisData.averageViews,
-          totalLikes: analysisData.totalLikes,
-          fitScore: analysisData.fitScore,
-          tier: analysisData.tier,
-          niche: analysisData.niche,
-          status: 'ANALYZING',
-          primaryPlatform: newInfluencerPlatform,
-          language: 'PT',
-        }),
+        body: JSON.stringify(influencerData),
       });
       
-      if (!createRes.ok) throw new Error('Failed to create');
+      if (!createRes.ok) {
+        const errorData = await createRes.json().catch(() => ({}));
+        throw new Error(errorData.error || errorData.message || 'Falha ao criar influencer');
+      }
       const newInfluencer = await createRes.json();
       
       // 3. Associar ao email
+      addToast('A associar ao email...', 'info');
       const associateRes = await fetch(`/api/emails/${selectedEmail.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ influencerId: newInfluencer.id }),
       });
       
-      if (!associateRes.ok) throw new Error('Failed to associate');
+      if (!associateRes.ok) {
+        const errorData = await associateRes.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Falha ao associar ao email');
+      }
       
-      // 4. Refresh
+      // 4. Refresh com dados completos
+      addToast('A atualizar...', 'info');
       const emailRes = await fetch(`/api/emails/${selectedEmail.id}`);
       const emailData = await emailRes.json();
       setSelectedEmail(emailData);
@@ -335,9 +373,10 @@ export default function MessagesPage() {
       addToast('Influencer criado e associado com sucesso!', 'success');
       setShowInfluencerModal(false);
       setNewInfluencerHandle('');
+      setActiveModalTab('existing');
     } catch (error) {
       console.error('Error creating influencer:', error);
-      addToast('Erro ao criar influencer', 'error');
+      addToast(`Erro: ${error instanceof Error ? error.message : 'Erro desconhecido'}`, 'error');
     } finally {
       setImportingInfluencer(false);
     }
@@ -895,7 +934,16 @@ export default function MessagesPage() {
                 </div>
               ) : (
                 /* TAB: Criar Novo Influencer */
-                <div className="space-y-4">
+                <div className="space-y-4 relative">
+                  {/* Loading Overlay */}
+                  {importingInfluencer && (
+                    <div className="absolute inset-0 bg-white/90 z-10 flex flex-col items-center justify-center rounded-lg">
+                      <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-3" />
+                      <p className="text-sm font-semibold text-slate-700">A importar influencer...</p>
+                      <p className="text-xs text-slate-400 mt-1">Isto pode levar alguns segundos</p>
+                    </div>
+                  )}
+                  
                   <p className="text-sm text-slate-600">
                     Importa um influencer do TikTok ou Instagram e associa automaticamente a este email.
                   </p>
@@ -906,7 +954,8 @@ export default function MessagesPage() {
                     <div className="flex gap-2">
                       <button
                         onClick={() => setNewInfluencerPlatform('TIKTOK')}
-                        className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition ${
+                        disabled={importingInfluencer}
+                        className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition disabled:opacity-50 ${
                           newInfluencerPlatform === 'TIKTOK' 
                             ? 'bg-black text-white' 
                             : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -916,7 +965,8 @@ export default function MessagesPage() {
                       </button>
                       <button
                         onClick={() => setNewInfluencerPlatform('INSTAGRAM')}
-                        className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition ${
+                        disabled={importingInfluencer}
+                        className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition disabled:opacity-50 ${
                           newInfluencerPlatform === 'INSTAGRAM' 
                             ? 'bg-black text-white' 
                             : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -937,7 +987,8 @@ export default function MessagesPage() {
                         placeholder={`username no ${newInfluencerPlatform.toLowerCase()}`}
                         value={newInfluencerHandle}
                         onChange={(e) => setNewInfluencerHandle(e.target.value.replace('@', ''))}
-                        className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-r-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                        disabled={importingInfluencer}
+                        className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-r-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-slate-50"
                       />
                     </div>
                   </div>
@@ -952,7 +1003,7 @@ export default function MessagesPage() {
                     {importingInfluencer ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        A importar...
+                        A processar...
                       </>
                     ) : (
                       <>
