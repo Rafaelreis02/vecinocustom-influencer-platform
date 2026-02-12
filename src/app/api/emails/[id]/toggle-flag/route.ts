@@ -5,12 +5,14 @@ import { logger } from '@/lib/logger';
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const { params } = context;
+  const { id } = await params;
   try {
     // Fetch current email to toggle flag
     const email = await prisma.email.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!email) {
@@ -21,7 +23,7 @@ export async function PATCH(
     }
 
     const updated = await prisma.email.update({
-      where: { id: params.id },
+      where: { id },
       data: { isFlagged: !email.isFlagged },
     });
 

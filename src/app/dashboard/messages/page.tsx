@@ -201,6 +201,19 @@ export default function MessagesPage() {
     }
   }
 
+  async function deleteEmail(emailId: string) {
+    if (!window.confirm('Tem certeza que quer eliminar este email?')) return;
+    try {
+      const res = await fetch(`/api/emails/${emailId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error();
+      setSelectedEmail(null);
+      fetchEmails();
+      addToast('Email eliminado', 'success');
+    } catch (error: any) {
+      addToast('Erro ao eliminar email', 'error');
+    }
+  }
+
   const filteredList = emails.filter(e => {
     if (filter === 'unread' && e.isRead) return false;
     if (filter === 'flagged' && !e.isFlagged) return false;
@@ -266,6 +279,7 @@ export default function MessagesPage() {
                 <p className={`text-sm line-clamp-1 ${!email.isRead ? 'font-bold text-slate-900' : 'text-slate-600'}`}>{email.subject}</p>
                 {email.influencer && <div className="mt-2 inline-flex items-center px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-bold uppercase tracking-tight">{email.influencer.name}</div>}
               </div>
+              </div>
             ))
           )}
         </div>
@@ -297,12 +311,19 @@ export default function MessagesPage() {
               
               <div className="flex gap-2">
                 <button 
+                  onClick={() => toggleEmailRead(selectedEmail.id, selectedEmail.isRead)}
+                  className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-semibold text-sm transition"
+                  title={selectedEmail.isRead ? 'Marcar como não-lido' : 'Marcar como lido'}
+                >
+                  {selectedEmail.isRead ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+                <button 
                   onClick={() => setShowReplyPanel(true)}
                   className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition shadow-lg active:scale-95"
                 >
                   <Reply className="h-4 w-4" /> Responder
                 </button>
-                <button onClick={() => window.confirm('Eliminar esta conversa?') && fetch(`/api/emails/${selectedEmail.id}`, { method: 'DELETE' }).then(() => setSelectedEmail(null))} className="p-2.5 text-slate-300 hover:text-red-500 transition-colors">
+                <button onClick={() => deleteEmail(selectedEmail.id)} className="p-2.5 text-slate-300 hover:text-red-500 transition-colors" title="Eliminar">
                   <Trash2 className="h-5 w-5" />
                 </button>
               </div>
