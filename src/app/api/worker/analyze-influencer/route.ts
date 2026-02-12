@@ -3,7 +3,7 @@ import { handleApiError } from '@/lib/api-error';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 import { parseProfile, type ParsedProfile } from '@/lib/apify-fetch';
-import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // Vercel hobby plan limit
@@ -18,10 +18,10 @@ const AnalyzeSchema = z.object({
 });
 
 // ============================================
-// SONNET ANALYSIS
+// AI ANALYSIS (GEMINI FLASH)
 // ============================================
 
-interface SonnetAnalysis {
+interface AIAnalysis {
   fitScore: number;       // 1-5
   niche: string;          // e.g. "Fashion & Lifestyle"
   tier: string;           // nano, micro, macro, mega
@@ -30,13 +30,13 @@ interface SonnetAnalysis {
   summary: string;        // 2-3 paragraph assessment in Portuguese
 }
 
-async function analyzeWithSonnet(
+async function analyzeWithGemini(
   handle: string,
   profile: ParsedProfile
-): Promise<SonnetAnalysis> {
-  const anthropic = new Anthropic({
-    apiKey: process.env.ANTHROPIC_API_KEY || '',
-  });
+): Promise<AIAnalysis> {
+  const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || '');
+  // Using gemini-1.5-flash (stable model, high speed)
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
   // Build video descriptions with URLs from posts (max 5 for Gemini)
   const videoInfo = profile.rawData?.posts && profile.rawData.posts.length > 0
@@ -84,16 +84,8 @@ Avalia o FIT deste influencer com a VecinoCustom. Considera:
   "summary": "<2-3 parágrafos em português: descrição do influencer, análise de fit com VecinoCustom, recomendação>"
 }`;
 
-  const message = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 2048,
-    messages: [{
-      role: 'user',
-      content: prompt,
-    }],
-  });
-
-  const text = message.content[0].type === 'text' ? message.content[0].text : '';
+  const result = await model.generateContent(prompt);
+  const text = result.response.text();
   
   // Extract JSON from response
   const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/```\n([\s\S]*?)\n```/) || text.match(/\{[\s\S]*\}/);
@@ -110,7 +102,7 @@ Avalia o FIT deste influencer com a VecinoCustom. Considera:
       summary: parsed.summary || 'Análise não disponível',
     };
   } catch (e) {
-    logger.warn('Failed to parse Sonnet JSON, using defaults', { handle, text, error: e });
+    logger.warn('Failed to parse Gemini JSON, using defaults', { handle, text, error: e });
     return {
       fitScore: 3,
       niche: 'Desconhecido',
@@ -126,30 +118,20 @@ Avalia o FIT deste influencer com a VecinoCustom. Considera:
 // HANDLER
 // ============================================
 
-/**
- * POST /api/worker/analyze-influencer
- * 
- * Accepts a TikTok/Instagram handle, fetches data via Apify,
- * analyzes with Sonnet, and returns structured data for import.
- */
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { handle, platform } = AnalyzeSchema.parse(body);
 
-    logger.info('Starting influencer analysis', { handle, platform });
-    
-    // Validate environment variables
     if (!process.env.APIFY_TOKEN) {
-      logger.error('APIFY_TOKEN not configured');
       return NextResponse.json(
         { error: 'Apify token não configurado' },
         { status: 500 }
       );
     }
     
-    if (!process.env.ANTHROPIC_API_KEY) {
-      logger.warn('ANTHROPIC_API_KEY not configured, will skip AI analysis');
+    if (!process.env.GOOGLE_API_KEY) {
+      logger.warn('GOOGLE_API_KEY not configured, will skip AI analysis');
     }
 
     // Step 1: Fetch profile data from Apify
@@ -170,19 +152,19 @@ export async function POST(request: Request) {
       );
     }
 
-    // Step 2: Analyze with Claude Sonnet
-    logger.info('Starting Sonnet analysis...', { handle });
-    let analysis: SonnetAnalysis;
+    // Step 2: Analyze with Gemini Flash
+    logger.info('Starting Gemini analysis...', { handle });
+    let analysis: AIAnalysis;
     try {
-      analysis = await analyzeWithSonnet(handle, profile);
-      logger.info('Sonnet analysis complete', { 
+      analysis = await analyzeWithGemini(handle, profile);
+      logger.info('Gemini analysis complete', { 
         handle, 
         fitScore: analysis.fitScore,
         tier: analysis.tier,
       });
-    } catch (sonnetError: any) {
-      logger.error('Sonnet analysis failed, continuing with Apify data only', { handle, error: sonnetError });
-      const errorMsg = sonnetError?.message || 'Erro desconhecido';
+    } catch (geminiError: any) {
+      logger.error('Gemini analysis failed, continuing with Apify data only', { handle, error: geminiError });
+      const errorMsg = geminiError?.message || 'Erro desconhecido';
       analysis = {
         fitScore: 3,
         niche: 'Desconhecido',
@@ -204,9 +186,10 @@ export async function POST(request: Request) {
       averageViews: profile.averageViews,
       biography: profile.biography,
       verified: profile.verified,
+      videoCount: profile.videoCount,
       estimatedPrice: profile.estimatedPrice,
       
-      // From Sonnet
+      // From AI
       fitScore: analysis.fitScore,
       niche: analysis.niche,
       tier: analysis.tier,
