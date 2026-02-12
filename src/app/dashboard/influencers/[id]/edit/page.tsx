@@ -74,10 +74,18 @@ export default function EditInfluencerPage() {
     setSaving(true);
 
     try {
+      // Converte dados antes de enviar
+      const dataToSend = {
+        ...formData,
+        instagramFollowers: formData.instagramFollowers ? parseInt(formData.instagramFollowers) : null,
+        tiktokFollowers: formData.tiktokFollowers ? parseInt(formData.tiktokFollowers) : null,
+        tags: formData.tags ? formData.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+      };
+
       const res = await fetch(`/api/influencers/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(dataToSend),
       });
 
       if (res.ok) {
@@ -86,25 +94,42 @@ export default function EditInfluencerPage() {
         const data = await res.json();
         console.error('Update failed:', data);
         
-        // Mostra erro detalhado
-        let errorMsg = data.error || 'Erro ao atualizar influencer';
+        // Mensagens amigáveis em português
+        const fieldNames: Record<string, string> = {
+          email: 'Email',
+          name: 'Nome',
+          instagramFollowers: 'Seguidores Instagram',
+          tiktokFollowers: 'Seguidores TikTok',
+          phone: 'Telefone',
+          tags: 'Tags',
+          status: 'Status',
+        };
         
-        // Se houver erros de validação Zod, mostra-os
+        const errorMessages: Record<string, string> = {
+          'Invalid email': 'formato inválido (ex: nome@email.com)',
+          'Expected number, received string': 'deve ser um número',
+          'Expected array, received string': 'formato inválido',
+          'Required': 'campo obrigatório',
+        };
+        
+        let errorMsg = 'Erro ao atualizar influencer:\n\n';
+        
         if (data.details && Array.isArray(data.details)) {
-          errorMsg += '\n\n' + data.details.map((d: any) => `${d.field}: ${d.message}`).join('\n');
-        }
-        
-        // Se houver erro específico de campo
-        if (data.message && data.message.includes('email')) {
-          errorMsg = 'Email inválido. Certifica-te que tem formato correto (ex: nome@email.com)';
+          errorMsg += data.details.map((d: any) => {
+            const field = fieldNames[d.field] || d.field;
+            const msg = errorMessages[d.message] || d.message;
+            return `• ${field}: ${msg}`;
+          }).join('\n');
+        } else {
+          errorMsg += data.error || 'Erro desconhecido';
         }
         
         alert(errorMsg);
-        addToast(errorMsg, 'error');
+        addToast('Erro ao atualizar. Verifica os dados.', 'error');
       }
     } catch (error) {
       console.error('Error updating influencer:', error);
-      addToast('Erro ao atualizar influencer. Verifica a consola para detalhes.', 'error');
+      addToast('Erro ao atualizar influencer.', 'error');
     } finally {
       setSaving(false);
     }
