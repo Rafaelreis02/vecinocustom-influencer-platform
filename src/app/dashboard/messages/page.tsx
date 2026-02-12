@@ -268,11 +268,15 @@ export default function MessagesPage() {
         }
       }
       
-      // 3. Refresh email details
+      // 3. Aguardar um momento para o backend processar
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // 4. Refresh email details
       const emailRes = await fetch(`/api/emails/${selectedEmail.id}`);
+      if (!emailRes.ok) throw new Error('Failed to refresh email');
       const emailData = await emailRes.json();
       setSelectedEmail(emailData);
-      fetchEmails();
+      await fetchEmails();
       
       addToast('Influencer associado com sucesso!', 'success');
       setShowInfluencerModal(false);
@@ -363,12 +367,16 @@ export default function MessagesPage() {
         throw new Error(errorData.error || 'Falha ao associar ao email');
       }
       
-      // 4. Refresh com dados completos
+      // 4. Aguardar processamento do backend
       addToast('A atualizar...', 'info');
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      // 5. Refresh com dados completos
       const emailRes = await fetch(`/api/emails/${selectedEmail.id}`);
+      if (!emailRes.ok) throw new Error('Failed to refresh email data');
       const emailData = await emailRes.json();
       setSelectedEmail(emailData);
-      fetchEmails();
+      await fetchEmails();
       
       addToast('Influencer criado e associado com sucesso!', 'success');
       setShowInfluencerModal(false);
