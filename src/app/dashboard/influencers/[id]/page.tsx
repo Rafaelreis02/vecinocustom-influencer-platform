@@ -445,8 +445,16 @@ export default function InfluencerDetailPage() {
       <div className="rounded-lg bg-slate-900 p-6 text-white overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4 sm:mb-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 flex-1">
-            <div className="h-16 w-16 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center text-2xl font-bold shrink-0">
-              {influencer.name[0]}
+            <div className="h-16 w-16 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center text-2xl font-bold shrink-0 overflow-hidden">
+              {influencer.avatarUrl ? (
+                <img 
+                  src={influencer.avatarUrl} 
+                  alt={influencer.name}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                influencer.name[0]
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">

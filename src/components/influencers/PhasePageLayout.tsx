@@ -21,6 +21,7 @@ type Influencer = {
   id: string;
   name: string;
   email: string | null;
+  avatarUrl: string | null;
   instagramHandle: string | null;
   instagramFollowers: number | null;
   tiktokHandle: string | null;
@@ -244,8 +245,16 @@ export default function PhasePageLayout({ phaseId }: PhasePageLayoutProps) {
               <div className="flex items-center justify-between gap-3">
                 {/* Left: Profile */}
                 <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
-                  <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-black flex items-center justify-center text-white font-semibold text-sm sm:text-base shrink-0">
-                    {influencer.name[0]}
+                  <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-black flex items-center justify-center text-white font-semibold text-sm sm:text-base shrink-0 overflow-hidden">
+                    {influencer.avatarUrl ? (
+                      <img 
+                        src={influencer.avatarUrl} 
+                        alt={influencer.name}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      influencer.name[0]
+                    )}
                   </div>
 
                   <div className="flex-1 min-w-0">

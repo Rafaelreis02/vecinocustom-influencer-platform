@@ -43,6 +43,7 @@ export async function GET(request: Request) {
           id: true,
           name: true,
           email: true,
+          avatarUrl: true,
           phone: true,
           instagramHandle: true,
           instagramFollowers: true,
