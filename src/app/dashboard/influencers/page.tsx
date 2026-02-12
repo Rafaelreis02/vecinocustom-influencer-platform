@@ -149,7 +149,18 @@ export default function InfluencersPage() {
     <div className="space-y-6">
       {/* Toast Container */}
       <ToastContainer toasts={toasts} onClose={removeToast} />
-      <ConfirmDialog dialog={dialog} />
+      
+      {/* Confirm Dialog */}
+      <ConfirmDialog 
+        isOpen={dialog.isOpen}
+        title={dialog.title}
+        message={dialog.message}
+        confirmText={dialog.confirmText}
+        cancelText={dialog.cancelText}
+        isDangerous={dialog.isDangerous}
+        onConfirm={dialog.onConfirm}
+        onCancel={dialog.onCancel}
+      />
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
