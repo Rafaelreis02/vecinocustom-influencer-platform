@@ -28,7 +28,7 @@ interface NavigationItem {
 const navigation: NavigationItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Influencers', href: '/dashboard/influencers', icon: Users },
-  // Fases com cor — separador visual antes
+  // Fases com cor -- separador visual antes
   { name: 'Prospeção', href: '/dashboard/influencers/prospecting', icon: Users, dotColor: 'bg-blue-400' },
   { name: 'Negociação', href: '/dashboard/influencers/negotiating', icon: Users, dotColor: 'bg-amber-400' },
   { name: 'Em Curso', href: '/dashboard/influencers/closing', icon: Users, dotColor: 'bg-emerald-400' },
@@ -103,7 +103,12 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
                 )}
               >
                 {item.dotColor ? (
-                  <div className={`h-2.5 w-2.5 rounded-full ${item.dotColor} mb-1`} />
+                  <div className={clsx(
+                    'h-2.5 w-2.5 rounded-full mb-1',
+                    item.dotColor === 'bg-blue-400' && 'bg-blue-400',
+                    item.dotColor === 'bg-amber-400' && 'bg-amber-400',
+                    item.dotColor === 'bg-emerald-400' && 'bg-emerald-400'
+                  )} />
                 ) : (
                   <item.icon className="h-5 w-5 mb-1" />
                 )}
