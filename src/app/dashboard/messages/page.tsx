@@ -68,6 +68,17 @@ export default function MessagesPage() {
     return () => clearInterval(interval);
   }, []);
 
+  // Handle Escape key to close drawer
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && selectedEmail) {
+        setSelectedEmail(null);
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [selectedEmail]);
+
   async function fetchUserSettings() {
     try {
       const res = await fetch('/api/user/settings');
@@ -489,6 +500,7 @@ export default function MessagesPage() {
               role="dialog"
               aria-modal="true"
               aria-labelledby="email-subject-heading"
+              aria-label="Email detail panel"
             >
               {/* Influencer Panel (desktop only) - mesmo conteúdo que já existe */}
               <div className="hidden md:flex w-[30%] min-w-[280px] max-w-[350px] border-r border-gray-200 flex-col h-full overflow-hidden">
