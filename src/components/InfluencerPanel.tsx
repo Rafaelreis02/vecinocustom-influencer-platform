@@ -1,6 +1,7 @@
 'use client';
 
-import { MessageCircle, Users, Video, Award, Gift, FileText, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { MessageCircle, Users, Video, Award, Gift, FileText, X, Loader2 } from 'lucide-react';
 
 interface InfluencerPanelProps {
   influencer?: {
@@ -14,7 +15,50 @@ interface InfluencerPanelProps {
   onClose?: () => void;
 }
 
+interface InfluencerDetails {
+  campaigns?: any[];
+  videos?: any[];
+  coupons?: any[];
+  payments?: any[];
+  stats?: {
+    totalViews?: number;
+    totalLikes?: number;
+    totalRevenue?: number;
+  };
+}
+
 export function InfluencerPanel({ influencer, onClose }: InfluencerPanelProps) {
+  const [details, setDetails] = useState<InfluencerDetails | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (influencer?.id) {
+      fetchInfluencerDetails();
+    }
+  }, [influencer?.id]);
+
+  async function fetchInfluencerDetails() {
+    if (!influencer?.id) return;
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/influencers/${influencer.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setDetails({
+          campaigns: data.campaigns || [],
+          videos: data.videos || [],
+          coupons: data.coupons || [],
+          payments: data.payments || [],
+          stats: data.stats || {},
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching influencer details:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   if (!influencer) {
     return (
       <div className="h-full bg-slate-50 p-6 flex items-center justify-center text-slate-400">
@@ -80,32 +124,84 @@ export function InfluencerPanel({ influencer, onClose }: InfluencerPanelProps) {
       <div className="space-y-2">
         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
           <MessageCircle className="h-3 w-3" /> Campanhas
+          {loading && <Loader2 className="h-3 w-3 animate-spin ml-1" />}
         </p>
-        <p className="text-xs text-slate-500 bg-slate-50 p-2 rounded-lg">A carregar...</p>
+        {loading ? (
+          <p className="text-xs text-slate-500 bg-slate-50 p-2 rounded-lg">A carregar...</p>
+        ) : details?.campaigns && details.campaigns.length > 0 ? (
+          <div className="space-y-1">
+            {details.campaigns.slice(0, 3).map((camp: any, idx: number) => (
+              <div key={idx} className="p-2 bg-slate-50 rounded-lg text-xs">
+                <span className="font-medium text-slate-700">{camp.campaign?.name || 'Campanha'}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-slate-400 bg-slate-50 p-2 rounded-lg">Sem campanhas</p>
+        )}
       </div>
 
       {/* Histórico de Vídeos */}
       <div className="space-y-2">
         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
           <Video className="h-3 w-3" /> Vídeos
+          {loading && <Loader2 className="h-3 w-3 animate-spin ml-1" />}
         </p>
-        <p className="text-xs text-slate-500 bg-slate-50 p-2 rounded-lg">A carregar...</p>
+        {loading ? (
+          <p className="text-xs text-slate-500 bg-slate-50 p-2 rounded-lg">A carregar...</p>
+        ) : details?.videos && details.videos.length > 0 ? (
+          <div className="space-y-1">
+            {details.videos.slice(0, 3).map((video: any, idx: number) => (
+              <div key={idx} className="p-2 bg-slate-50 rounded-lg text-xs flex justify-between">
+                <span className="truncate text-slate-700">{video.title || 'Vídeo'}</span>
+                {video.views && <span className="text-slate-400">{video.views.toLocaleString()} views</span>}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-slate-400 bg-slate-50 p-2 rounded-lg">Sem vídeos</p>
+        )}
       </div>
 
       {/* Comissões */}
       <div className="space-y-2">
         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
           <Award className="h-3 w-3" /> Comissões
+          {loading && <Loader2 className="h-3 w-3 animate-spin ml-1" />}
         </p>
-        <p className="text-xs text-slate-500 bg-slate-50 p-2 rounded-lg">A carregar...</p>
+        {loading ? (
+          <p className="text-xs text-slate-500 bg-slate-50 p-2 rounded-lg">A carregar...</p>
+        ) : details?.stats?.totalRevenue ? (
+          <p className="text-xs text-slate-700 bg-slate-50 p-2 rounded-lg font-medium">
+            € {details.stats.totalRevenue.toLocaleString()}
+          </p>
+        ) : (
+          <p className="text-xs text-slate-400 bg-slate-50 p-2 rounded-lg">Sem comissões</p>
+        )}
       </div>
 
       {/* Cupom */}
       <div className="space-y-2">
         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
           <Gift className="h-3 w-3" /> Cupom
+          {loading && <Loader2 className="h-3 w-3 animate-spin ml-1" />}
         </p>
-        <p className="text-xs text-slate-500 bg-slate-50 p-2 rounded-lg">A carregar...</p>
+        {loading ? (
+          <p className="text-xs text-slate-500 bg-slate-50 p-2 rounded-lg">A carregar...</p>
+        ) : details?.coupons && details.coupons.length > 0 ? (
+          <div className="space-y-1">
+            {details.coupons.slice(0, 2).map((coupon: any, idx: number) => (
+              <div key={idx} className="p-2 bg-slate-50 rounded-lg text-xs">
+                <span className="font-mono text-slate-700">{coupon.code}</span>
+                {coupon.usageCount > 0 && (
+                  <span className="text-slate-400 ml-2">{coupon.usageCount} usos</span>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-slate-400 bg-slate-50 p-2 rounded-lg">Sem cupom</p>
+        )}
       </div>
 
       {/* Notas */}
