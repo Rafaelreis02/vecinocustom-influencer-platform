@@ -274,11 +274,11 @@ export default function MessagesPage() {
   const currentEmails = filteredList.slice((currentPage - 1) * emailsPerPage, currentPage * emailsPerPage);
 
   return (
-    <div className="flex h-[calc(100vh-theme(spacing.16))] bg-white overflow-hidden text-slate-900 font-sans">
+    <div className="h-[calc(100vh-64px)] bg-white overflow-hidden text-slate-900 font-sans">
       {/* Container Principal - Lista + Collapsive */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="h-full flex">
         {/* Lista de Mensagens */}
-        <div className={`${selectedEmail ? 'hidden md:flex md:w-[500px] lg:w-[600px] xl:w-[700px]' : 'flex w-full'} flex-col border-r border-gray-200 bg-white shadow-sm z-10`}>
+        <div className={`${selectedEmail ? 'hidden md:flex md:w-[500px] lg:w-[600px] xl:w-[700px]' : 'flex w-full'} h-full flex-col border-r border-gray-200 bg-white shadow-sm z-10`}>
           {/* Header com Dropdowns */}
           <div className="p-3 border-b border-gray-200 space-y-3">
             <div className="relative">
@@ -474,9 +474,9 @@ export default function MessagesPage() {
 
         {/* Collapsive Direito - Quando Email Selecionado */}
         {selectedEmail && (
-          <div className="fixed inset-0 md:static md:flex-1 flex bg-white z-50 md:z-10 animate-in slide-in-from-right duration-300">
+          <div className="fixed inset-0 md:static md:flex-1 md:h-full flex bg-white z-50 md:z-10 animate-in slide-in-from-right duration-300">
             {/* Influencer Panel (30%) */}
-            <div className="hidden md:flex w-[30%] min-w-[280px] max-w-[350px] border-r border-gray-200 flex-col h-full">
+            <div className="hidden md:flex w-[30%] min-w-[280px] max-w-[350px] border-r border-gray-200 flex-col">
               {selectedEmail.influencer ? (
                 <InfluencerPanel influencer={selectedEmail.influencer} />
               ) : (
