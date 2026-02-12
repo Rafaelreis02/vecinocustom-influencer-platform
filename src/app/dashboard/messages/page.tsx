@@ -175,6 +175,32 @@ export default function MessagesPage() {
     }
   }
 
+  async function toggleEmailFlag(emailId: string) {
+    try {
+      const res = await fetch(`/api/emails/${emailId}/toggle-flag`, {
+        method: 'PATCH',
+      });
+      if (!res.ok) throw new Error();
+      fetchEmails();
+    } catch (error: any) {
+      addToast('Erro ao marcar flag', 'error');
+    }
+  }
+
+  async function toggleEmailRead(emailId: string, isRead: boolean) {
+    try {
+      const res = await fetch(`/api/emails/${emailId}/mark-read`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isRead: !isRead }),
+      });
+      if (!res.ok) throw new Error();
+      fetchEmails();
+    } catch (error: any) {
+      addToast('Erro ao marcar lido/não-lido', 'error');
+    }
+  }
+
   const filteredList = emails.filter(e => {
     if (filter === 'unread' && e.isRead) return false;
     if (filter === 'flagged' && !e.isFlagged) return false;
@@ -228,7 +254,11 @@ export default function MessagesPage() {
              <div className="p-8 text-center text-slate-400 text-sm">Nenhuma mensagem encontrada</div>
           ) : (
             currentEmails.map(email => (
-              <div key={email.id} onClick={() => handleEmailClick(email)} className={`p-4 cursor-pointer hover:bg-slate-50 transition border-l-4 ${selectedEmail?.id === email.id ? 'bg-blue-50/50 border-l-blue-600' : 'border-l-transparent'} ${!email.isRead ? 'bg-blue-50/30' : ''}`}>
+              <div key={email.id} onClick={() => handleEmailClick(email)} className={`p-3 cursor-pointer hover:bg-slate-50 transition border-l-4 flex items-center gap-2 ${selectedEmail?.id === email.id ? 'bg-blue-50/50 border-l-blue-600' : 'border-l-transparent'} ${!email.isRead ? 'bg-blue-50/30 font-semibold' : ''}`}>
+                <button onClick={(e) => { e.stopPropagation(); toggleEmailFlag(email.id); }} className="p-1 hover:bg-slate-200 rounded" title={email.isFlagged ? 'Remover flag' : 'Adicionar flag'}>
+                  <Flag className={`h-4 w-4 ${email.isFlagged ? 'fill-yellow-400 text-yellow-500' : 'text-slate-300'}`} />
+                </button>
+                <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-start mb-1">
                   <span className={`text-xs truncate max-w-[180px] ${!email.isRead ? 'font-bold text-blue-900' : 'text-slate-500'}`}>{email.from}</span>
                   <span className="text-[10px] text-slate-400 font-medium uppercase">{new Date(email.receivedAt).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}</span>
