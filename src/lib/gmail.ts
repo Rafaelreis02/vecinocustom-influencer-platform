@@ -139,50 +139,71 @@ export async function getMessageDetails(auth: any, messageId: string) {
 
 export async function syncEmails(auth: any) {
   try {
-    console.log('[GMAIL SYNC] Starting email sync...');
+    console.log('[GMAIL SYNC] Starting incremental email sync...');
     let totalSynced = 0;
 
-    // Fetch emails (first page only for now)
-    const { emails } = await fetchEmails(auth);
+    // 1. Encontrar a data do último email recebido na DB
+    const lastEmail = await prisma.email.findFirst({
+      orderBy: { receivedAt: 'desc' },
+      select: { receivedAt: true }
+    });
 
-    for (const emailData of emails) {
-      // Find influencer by email
-      const influencer = await prisma.influencer.findFirst({
-        where: {
-          email: emailData.from,
-        },
-      });
-
-      // Check if email already exists
-      const existingEmail = await prisma.email.findFirst({
-        where: {
-          gmailId: emailData.gmailId,
-        },
-      });
-
-      if (!existingEmail) {
-        await prisma.email.create({
-          data: {
-            gmailId: emailData.gmailId,
-            gmailThreadId: emailData.gmailThreadId,
-            from: emailData.from,
-            to: emailData.to,
-            subject: emailData.subject,
-            body: emailData.body,
-            htmlBody: emailData.htmlBody,
-            attachments: emailData.attachments,
-            receivedAt: emailData.receivedAt,
-            labels: emailData.labels,
-            influencerId: influencer?.id || null,
-          },
-        });
-
-        totalSynced++;
-        console.log(`[GMAIL SYNC] Synced: ${emailData.subject} from ${emailData.from}`);
-      }
+    // 2. Construir query de busca (só novos ou não lidos)
+    let query = 'is:unread';
+    if (lastEmail) {
+      // Adicionar filtro de data (Gmail usa segundos Unix para after:)
+      const afterTimestamp = Math.floor(lastEmail.receivedAt.getTime() / 1000);
+      query = `after:${afterTimestamp}`;
     }
 
-    console.log(`[GMAIL SYNC] Complete! Synced ${totalSynced} new emails.`);
+    // 3. Buscar lista de mensagens
+    const res = await gmail.users.messages.list({
+      userId: 'me',
+      auth,
+      q: query,
+      maxResults: 250, // Carregar até 250 de uma vez
+    });
+
+    const messages = res.data.messages || [];
+    console.log(`[GMAIL SYNC] Found ${messages.length} potential new messages.`);
+
+    for (const msg of messages) {
+      // Check if email already exists to avoid duplicates
+      const existingEmail = await prisma.email.findFirst({
+        where: { gmailId: msg.id! },
+      });
+
+      if (existingEmail) continue;
+
+      // Fetch full message content
+      const emailData = await getMessageDetails(auth, msg.id!);
+
+      // Find influencer by email
+      const influencer = await prisma.influencer.findFirst({
+        where: { email: emailData.from },
+      });
+
+      await prisma.email.create({
+        data: {
+          gmailId: emailData.gmailId,
+          gmailThreadId: emailData.gmailThreadId,
+          from: emailData.from,
+          to: emailData.to,
+          subject: emailData.subject,
+          body: emailData.body,
+          htmlBody: emailData.htmlBody,
+          attachments: emailData.attachments,
+          receivedAt: emailData.receivedAt,
+          labels: emailData.labels,
+          influencerId: influencer?.id || null,
+        },
+      });
+
+      totalSynced++;
+      console.log(`[GMAIL SYNC] New email: ${emailData.subject}`);
+    }
+
+    console.log(`[GMAIL SYNC] Success! ${totalSynced} emails added.`);
     return totalSynced;
   } catch (error: any) {
     console.error('[GMAIL SYNC ERROR]', error.message);
