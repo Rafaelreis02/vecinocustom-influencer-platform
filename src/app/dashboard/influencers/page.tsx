@@ -148,7 +148,7 @@ export default function InfluencersPage() {
   return (
     <div className="space-y-6">
       {/* Toast Container */}
-      <ToastContainer toasts={toasts} onRemove={removeToast} />
+      <ToastContainer toasts={toasts} onClose={removeToast} />
       <ConfirmDialog dialog={dialog} />
 
       {/* Header */}
