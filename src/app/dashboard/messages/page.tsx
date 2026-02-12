@@ -43,8 +43,16 @@ export default function MessagesPage() {
   const [showInboxDropdown, setShowInboxDropdown] = useState(false);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [showInfluencerModal, setShowInfluencerModal] = useState(false);
-  const [availableInfluencers, setAvailableInfluencers] = useState<{id: string, name: string}[]>([]);
+  const [activeModalTab, setActiveModalTab] = useState<'existing' | 'new'>('existing');
+  const [availableInfluencers, setAvailableInfluencers] = useState<{id: string, name: string, email?: string | null, avatarUrl?: string | null}[]>([]);
+  const [filteredInfluencers, setFilteredInfluencers] = useState<{id: string, name: string, email?: string | null, avatarUrl?: string | null}[]>([]);
+  const [influencerSearchQuery, setInfluencerSearchQuery] = useState('');
   const [associatingInfluencer, setAssociatingInfluencer] = useState(false);
+  
+  // Novo influencer
+  const [newInfluencerHandle, setNewInfluencerHandle] = useState('');
+  const [newInfluencerPlatform, setNewInfluencerPlatform] = useState<'TIKTOK' | 'INSTAGRAM'>('TIKTOK');
+  const [importingInfluencer, setImportingInfluencer] = useState(false);
   
   // Paginação
   const [currentPage, setCurrentPage] = useState(1);
@@ -183,25 +191,72 @@ export default function MessagesPage() {
     try {
       const res = await fetch('/api/influencers?limit=100');
       const data = await res.json();
-      setAvailableInfluencers(data.influencers?.map((i: any) => ({ id: i.id, name: i.name })) || []);
+      // API returns { data: [...] } not { influencers: [...] }
+      const influencers = data.data || [];
+      const mapped = influencers.map((i: any) => ({ 
+        id: i.id, 
+        name: i.name,
+        email: i.email,
+        avatarUrl: i.avatarUrl
+      }));
+      setAvailableInfluencers(mapped);
+      setFilteredInfluencers(mapped);
       setShowInfluencerModal(true);
     } catch (error) {
+      console.error('Error loading influencers:', error);
       addToast('Erro ao carregar influencers', 'error');
     }
   }
 
-  async function associateInfluencer(influencerId: string) {
+  // Filtrar influencers quando pesquisa muda
+  useEffect(() => {
+    if (!influencerSearchQuery.trim()) {
+      setFilteredInfluencers(availableInfluencers);
+    } else {
+      const q = influencerSearchQuery.toLowerCase();
+      setFilteredInfluencers(
+        availableInfluencers.filter(i => 
+          i.name.toLowerCase().includes(q) || 
+          (i.email && i.email.toLowerCase().includes(q))
+        )
+      );
+    }
+  }, [influencerSearchQuery, availableInfluencers]);
+
+  async function associateInfluencer(influencerId: string, influencerEmail?: string | null) {
     if (!selectedEmail) return;
+    
+    // Verificar se influencer já tem email diferente
+    if (influencerEmail && influencerEmail !== selectedEmail.from) {
+      const shouldReplace = window.confirm(
+        `Este influencer já tem email: ${influencerEmail}\n\n` +
+        `Queres substituir por: ${selectedEmail.from}?\n\n` +
+        `SIM = Substituir\nNÃO = Cancelar`
+      );
+      if (!shouldReplace) return;
+    }
+    
     try {
       setAssociatingInfluencer(true);
+      
+      // 1. Associar influencer ao email
       const res = await fetch(`/api/emails/${selectedEmail.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ influencerId }),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) throw new Error('Failed to associate');
       
-      // Refresh email details
+      // 2. Se influencer não tinha email, atualizar com email do remetente
+      if (!influencerEmail) {
+        await fetch(`/api/influencers/${influencerId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: selectedEmail.from }),
+        });
+      }
+      
+      // 3. Refresh email details
       const emailRes = await fetch(`/api/emails/${selectedEmail.id}`);
       const emailData = await emailRes.json();
       setSelectedEmail(emailData);
@@ -209,10 +264,82 @@ export default function MessagesPage() {
       
       addToast('Influencer associado com sucesso!', 'success');
       setShowInfluencerModal(false);
+      setInfluencerSearchQuery('');
     } catch (error) {
+      console.error('Error associating influencer:', error);
       addToast('Erro ao associar influencer', 'error');
     } finally {
       setAssociatingInfluencer(false);
+    }
+  }
+
+  async function createAndAssociateInfluencer() {
+    if (!selectedEmail || !newInfluencerHandle.trim()) return;
+    
+    try {
+      setImportingInfluencer(true);
+      
+      // 1. Analisar perfil
+      const analyzeRes = await fetch('/api/worker/analyze-influencer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          handle: newInfluencerHandle,
+          platform: newInfluencerPlatform,
+        }),
+      });
+      
+      if (!analyzeRes.ok) throw new Error('Failed to analyze');
+      const analysisData = await analyzeRes.json();
+      
+      // 2. Criar influencer com email do remetente
+      const createRes = await fetch('/api/influencers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newInfluencerHandle,
+          email: selectedEmail.from,
+          tiktokHandle: newInfluencerPlatform === 'TIKTOK' ? newInfluencerHandle : '',
+          instagramHandle: newInfluencerPlatform === 'INSTAGRAM' ? newInfluencerHandle : '',
+          avatarUrl: analysisData.avatar,
+          engagementRate: analysisData.engagement,
+          averageViews: analysisData.averageViews,
+          totalLikes: analysisData.totalLikes,
+          fitScore: analysisData.fitScore,
+          tier: analysisData.tier,
+          niche: analysisData.niche,
+          status: 'ANALYZING',
+          primaryPlatform: newInfluencerPlatform,
+          language: 'PT',
+        }),
+      });
+      
+      if (!createRes.ok) throw new Error('Failed to create');
+      const newInfluencer = await createRes.json();
+      
+      // 3. Associar ao email
+      const associateRes = await fetch(`/api/emails/${selectedEmail.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ influencerId: newInfluencer.id }),
+      });
+      
+      if (!associateRes.ok) throw new Error('Failed to associate');
+      
+      // 4. Refresh
+      const emailRes = await fetch(`/api/emails/${selectedEmail.id}`);
+      const emailData = await emailRes.json();
+      setSelectedEmail(emailData);
+      fetchEmails();
+      
+      addToast('Influencer criado e associado com sucesso!', 'success');
+      setShowInfluencerModal(false);
+      setNewInfluencerHandle('');
+    } catch (error) {
+      console.error('Error creating influencer:', error);
+      addToast('Erro ao criar influencer', 'error');
+    } finally {
+      setImportingInfluencer(false);
     }
   }
 
@@ -674,31 +801,170 @@ export default function MessagesPage() {
       {/* Modal para associar influencer */}
       {showInfluencerModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col">
-            <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-              <h3 className="font-bold text-slate-900">Associar Influencer</h3>
-              <button onClick={() => setShowInfluencerModal(false)} className="p-1 hover:bg-slate-100 rounded-lg">
-                <X className="h-5 w-5 text-slate-400" />
-              </button>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col">
+            {/* Header com Tabs */}
+            <div className="p-4 border-b border-slate-200">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-slate-900">Associar Influencer</h3>
+                <button onClick={() => {setShowInfluencerModal(false); setInfluencerSearchQuery('');}} className="p-1 hover:bg-slate-100 rounded-lg">
+                  <X className="h-5 w-5 text-slate-400" />
+                </button>
+              </div>
+              
+              {/* Tabs */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setActiveModalTab('existing')}
+                  className={`flex-1 py-2 px-4 rounded-lg text-sm font-semibold transition ${
+                    activeModalTab === 'existing' 
+                      ? 'bg-blue-100 text-blue-700' 
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  Existente
+                </button>
+                <button
+                  onClick={() => setActiveModalTab('new')}
+                  className={`flex-1 py-2 px-4 rounded-lg text-sm font-semibold transition ${
+                    activeModalTab === 'new' 
+                      ? 'bg-blue-100 text-blue-700' 
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  Criar Novo
+                </button>
+              </div>
             </div>
+            
+            {/* Conteúdo */}
             <div className="flex-1 overflow-y-auto p-4">
-              {availableInfluencers.length === 0 ? (
-                <p className="text-center text-slate-400 py-8">Nenhum influencer encontrado</p>
+              {activeModalTab === 'existing' ? (
+                /* TAB: Influencer Existente */
+                <div className="space-y-3">
+                  {/* Search */}
+                  <div className="relative">
+                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Pesquisar por nome..."
+                      value={influencerSearchQuery}
+                      onChange={(e) => setInfluencerSearchQuery(e.target.value)}
+                      className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
+                  
+                  {/* Lista de influencers */}
+                  {filteredInfluencers.length === 0 ? (
+                    <div className="text-center py-8">
+                      <p className="text-slate-400 text-sm">
+                        {influencerSearchQuery ? 'Nenhum influencer encontrado' : 'Nenhum influencer registado'}
+                      </p>
+                      <p className="text-slate-400 text-xs mt-1">
+                        Cria um novo influencer na outra tab
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+                      {filteredInfluencers.map(inf => (
+                        <button
+                          key={inf.id}
+                          onClick={() => associateInfluencer(inf.id, inf.email)}
+                          disabled={associatingInfluencer}
+                          className="w-full flex items-center gap-3 p-3 hover:bg-slate-50 rounded-xl transition text-left border border-slate-100 disabled:opacity-50"
+                        >
+                          {inf.avatarUrl ? (
+                            <img src={inf.avatarUrl} alt={inf.name} className="w-10 h-10 rounded-full object-cover" />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-bold text-sm">
+                              {inf.name.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <span className="font-semibold text-slate-700 block truncate">{inf.name}</span>
+                            {inf.email && (
+                              <span className="text-xs text-slate-400 truncate block">{inf.email}</span>
+                            )}
+                          </div>
+                          {associatingInfluencer && (
+                            <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               ) : (
-                <div className="space-y-2">
-                  {availableInfluencers.map(inf => (
-                    <button
-                      key={inf.id}
-                      onClick={() => associateInfluencer(inf.id)}
-                      disabled={associatingInfluencer}
-                      className="w-full flex items-center gap-3 p-3 hover:bg-slate-50 rounded-xl transition text-left border border-slate-100"
-                    >
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-bold text-sm">
-                        {inf.name.charAt(0).toUpperCase()}
-                      </div>
-                      <span className="font-semibold text-slate-700">{inf.name}</span>
-                    </button>
-                  ))}
+                /* TAB: Criar Novo Influencer */
+                <div className="space-y-4">
+                  <p className="text-sm text-slate-600">
+                    Importa um influencer do TikTok ou Instagram e associa automaticamente a este email.
+                  </p>
+                  
+                  {/* Plataforma */}
+                  <div>
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Plataforma</label>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setNewInfluencerPlatform('TIKTOK')}
+                        className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition ${
+                          newInfluencerPlatform === 'TIKTOK' 
+                            ? 'bg-black text-white' 
+                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                        }`}
+                      >
+                        TikTok
+                      </button>
+                      <button
+                        onClick={() => setNewInfluencerPlatform('INSTAGRAM')}
+                        className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition ${
+                          newInfluencerPlatform === 'INSTAGRAM' 
+                            ? 'bg-black text-white' 
+                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                        }`}
+                      >
+                        Instagram
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* Handle */}
+                  <div>
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Handle do Perfil</label>
+                    <div className="flex gap-2">
+                      <span className="flex items-center px-3 py-2 bg-slate-100 border border-r-0 border-slate-200 rounded-l-lg text-slate-500 font-medium">@</span>
+                      <input
+                        type="text"
+                        placeholder={`username no ${newInfluencerPlatform.toLowerCase()}`}
+                        value={newInfluencerHandle}
+                        onChange={(e) => setNewInfluencerHandle(e.target.value.replace('@', ''))}
+                        className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-r-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Botão Importar */}
+                  <button
+                    onClick={createAndAssociateInfluencer}
+                    disabled={importingInfluencer || !newInfluencerHandle.trim()}
+                    className="w-full py-3 rounded-lg font-bold text-sm text-white transition disabled:opacity-50 flex items-center justify-center gap-2"
+                    style={{ backgroundColor: 'rgb(18,24,39)' }}
+                  >
+                    {importingInfluencer ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        A importar...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-4 w-4" />
+                        Importar e Associar
+                      </>
+                    )}
+                  </button>
+                  
+                  <p className="text-xs text-slate-400 text-center">
+                    O email <strong>{selectedEmail?.from}</strong> será associado automaticamente.
+                  </p>
                 </div>
               )}
             </div>
