@@ -71,13 +71,13 @@ export default function MessagesPage() {
   // Handle Escape key to close drawer
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && selectedEmail) {
+      if (e.key === 'Escape' && selectedEmail && !showInfluencerModal) {
         setSelectedEmail(null);
       }
     };
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
-  }, [selectedEmail]);
+  }, [selectedEmail, showInfluencerModal]);
 
   async function fetchUserSettings() {
     try {
