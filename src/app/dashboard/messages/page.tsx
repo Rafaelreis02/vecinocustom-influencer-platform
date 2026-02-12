@@ -223,20 +223,27 @@ export default function MessagesPage() {
     }
   }, [influencerSearchQuery, availableInfluencers]);
 
+  // Helper para extrair email limpo (remove "Nome <email>" format)
+  function extractEmail(from: string): string {
+    const match = from.match(/<([^>]+)>/);
+    return match ? match[1].trim() : from.trim();
+  }
+
   async function associateInfluencer(influencerId: string, influencerEmail?: string | null) {
     if (!selectedEmail) return;
     
+    const cleanEmail = extractEmail(selectedEmail.from);
     let shouldUpdateEmail = false;
     
     // Verificar se influencer já tem email diferente
-    if (influencerEmail && influencerEmail !== selectedEmail.from) {
+    if (influencerEmail && influencerEmail !== cleanEmail) {
       const shouldReplace = window.confirm(
         `Este influencer já tem email: ${influencerEmail}\n\n` +
-        `Queres substituir por: ${selectedEmail.from}?\n\n` +
+        `Queres substituir por: ${cleanEmail}?\n\n` +
         `SIM = Substituir\nNÃO = Cancelar`
       );
       if (!shouldReplace) return;
-      shouldUpdateEmail = true; // User confirmou substituição
+      shouldUpdateEmail = true;
     } else if (!influencerEmail) {
       // Influencer não tem email, vamos adicionar
       shouldUpdateEmail = true;
@@ -245,7 +252,21 @@ export default function MessagesPage() {
     try {
       setAssociatingInfluencer(true);
       
-      // 1. Associar influencer ao email
+      // 1. PRIMEIRO atualizar email do influencer (ordem importante)
+      if (shouldUpdateEmail) {
+        const updateRes = await fetch(`/api/influencers/${influencerId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: cleanEmail }),
+        });
+        if (!updateRes.ok) {
+          const errorData = await updateRes.json().catch(() => ({}));
+          console.error('Failed to update influencer email:', errorData);
+          throw new Error(errorData.error || errorData.details?.[0]?.message || 'Falha ao atualizar email do influencer');
+        }
+      }
+      
+      // 2. DEPOIS associar influencer ao email
       const res = await fetch(`/api/emails/${selectedEmail.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -256,22 +277,7 @@ export default function MessagesPage() {
         throw new Error(errorData.error || 'Failed to associate');
       }
       
-      // 2. Atualizar email do influencer se necessário
-      if (shouldUpdateEmail) {
-        const updateRes = await fetch(`/api/influencers/${influencerId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: selectedEmail.from }),
-        });
-        if (!updateRes.ok) {
-          console.warn('Failed to update influencer email, but association succeeded');
-        }
-      }
-      
-      // 3. Aguardar um momento para o backend processar
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // 4. Refresh email details
+      // 3. Refresh
       const emailRes = await fetch(`/api/emails/${selectedEmail.id}`);
       if (!emailRes.ok) throw new Error('Failed to refresh email');
       const emailData = await emailRes.json();
@@ -291,6 +297,8 @@ export default function MessagesPage() {
 
   async function createAndAssociateInfluencer() {
     if (!selectedEmail || !newInfluencerHandle.trim()) return;
+    
+    const cleanEmail = extractEmail(selectedEmail.from);
     
     try {
       setImportingInfluencer(true);
@@ -315,60 +323,61 @@ export default function MessagesPage() {
       // 2. Criar influencer com email do remetente
       addToast('A criar influencer...', 'info');
       
-      // Build data object dynamically to avoid empty strings
+      // Build data object - apenas campos válidos
       const influencerData: any = {
         name: analysisData.handle || newInfluencerHandle,
-        email: selectedEmail.from,
+        email: cleanEmail,
         status: 'ANALYZING',
         primaryPlatform: newInfluencerPlatform,
         language: 'PT',
       };
       
-      // Only add numeric fields if they are valid numbers
-      if (analysisData.engagement !== null && analysisData.engagement !== undefined) {
+      // Numeric fields - só adicionar se forem números válidos
+      if (analysisData.engagement != null) {
         const engagement = parseFloat(analysisData.engagement);
-        if (!isNaN(engagement)) {
+        if (!isNaN(engagement) && isFinite(engagement)) {
           influencerData.engagementRate = engagement;
         }
       }
       
-      if (analysisData.totalLikes !== null && analysisData.totalLikes !== undefined) {
+      if (analysisData.totalLikes != null) {
         const likes = Math.round(parseFloat(analysisData.totalLikes));
-        if (!isNaN(likes)) {
+        if (!isNaN(likes) && isFinite(likes) && likes >= 0) {
           influencerData.totalLikes = likes;
         }
       }
       
-      if (analysisData.fitScore !== null && analysisData.fitScore !== undefined) {
+      if (analysisData.fitScore != null) {
         const fit = Math.round(parseFloat(analysisData.fitScore));
-        if (!isNaN(fit)) {
+        if (!isNaN(fit) && isFinite(fit) && fit >= 0) {
           influencerData.fitScore = fit;
         }
       }
       
-      // String fields
-      if (analysisData.averageViews) {
-        influencerData.averageViews = String(analysisData.averageViews);
+      // String fields - só adicionar se não forem vazios
+      if (analysisData.averageViews && String(analysisData.averageViews).trim()) {
+        influencerData.averageViews = String(analysisData.averageViews).trim();
       }
       
-      if (analysisData.tier) {
-        influencerData.tier = String(analysisData.tier);
+      if (analysisData.tier && String(analysisData.tier).trim()) {
+        influencerData.tier = String(analysisData.tier).trim();
       }
       
-      if (analysisData.niche) {
-        influencerData.niche = String(analysisData.niche);
+      if (analysisData.niche && String(analysisData.niche).trim()) {
+        influencerData.niche = String(analysisData.niche).trim();
       }
       
-      // Only add avatar if exists
-      if (analysisData.avatar) {
-        influencerData.avatarUrl = String(analysisData.avatar);
+      // Avatar - só se for URL válida
+      if (analysisData.avatar && String(analysisData.avatar).trim() && 
+          (String(analysisData.avatar).startsWith('http') || String(analysisData.avatar).startsWith('/'))) {
+        influencerData.avatarUrl = String(analysisData.avatar).trim();
       }
       
-      // Only add the correct platform handle
+      // Platform handle
       if (newInfluencerPlatform === 'TIKTOK') {
-        influencerData.tiktokHandle = newInfluencerHandle;
+        influencerData.tiktokHandle = newInfluencerHandle.trim();
       } else if (newInfluencerPlatform === 'INSTAGRAM') {
-        influencerData.instagramHandle = newInfluencerHandle;
+        influencerData.instagramHandle = newInfluencerHandle.trim();
       }
       
       const createRes = await fetch('/api/influencers', {
@@ -379,8 +388,10 @@ export default function MessagesPage() {
       
       if (!createRes.ok) {
         const errorData = await createRes.json().catch(() => ({}));
-        throw new Error(errorData.error || errorData.message || 'Falha ao criar influencer');
+        console.error('Create influencer failed:', errorData);
+        throw new Error(errorData.error || errorData.details?.[0]?.message || 'Falha ao criar influencer');
       }
+      
       const newInfluencer = await createRes.json();
       
       // 3. Associar ao email
@@ -396,11 +407,7 @@ export default function MessagesPage() {
         throw new Error(errorData.error || 'Falha ao associar ao email');
       }
       
-      // 4. Aguardar processamento do backend
-      addToast('A atualizar...', 'info');
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      // 5. Refresh com dados completos
+      // 4. Refresh
       const emailRes = await fetch(`/api/emails/${selectedEmail.id}`);
       if (!emailRes.ok) throw new Error('Failed to refresh email data');
       const emailData = await emailRes.json();
