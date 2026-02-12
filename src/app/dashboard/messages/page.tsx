@@ -474,82 +474,43 @@ export default function MessagesPage() {
 
         {/* Collapsive Direito - Quando Email Selecionado */}
         {selectedEmail && (
-          <>
-            {/* Mobile: Full screen overlay */}
-            <div className="md:hidden fixed inset-0 bg-white z-50 flex flex-col animate-in slide-in-from-right duration-300">
-              {/* Mobile Header com botão fechar */}
-              <div className="p-3 border-b border-gray-200 flex items-center justify-between bg-white">
-                <button onClick={() => setSelectedEmail(null)} className="flex items-center gap-2 text-slate-600">
-                  <ChevronLeft className="h-5 w-5" />
-                  <span className="text-sm font-medium">Voltar</span>
-                </button>
-                <span className="text-sm font-semibold text-slate-900">Email</span>
-                <div className="w-16"></div>
-              </div>
-              {/* Mobile Content */}
-              <div className="flex-1 overflow-y-auto">
-                <div className="p-4">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-bold">
-                      {selectedEmail.from.charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                      <p className="font-bold text-slate-900">{selectedEmail.from}</p>
-                      <p className="text-xs text-slate-400">{new Date(selectedEmail.receivedAt).toLocaleString('pt-PT')}</p>
-                    </div>
+          <div className="absolute inset-0 md:static md:relative md:flex-1 md:h-full flex flex-row bg-white z-50 md:z-10 animate-in slide-in-from-right duration-300">
+            {/* Influencer Panel (30%) - Desktop only */}
+            <div className="hidden md:flex w-[30%] min-w-[280px] max-w-[350px] border-r border-gray-200 flex-col h-full overflow-hidden">
+              {selectedEmail.influencer ? (
+                <InfluencerPanel influencer={selectedEmail.influencer} />
+              ) : (
+                <div className="h-full bg-slate-50 p-6 flex flex-col items-center justify-center text-center space-y-4">
+                  <div className="w-16 h-16 rounded-full bg-slate-200 flex items-center justify-center">
+                    <UserPlus className="h-8 w-8 text-slate-400" />
                   </div>
-                  <h1 className="text-lg font-bold text-slate-900 mb-4">{selectedEmail.subject}</h1>
-                  {selectedEmail.htmlBody ? (
-                    <div className="prose prose-sm max-w-none text-slate-700" dangerouslySetInnerHTML={{ __html: selectedEmail.htmlBody }} />
-                  ) : (
-                    <p className="text-sm text-slate-600 whitespace-pre-wrap">{selectedEmail.body}</p>
-                  )}
+                  <div>
+                    <p className="text-sm font-semibold text-slate-600 mb-1">Sem influencer associado</p>
+                    <p className="text-xs text-slate-400">Adiciona um influencer a este email</p>
+                  </div>
+                  <button 
+                    onClick={openInfluencerModal}
+                    className="px-4 py-2 rounded-lg font-bold text-xs text-white hover:opacity-90 transition"
+                    style={{ backgroundColor: 'rgb(18,24,39)' }}
+                  >
+                    + Adicionar Influencer
+                  </button>
                 </div>
-              </div>
-              {/* Mobile Reply Footer */}
-              <div className="p-3 border-t border-gray-200">
-                <button 
-                  onClick={() => setShowReplyPanel(true)}
-                  className="w-full py-2 rounded-lg font-bold text-sm text-white flex items-center justify-center gap-2"
-                  style={{ backgroundColor: 'rgb(18,24,39)' }}
-                >
-                  <Reply className="h-4 w-4" /> Responder
-                </button>
-              </div>
+              )}
             </div>
 
-            {/* Desktop: Side by side layout */}
-            <div className="hidden md:flex flex-1 h-full flex-row bg-white">
-              {/* Influencer Panel (30%) */}
-              <div className="w-[30%] min-w-[280px] max-w-[350px] border-r border-gray-200 flex-col h-full overflow-hidden flex">
-                {selectedEmail.influencer ? (
-                  <InfluencerPanel influencer={selectedEmail.influencer} />
-                ) : (
-                  <div className="h-full bg-slate-50 p-6 flex flex-col items-center justify-center text-center space-y-4">
-                    <div className="w-16 h-16 rounded-full bg-slate-200 flex items-center justify-center">
-                      <UserPlus className="h-8 w-8 text-slate-400" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-600 mb-1">Sem influencer associado</p>
-                      <p className="text-xs text-slate-400">Adiciona um influencer a este email</p>
-                    </div>
-                    <button 
-                      onClick={openInfluencerModal}
-                      className="px-4 py-2 rounded-lg font-bold text-xs text-white hover:opacity-90 transition"
-                      style={{ backgroundColor: 'rgb(18,24,39)' }}
-                    >
-                      + Adicionar Influencer
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Email Detail + Reply (70%) */}
-              <div className="flex-1 flex flex-col h-full overflow-hidden bg-white">
+            {/* Email Detail + Reply (70%) */}
+            <div className="flex-1 flex flex-col h-full w-full overflow-hidden bg-white">
               {/* Header */}
               <div className="p-4 px-6 border-b border-gray-100 flex items-center justify-between bg-white z-20">
                 <div className="flex items-center gap-3">
-                  <button onClick={() => setSelectedEmail(null)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-400">
+                  {/* Mobile back button */}
+                  <button onClick={() => setSelectedEmail(null)} className="md:hidden flex items-center gap-1 text-slate-600">
+                    <ChevronLeft className="h-5 w-5" />
+                    <span className="text-sm">Voltar</span>
+                  </button>
+                  {/* Desktop close button */}
+                  <button onClick={() => setSelectedEmail(null)} className="hidden md:block p-2 hover:bg-slate-100 rounded-lg text-slate-400">
                     <X className="h-4 w-4" />
                   </button>
                   <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-bold text-xs">
