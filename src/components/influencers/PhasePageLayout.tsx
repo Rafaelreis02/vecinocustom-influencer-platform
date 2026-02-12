@@ -56,32 +56,27 @@ export default function PhasePageLayout({ phaseId }: PhasePageLayoutProps) {
   const fetchInfluencers = async () => {
     setLoading(true);
     try {
-      // Forçar refresh total para ignorar cache
-      const res = await fetch(`/api/influencers?t=${Date.now()}`, { cache: 'no-store' });
-      const data = await res.json();
+      // Simplificado ao máximo: Chamada direta sem parâmetros complexos
+      const res = await fetch(`/api/influencers`, { cache: 'no-store' });
       
-      console.log(`[DEBUG] Loaded ${data.length} influencers for phase ${phaseId}`);
+      if (!res.ok) throw new Error('Failed to fetch');
+      const responseData = await res.json();
       
-      // Filtrar influencers que pertencem a esta fase
+      // Suporte para resposta direta ou { data: [] }
+      const data = Array.isArray(responseData) ? responseData : (responseData.data || []);
+      
+      // Filtro rigoroso pela fase
       const phaseStatuses = phase.statuses.map(s => s.toUpperCase());
       const phaseInfluencers = data.filter((inf: Influencer) => {
         const infStatus = (inf.status || 'UNKNOWN').toUpperCase();
         return phaseStatuses.includes(infStatus);
       });
       
-      console.log(`[DEBUG] ${phaseInfluencers.length} influencers match this phase`);
       setAllInfluencers(phaseInfluencers);
       
-      // Se a tab ativa não tem ninguém mas outra tem, muda para a primeira com gente
-      if (phaseInfluencers.length > 0) {
-        const hasActivePeople = phaseInfluencers.some((i: Influencer) => i.status.toUpperCase() === activeTab.toUpperCase());
-        if (!hasActivePeople) {
-          const firstAvailableStatus = phase.statuses.find(s => 
-            phaseInfluencers.some((i: Influencer) => i.status.toUpperCase() === s.toUpperCase())
-          );
-          if (firstAvailableStatus) setActiveTab(firstAvailableStatus.toUpperCase());
-        }
-      }
+      // Garante que o activeTab está sempre em maiúsculas
+      if (activeTab) setActiveTab(activeTab.toUpperCase());
+      
     } catch (error) {
       console.error('Error fetching influencers:', error);
       addToast('Erro ao carregar lista de influencers', 'error');
