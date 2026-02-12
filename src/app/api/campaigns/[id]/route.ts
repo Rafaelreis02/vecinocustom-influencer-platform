@@ -90,11 +90,19 @@ export async function PATCH(
     const { id } = await params;
     const body = await request.json();
     
-    const validated = CampaignUpdateSchema.parse(body);
+    // Converte strings vazias para null para evitar erros de validação
+    const cleanBody = Object.fromEntries(
+      Object.entries(body).map(([k, v]) => [k, v === '' ? null : v])
+    );
+    
+    const validated = CampaignUpdateSchema.parse(cleanBody);
 
     const campaign = await prisma.campaign.update({
       where: { id },
-      data: validated,
+      data: {
+        ...validated,
+        status: (body.status as any) || undefined,
+      },
     });
 
     logger.info('Campaign updated', { id });
