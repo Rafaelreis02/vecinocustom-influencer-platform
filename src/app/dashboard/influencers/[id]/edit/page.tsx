@@ -84,11 +84,27 @@ export default function EditInfluencerPage() {
         router.push(`/dashboard/influencers/${id}`);
       } else {
         const data = await res.json();
-        alert(data.error || 'Erro ao atualizar influencer');
+        console.error('Update failed:', data);
+        
+        // Mostra erro detalhado
+        let errorMsg = data.error || 'Erro ao atualizar influencer';
+        
+        // Se houver erros de validação Zod, mostra-os
+        if (data.details && Array.isArray(data.details)) {
+          errorMsg += '\n\n' + data.details.map((d: any) => `${d.field}: ${d.message}`).join('\n');
+        }
+        
+        // Se houver erro específico de campo
+        if (data.message && data.message.includes('email')) {
+          errorMsg = 'Email inválido. Certifica-te que tem formato correto (ex: nome@email.com)';
+        }
+        
+        alert(errorMsg);
+        addToast(errorMsg, 'error');
       }
     } catch (error) {
       console.error('Error updating influencer:', error);
-      addToast('Erro ao atualizar influencer', 'error');
+      addToast('Erro ao atualizar influencer. Verifica a consola para detalhes.', 'error');
     } finally {
       setSaving(false);
     }

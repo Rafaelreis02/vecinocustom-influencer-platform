@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { serializeBigInt } from '@/lib/serialize';
 import { InfluencerUpdateSchema } from '@/lib/validation';
@@ -94,6 +95,19 @@ export async function PATCH(
     return NextResponse.json(serializeBigInt(influencer));
   } catch (error) {
     logger.error('PATCH /api/influencers/[id] failed', error);
+    
+    // Se for erro de validação Zod, retorna detalhes
+    if (error instanceof z.ZodError) {
+      const details = error.errors.map(e => ({
+        field: e.path.join('.'),
+        message: e.message,
+      }));
+      return NextResponse.json(
+        { error: 'Dados inválidos', details },
+        { status: 400 }
+      );
+    }
+    
     return handleApiError(error);
   }
 }
