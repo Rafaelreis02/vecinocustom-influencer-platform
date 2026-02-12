@@ -1,6 +1,5 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { clsx } from 'clsx';
@@ -17,23 +16,23 @@ import {
   LogOut,
   X,
   Mail,
-  ChevronDown
 } from 'lucide-react';
-import { PHASES } from '@/lib/influencer-status';
 
-const navigation = [
+interface NavigationItem {
+  name: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  dotColor?: string;
+}
+
+const navigation: NavigationItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { 
-    name: 'Influencers', 
-    href: '/dashboard/influencers', 
-    icon: Users,
-    isExpandable: true,
-    subItems: Object.values(PHASES).map(phase => ({
-      name: phase.label,
-      href: phase.href,
-      icon: phase.icon,
-    }))
-  },
+  { name: 'Influencers', href: '/dashboard/influencers', icon: Users },
+  // Fases com cor — separador visual antes
+  { name: 'Prospeção', href: '/dashboard/influencers/prospecting', icon: Users, dotColor: 'bg-blue-400' },
+  { name: 'Negociação', href: '/dashboard/influencers/negotiating', icon: Users, dotColor: 'bg-amber-400' },
+  { name: 'Em Curso', href: '/dashboard/influencers/closing', icon: Users, dotColor: 'bg-emerald-400' },
+  // Separador
   { name: 'Campanhas', href: '/dashboard/campaigns', icon: Target },
   { name: 'Mensagens', href: '/dashboard/messages', icon: Mail },
   { name: 'Comissões', href: '/dashboard/commissions', icon: DollarSign },
@@ -50,24 +49,6 @@ interface SidebarProps {
 
 export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
-  const [expandedItems, setExpandedItems] = useState<string[]>([]);
-
-  // Auto-expand Influencers menu when on any influencers route
-  useEffect(() => {
-    if (pathname.startsWith('/dashboard/influencers')) {
-      setExpandedItems(prev => 
-        prev.includes('Influencers') ? prev : [...prev, 'Influencers']
-      );
-    }
-  }, [pathname]);
-
-  const toggleExpand = (itemName: string) => {
-    setExpandedItems(prev => 
-      prev.includes(itemName) 
-        ? prev.filter(name => name !== itemName)
-        : [...prev, itemName]
-    );
-  };
 
   return (
     <>
@@ -82,121 +63,70 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
       {/* Sidebar */}
       <div className={clsx(
         "fixed md:static inset-y-0 left-0 z-50 md:z-0",
-        "flex h-screen w-64 flex-col bg-white border-r border-gray-200",
+        "flex h-screen w-20 flex-col bg-gray-900",
         "transform transition-transform duration-300 ease-in-out",
         mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
       )}>
         {/* Logo + Close Button (Mobile) */}
-        <div className="flex h-16 items-center justify-between px-6 border-b border-gray-200">
-          <Link href="/dashboard" className="flex items-center space-x-2">
-            <div className="h-8 w-8 rounded bg-black flex items-center justify-center font-bold text-white text-sm">
+        <div className="flex h-16 items-center justify-center relative">
+          <Link href="/dashboard" className="flex items-center justify-center">
+            <div className="h-8 w-8 rounded bg-white flex items-center justify-center font-bold text-black text-sm">
               V
-            </div>
-            <div>
-              <span className="text-lg font-semibold text-gray-900">VecinoCustom</span>
             </div>
           </Link>
           {/* Close button - mobile only */}
           <button
             onClick={onClose}
-            className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            className="md:hidden absolute right-2 p-2 rounded-lg hover:bg-white/10 transition-colors"
           >
-            <X className="h-5 w-5 text-gray-600" />
+            <X className="h-5 w-5 text-gray-400" />
           </button>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto" aria-label="Main navigation">
+        <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto" aria-label="Main navigation">
           {navigation.map((item) => {
-            const isActive = pathname === item.href;
-            const isExpanded = expandedItems.includes(item.name);
-            const hasSubItems = item.isExpandable && item.subItems;
+            // Dashboard uses exact match, others use startsWith
+            const isActive = item.href === '/dashboard' 
+              ? pathname === item.href 
+              : pathname.startsWith(item.href);
 
-            if (hasSubItems) {
-              return (
-                <div key={item.name}>
-                  {/* Main expandable item */}
-                  <button
-                    onClick={() => toggleExpand(item.name)}
-                    className={clsx(
-                      'w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors',
-                      pathname.startsWith(item.href)
-                        ? 'bg-gray-100 text-gray-900'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    )}
-                  >
-                    <div className="flex items-center">
-                      <item.icon className="mr-3 h-5 w-5" />
-                      {item.name}
-                    </div>
-                    <ChevronDown 
-                      className={clsx(
-                        "h-4 w-4 transition-transform",
-                        isExpanded ? "rotate-180" : ""
-                      )}
-                    />
-                  </button>
-
-                  {/* Sub-items */}
-                  {isExpanded && (
-                    <div className="mt-1 space-y-1">
-                      {item.subItems.map((subItem) => {
-                        const isSubActive = pathname === subItem.href;
-                        return (
-                          <Link
-                            key={subItem.href}
-                            href={subItem.href}
-                            className={clsx(
-                              'flex items-center pl-10 pr-3 py-2 text-sm font-medium rounded-md transition-colors',
-                              isSubActive
-                                ? 'bg-gray-900 text-white'
-                                : 'text-gray-700 hover:bg-gray-100'
-                            )}
-                          >
-                            <span className="mr-2">{subItem.icon}</span>
-                            {subItem.name}
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            }
-
-            // Regular non-expandable item
             return (
               <Link
                 key={item.name}
                 href={item.href}
                 className={clsx(
-                  'flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors',
+                  'flex flex-col items-center justify-center px-2 py-3 text-[10px] font-medium rounded-md transition-colors',
                   isActive
-                    ? 'bg-gray-900 text-white'
-                    : 'text-gray-700 hover:bg-gray-100'
+                    ? 'bg-white/10 text-white'
+                    : 'text-gray-400 hover:bg-white/5 hover:text-gray-300'
                 )}
               >
-                <item.icon className="mr-3 h-5 w-5" />
-                {item.name}
+                {item.dotColor ? (
+                  <div className={`h-2.5 w-2.5 rounded-full ${item.dotColor} mb-1`} />
+                ) : (
+                  <item.icon className="h-5 w-5 mb-1" />
+                )}
+                <span className="text-center leading-tight">{item.name}</span>
               </Link>
             );
           })}
         </nav>
 
         {/* Bottom */}
-        <div className="border-t border-gray-200 p-3 space-y-1">
+        <div className="border-t border-gray-800 p-2 space-y-1">
           <Link
             href="/dashboard/settings"
-            className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+            className="flex flex-col items-center justify-center px-2 py-3 text-[10px] font-medium text-gray-500 hover:text-gray-300 hover:bg-white/5 rounded-md transition-colors"
           >
-            <Settings className="mr-3 h-5 w-5" />
-            Definições
+            <Settings className="h-5 w-5 mb-1" />
+            <span className="text-center leading-tight">Definições</span>
           </Link>
           <button
-            className="w-full flex items-center px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+            className="w-full flex flex-col items-center justify-center px-2 py-3 text-[10px] font-medium text-gray-500 hover:text-gray-300 hover:bg-white/5 rounded-md transition-colors"
           >
-            <LogOut className="mr-3 h-5 w-5" />
-            Sair
+            <LogOut className="h-5 w-5 mb-1" />
+            <span className="text-center leading-tight">Sair</span>
           </button>
         </div>
       </div>
