@@ -7,7 +7,6 @@ import {
   LayoutDashboard,
   Users,
   Target,
-  Ticket,
   DollarSign,
   TrendingUp,
   Settings,
@@ -22,21 +21,14 @@ interface NavigationItem {
   name: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
-  dotColor?: string;
 }
 
 const navigation: NavigationItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Influencers', href: '/dashboard/influencers', icon: Users },
-  // Fases com cor — separador visual antes
-  { name: 'Prospeção', href: '/dashboard/influencers/prospecting', icon: Users, dotColor: 'bg-blue-400' },
-  { name: 'Negociação', href: '/dashboard/influencers/negotiating', icon: Users, dotColor: 'bg-amber-400' },
-  { name: 'Em Curso', href: '/dashboard/influencers/closing', icon: Users, dotColor: 'bg-emerald-400' },
-  // Separador
   { name: 'Campanhas', href: '/dashboard/campaigns', icon: Target },
   { name: 'Mensagens', href: '/dashboard/messages', icon: Mail },
   { name: 'Comissões', href: '/dashboard/commissions', icon: DollarSign },
-  { name: 'Cupões', href: '/dashboard/coupons', icon: Ticket },
   { name: 'Analytics', href: '/dashboard/analytics', icon: TrendingUp },
   { name: 'Integrações', href: '/dashboard/integrations', icon: Instagram },
   { name: 'Ficheiros', href: '/dashboard/files', icon: FileText },
@@ -102,11 +94,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
                     : 'text-gray-400 hover:bg-white/5 hover:text-gray-300'
                 )}
               >
-                {item.dotColor ? (
-                  <div className={`h-2.5 w-2.5 rounded-full ${item.dotColor} mb-1`} />
-                ) : (
-                  <item.icon className="h-5 w-5 mb-1" />
-                )}
+                <item.icon className="h-5 w-5 mb-1" />
                 <span className="text-center leading-tight">{item.name}</span>
               </Link>
             );
