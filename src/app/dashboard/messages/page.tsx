@@ -38,7 +38,13 @@ export default function MessagesPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [syncing, setSyncing] = useState(false);
-  const [filter, setFilter] = useState<'inbox' | 'unread' | 'flagged'>('inbox');
+  const [filter, setFilter] = useState<'all' | 'inbox' | 'unread' | 'read' | 'sent' | 'flagged'>('inbox');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [showInboxDropdown, setShowInboxDropdown] = useState(false);
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const [showInfluencerModal, setShowInfluencerModal] = useState(false);
+  const [availableInfluencers, setAvailableInfluencers] = useState<{id: string, name: string}[]>([]);
+  const [associatingInfluencer, setAssociatingInfluencer] = useState(false);
   
   // Paginação
   const [currentPage, setCurrentPage] = useState(1);
@@ -162,6 +168,43 @@ export default function MessagesPage() {
     }
   }
 
+  async function openInfluencerModal() {
+    try {
+      const res = await fetch('/api/influencers?limit=100');
+      const data = await res.json();
+      setAvailableInfluencers(data.influencers?.map((i: any) => ({ id: i.id, name: i.name })) || []);
+      setShowInfluencerModal(true);
+    } catch (error) {
+      addToast('Erro ao carregar influencers', 'error');
+    }
+  }
+
+  async function associateInfluencer(influencerId: string) {
+    if (!selectedEmail) return;
+    try {
+      setAssociatingInfluencer(true);
+      const res = await fetch(`/api/emails/${selectedEmail.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ influencerId }),
+      });
+      if (!res.ok) throw new Error();
+      
+      // Refresh email details
+      const emailRes = await fetch(`/api/emails/${selectedEmail.id}`);
+      const emailData = await emailRes.json();
+      setSelectedEmail(emailData);
+      fetchEmails();
+      
+      addToast('Influencer associado com sucesso!', 'success');
+      setShowInfluencerModal(false);
+    } catch (error) {
+      addToast('Erro ao associar influencer', 'error');
+    } finally {
+      setAssociatingInfluencer(false);
+    }
+  }
+
   async function handleSyncNow() {
     try {
       setSyncing(true);
@@ -217,7 +260,9 @@ export default function MessagesPage() {
 
   const filteredList = emails.filter(e => {
     if (filter === 'unread' && e.isRead) return false;
+    if (filter === 'read' && !e.isRead) return false;
     if (filter === 'flagged' && !e.isFlagged) return false;
+    if (statusFilter !== 'all' && e.influencer?.status !== statusFilter) return false;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       return e.subject.toLowerCase().includes(q) || e.from.toLowerCase().includes(q);
@@ -231,63 +276,187 @@ export default function MessagesPage() {
   return (
     <div className="flex h-[calc(100vh-theme(spacing.16))] bg-white overflow-hidden text-slate-900 font-sans">
       {/* Sidebar de Navegação */}
-      <div className="hidden md:flex w-64 flex-col border-r border-gray-200 bg-slate-50">
-        <div className="p-4 border-b border-gray-200 bg-white">
-          <button onClick={handleSyncNow} disabled={syncing} className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition active:scale-95 disabled:bg-gray-400 shadow-md">
-            <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} /> {syncing ? 'A Sincronizar...' : 'Sincronizar Gmail'}
+      <div className="hidden md:flex w-16 lg:w-64 flex-col border-r border-gray-200 bg-slate-50">
+        <div className="p-3 border-b border-gray-200 bg-white">
+          <button onClick={handleSyncNow} disabled={syncing} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm transition active:scale-95 disabled:bg-gray-400 shadow-md" style={{ backgroundColor: 'rgb(18,24,39)', color: 'white' }}>
+            <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+            <span className="hidden lg:inline">{syncing ? 'A Sincronizar...' : 'Sincronizar'}</span>
           </button>
         </div>
         <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
-          <div className="space-y-1">
-            <button onClick={() => setFilter('inbox')} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition ${filter === 'inbox' ? 'bg-blue-100 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-100'}`}>
-              <Inbox className="h-4 w-4" /> Caixa de Entrada <span className="ml-auto text-xs bg-white/50 px-2 py-0.5 rounded-full">{emails.length}</span>
-            </button>
-            <button onClick={() => setFilter('unread')} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition ${filter === 'unread' ? 'bg-blue-100 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-100'}`}>
-              <EyeOff className="h-4 w-4" /> Não Lidas <span className="ml-auto text-xs bg-white/50 px-2 py-0.5 rounded-full">{emails.filter(e => !e.isRead).length}</span>
-            </button>
-            <button onClick={() => setFilter('flagged')} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition ${filter === 'flagged' ? 'bg-blue-100 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-100'}`}>
-              <Flag className="h-4 w-4" /> Marcadas <span className="ml-auto text-xs bg-white/50 px-2 py-0.5 rounded-full">{emails.filter(e => e.isFlagged).length}</span>
-            </button>
-          </div>
+          <button onClick={() => setFilter('inbox')} className={`w-full flex items-center justify-center lg:justify-start gap-3 px-3 py-2.5 rounded-xl text-sm transition ${filter === 'inbox' ? 'bg-blue-100 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-100'}`}>
+            <Inbox className="h-4 w-4" /> <span className="hidden lg:inline">Entrada</span>
+          </button>
+          <button onClick={() => setFilter('unread')} className={`w-full flex items-center justify-center lg:justify-start gap-3 px-3 py-2.5 rounded-xl text-sm transition ${filter === 'unread' ? 'bg-blue-100 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-100'}`}>
+            <EyeOff className="h-4 w-4" /> <span className="hidden lg:inline">Não lidas</span>
+          </button>
+          <button onClick={() => setFilter('flagged')} className={`w-full flex items-center justify-center lg:justify-start gap-3 px-3 py-2.5 rounded-xl text-sm transition ${filter === 'flagged' ? 'bg-blue-100 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-100'}`}>
+            <Flag className="h-4 w-4" /> <span className="hidden lg:inline">Marcadas</span>
+          </button>
         </nav>
       </div>
 
       {/* Container Principal - Lista + Collapsive */}
       <div className="flex-1 flex overflow-hidden">
         {/* Lista de Mensagens */}
-        <div className={`${selectedEmail ? 'hidden md:flex md:w-80 lg:w-96' : 'flex w-full'} flex-col border-r border-gray-200 bg-white shadow-sm z-10`}>
-          <div className="p-4 border-b border-gray-200">
+        <div className={`${selectedEmail ? 'hidden md:flex md:w-[450px] lg:w-[550px]' : 'flex w-full'} flex-col border-r border-gray-200 bg-white shadow-sm z-10`}>
+          {/* Header com Dropdowns */}
+          <div className="p-3 border-b border-gray-200 space-y-3">
             <div className="relative">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-              <input type="text" placeholder="Pesquisar..." value={searchQuery} onChange={(e) => {setSearchQuery(e.target.value); setCurrentPage(1);}} className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+              <input type="text" placeholder="Pesquisar emails..." value={searchQuery} onChange={(e) => {setSearchQuery(e.target.value); setCurrentPage(1);}} className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+            </div>
+            
+            {/* Dropdowns */}
+            <div className="flex gap-2">
+              {/* Dropdown Caixa de Entrada */}
+              <div className="relative flex-1">
+                <button 
+                  onClick={() => {setShowInboxDropdown(!showInboxDropdown); setShowStatusDropdown(false);}}
+                  className="w-full flex items-center justify-between px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 transition"
+                >
+                  <span className="flex items-center gap-2">
+                    {filter === 'inbox' && <Inbox className="h-3.5 w-3.5" />}
+                    {filter === 'unread' && <EyeOff className="h-3.5 w-3.5" />}
+                    {filter === 'read' && <Eye className="h-3.5 w-3.5" />}
+                    {filter === 'sent' && <Send className="h-3.5 w-3.5" />}
+                    {filter === 'flagged' && <Flag className="h-3.5 w-3.5" />}
+                    {filter === 'all' && <Mail className="h-3.5 w-3.5" />}
+                    {filter === 'inbox' && 'Caixa de Entrada'}
+                    {filter === 'unread' && 'Não lidas'}
+                    {filter === 'read' && 'Lidas'}
+                    {filter === 'sent' && 'Enviados'}
+                    {filter === 'flagged' && 'Marcadas'}
+                    {filter === 'all' && 'Todos'}
+                  </span>
+                  <ChevronDown className={`h-3.5 w-3.5 transition ${showInboxDropdown ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {showInboxDropdown && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-50 py-1">
+                    {[
+                      { key: 'inbox', label: 'Caixa de Entrada', icon: Inbox, count: emails.length },
+                      { key: 'unread', label: 'Não lidas', icon: EyeOff, count: emails.filter(e => !e.isRead).length },
+                      { key: 'read', label: 'Lidas', icon: Eye, count: emails.filter(e => e.isRead).length },
+                      { key: 'sent', label: 'Enviados', icon: Send, count: 0 },
+                      { key: 'flagged', label: 'Marcadas', icon: Flag, count: emails.filter(e => e.isFlagged).length },
+                      { key: 'all', label: 'Todos', icon: Mail, count: emails.length },
+                    ].map(({ key, label, icon: Icon, count }) => (
+                      <button
+                        key={key}
+                        onClick={() => { setFilter(key as any); setShowInboxDropdown(false); }}
+                        className={`w-full flex items-center justify-between px-3 py-2 text-xs hover:bg-slate-50 transition ${filter === key ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-slate-600'}`}
+                      >
+                        <span className="flex items-center gap-2"><Icon className="h-3.5 w-3.5" /> {label}</span>
+                        <span className="text-slate-400">{count}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              {/* Dropdown Status */}
+              <div className="relative flex-1">
+                <button 
+                  onClick={() => {setShowStatusDropdown(!showStatusDropdown); setShowInboxDropdown(false);}}
+                  className="w-full flex items-center justify-between px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 transition"
+                >
+                  <span className="flex items-center gap-2">
+                    <CheckCircle className="h-3.5 w-3.5" />
+                    {statusFilter === 'all' ? 'Todos status' : statusFilter}
+                  </span>
+                  <ChevronDown className={`h-3.5 w-3.5 transition ${showStatusDropdown ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {showStatusDropdown && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-50 py-1">
+                    <button
+                      onClick={() => { setStatusFilter('all'); setShowStatusDropdown(false); }}
+                      className={`w-full text-left px-3 py-2 text-xs hover:bg-slate-50 transition ${statusFilter === 'all' ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-slate-600'}`}
+                    >
+                      Todos status
+                    </button>
+                    {['SUGGESTION', 'IMPORT_PENDING', 'ANALYZING', 'COUNTER_PROPOSAL', 'AGREED', 'PRODUCT_SELECTION', 'CONTRACT_PENDING', 'SHIPPED', 'COMPLETED'].map(status => (
+                      <button
+                        key={status}
+                        onClick={() => { setStatusFilter(status); setShowStatusDropdown(false); }}
+                        className={`w-full text-left px-3 py-2 text-xs hover:bg-slate-50 transition ${statusFilter === status ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-slate-600'}`}
+                      >
+                        {status}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           
-          <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
+          {/* Lista de Emails - Uma linha */}
+          <div className="flex-1 overflow-y-auto">
             {loading ? (
                <div className="p-8 text-center"><Loader2 className="h-8 w-8 mx-auto animate-spin text-blue-500" /></div>
             ) : currentEmails.length === 0 ? (
                <div className="p-8 text-center text-slate-400 text-sm">Nenhuma mensagem encontrada</div>
             ) : (
               currentEmails.map(email => (
-                <div key={email.id} onClick={() => handleEmailClick(email)} className={`p-3 cursor-pointer hover:bg-slate-50 transition border-l-4 flex items-center gap-3 ${selectedEmail?.id === email.id ? 'bg-blue-50/50 border-l-blue-600' : 'border-l-transparent'} ${!email.isRead ? 'bg-blue-50/30 font-semibold' : ''}`}>
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-400 to-slate-500 text-white flex items-center justify-center font-black text-sm flex-shrink-0">
+                <div 
+                  key={email.id} 
+                  onClick={() => handleEmailClick(email)} 
+                  className={`group p-3 cursor-pointer hover:bg-slate-50 transition border-b border-slate-100 flex items-center gap-3 ${selectedEmail?.id === email.id ? 'bg-blue-50/50' : ''} ${!email.isRead ? 'bg-blue-50/20' : ''}`}
+                >
+                  {/* Avatar */}
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-slate-400 to-slate-500 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
                     {email.from.charAt(0).toUpperCase()}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-center mb-1">
-                      <span className={`text-sm truncate ${!email.isRead ? 'font-bold text-slate-900' : 'text-slate-700'}`}>{email.from}</span>
-                      <span className="text-[10px] text-slate-400 font-medium">{new Date(email.receivedAt).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}</span>
-                    </div>
-                    <p className={`text-xs line-clamp-1 mb-1 ${!email.isRead ? 'font-semibold text-slate-800' : 'text-slate-500'}`}>{email.subject}</p>
-                    <div className="flex items-center gap-2">
-                      {email.isFlagged && <Flag className="h-3 w-3 fill-yellow-400 text-yellow-500" />}
-                      {email.influencer ? (
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-bold uppercase tracking-tight">{email.influencer.name}</span>
-                      ) : (
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[10px] font-bold uppercase tracking-tight">Sem influencer</span>
-                      )}
-                    </div>
+                  
+                  {/* Info principal */}
+                  <div className="flex-1 min-w-0 flex items-center gap-3">
+                    {/* Nome */}
+                    <span className={`w-32 truncate text-sm ${!email.isRead ? 'font-bold text-slate-900' : 'text-slate-700'}`}>
+                      {email.from.split('@')[0]}
+                    </span>
+                    
+                    {/* Status badge */}
+                    {email.influencer ? (
+                      <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-bold uppercase whitespace-nowrap">
+                        {email.influencer.status || 'Sem status'}
+                      </span>
+                    ) : (
+                      <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[10px] font-bold uppercase whitespace-nowrap">
+                        Sem influencer
+                      </span>
+                    )}
+                    
+                    {/* Assunto */}
+                    <span className={`flex-1 truncate text-sm ${!email.isRead ? 'font-semibold text-slate-800' : 'text-slate-600'}`}>
+                      {email.subject}
+                    </span>
+                  </div>
+                  
+                  {/* Ações + Data */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {/* Flag */}
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); toggleEmailFlag(email.id); }}
+                      className="p-1.5 hover:bg-slate-200 rounded transition opacity-0 group-hover:opacity-100"
+                      title={email.isFlagged ? 'Remover flag' : 'Adicionar flag'}
+                    >
+                      <Flag className={`h-3.5 w-3.5 ${email.isFlagged ? 'fill-yellow-400 text-yellow-500' : 'text-slate-300'}`} />
+                    </button>
+                    
+                    {/* Lido/Não lido */}
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); toggleEmailRead(email.id, email.isRead); }}
+                      className="p-1.5 hover:bg-slate-200 rounded transition opacity-0 group-hover:opacity-100"
+                      title={email.isRead ? 'Marcar como não lido' : 'Marcar como lido'}
+                    >
+                      {email.isRead ? <EyeOff className="h-3.5 w-3.5 text-slate-400" /> : <Eye className="h-3.5 w-3.5 text-blue-500" />}
+                    </button>
+                    
+                    {/* Data */}
+                    <span className="text-[11px] text-slate-400 w-14 text-right">
+                      {new Date(email.receivedAt).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}
+                    </span>
                   </div>
                 </div>
               ))
@@ -320,7 +489,11 @@ export default function MessagesPage() {
                     <p className="text-sm font-semibold text-slate-600 mb-1">Sem influencer associado</p>
                     <p className="text-xs text-slate-400">Adiciona um influencer a este email</p>
                   </div>
-                  <button className="px-4 py-2 bg-blue-100 text-blue-600 rounded-lg font-bold text-xs hover:bg-blue-200 transition">
+                  <button 
+                    onClick={openInfluencerModal}
+                    className="px-4 py-2 rounded-lg font-bold text-xs text-white hover:opacity-90 transition"
+                    style={{ backgroundColor: 'rgb(18,24,39)' }}
+                  >
                     + Adicionar Influencer
                   </button>
                 </div>
@@ -429,7 +602,8 @@ export default function MessagesPage() {
                         <button 
                           onClick={handleSendReply}
                           disabled={sendingReply || !replyText.trim()}
-                          className="flex-1 py-2 bg-blue-600 text-white rounded-lg font-bold text-sm hover:bg-blue-700 transition disabled:bg-slate-300 flex items-center justify-center gap-2"
+                          className="flex-1 py-2 rounded-lg font-bold text-sm text-white hover:opacity-90 transition disabled:bg-slate-300 flex items-center justify-center gap-2"
+                          style={{ backgroundColor: 'rgb(18,24,39)' }}
                         >
                           <Send className="h-4 w-4" /> {sendingReply ? 'A enviar...' : 'Enviar'}
                         </button>
@@ -463,6 +637,41 @@ export default function MessagesPage() {
           </div>
         )}
       </div>
+
+      {/* Modal para associar influencer */}
+      {showInfluencerModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col">
+            <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+              <h3 className="font-bold text-slate-900">Associar Influencer</h3>
+              <button onClick={() => setShowInfluencerModal(false)} className="p-1 hover:bg-slate-100 rounded-lg">
+                <X className="h-5 w-5 text-slate-400" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              {availableInfluencers.length === 0 ? (
+                <p className="text-center text-slate-400 py-8">Nenhum influencer encontrado</p>
+              ) : (
+                <div className="space-y-2">
+                  {availableInfluencers.map(inf => (
+                    <button
+                      key={inf.id}
+                      onClick={() => associateInfluencer(inf.id)}
+                      disabled={associatingInfluencer}
+                      className="w-full flex items-center gap-3 p-3 hover:bg-slate-50 rounded-xl transition text-left border border-slate-100"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-bold text-sm">
+                        {inf.name.charAt(0).toUpperCase()}
+                      </div>
+                      <span className="font-semibold text-slate-700">{inf.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
