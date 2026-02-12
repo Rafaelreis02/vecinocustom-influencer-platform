@@ -4,7 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import {
   Mail, Search, AlertCircle, CheckCircle, Clock, X, RefreshCw,
   Reply, Trash2, Eye, EyeOff, Send, Paperclip, Inbox, Flag,
-  Download, Sparkles, ChevronLeft, ChevronRight, UserPlus, AtSign
+  Download, Sparkles, ChevronLeft, ChevronRight, UserPlus, AtSign,
+  Loader2, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { useGlobalToast } from '@/contexts/ToastContext';
 import { StatusDropdown } from '@/components/StatusDropdown';
