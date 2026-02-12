@@ -7,6 +7,7 @@ import { logger } from '@/lib/logger';
 import { Prisma } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { downloadAndStoreImage } from '@/lib/image-storage';
 
 // GET /api/influencers - Listar influencers com pagination
 export async function GET(request: Request) {
@@ -137,6 +138,20 @@ export async function POST(request: Request) {
     
     // Validate input
     const validated = InfluencerCreateSchema.parse(body);
+    
+    // Download and store avatar if provided (external URL)
+    let avatarUrl = validated.avatarUrl;
+    if (avatarUrl && (avatarUrl.includes('tiktokcdn.com') || avatarUrl.includes('instagram.com'))) {
+      console.log(`[INFLUENCER] Downloading avatar from: ${avatarUrl}`);
+      const storedUrl = await downloadAndStoreImage(
+        avatarUrl,
+        `avatars/${Date.now()}-${validated.tiktokHandle || validated.instagramHandle || 'influencer'}.jpg`
+      );
+      if (storedUrl) {
+        avatarUrl = storedUrl;
+        console.log(`[INFLUENCER] Avatar stored: ${avatarUrl}`);
+      }
+    }
 
     // Check if handle already exists
     if (validated.tiktokHandle) {
@@ -167,10 +182,11 @@ export async function POST(request: Request) {
       createdById = firstUser.id;
     }
 
-    // Create influencer
+    // Create influencer with stored avatar
     const influencer = await prisma.influencer.create({
       data: {
         ...validated,
+        avatarUrl,
         createdById,
       },
     });
