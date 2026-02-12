@@ -474,9 +474,9 @@ export default function MessagesPage() {
 
         {/* Collapsive Direito - Quando Email Selecionado */}
         {selectedEmail && (
-          <div className="fixed inset-0 md:static md:flex-1 md:h-full flex bg-white z-50 md:z-10 animate-in slide-in-from-right duration-300">
+          <div className="fixed inset-0 md:static md:flex-1 md:h-full flex flex-row bg-white z-50 md:z-10">
             {/* Influencer Panel (30%) */}
-            <div className="hidden md:flex w-[30%] min-w-[280px] max-w-[350px] border-r border-gray-200 flex-col">
+            <div className="hidden md:flex w-[30%] min-w-[280px] max-w-[350px] border-r border-gray-200 flex-col h-full overflow-hidden">
               {selectedEmail.influencer ? (
                 <InfluencerPanel influencer={selectedEmail.influencer} />
               ) : (
@@ -500,7 +500,7 @@ export default function MessagesPage() {
             </div>
 
             {/* Email Detail + Reply (70%) */}
-            <div className="flex-1 flex flex-col h-full overflow-hidden">
+            <div className="flex-1 flex flex-col h-full overflow-hidden bg-white">
               {/* Header */}
               <div className="p-4 px-6 border-b border-gray-100 flex items-center justify-between bg-white z-20">
                 <div className="flex items-center gap-3">
