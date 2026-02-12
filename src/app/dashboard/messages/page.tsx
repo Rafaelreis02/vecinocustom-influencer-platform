@@ -625,8 +625,8 @@ export default function MessagesPage() {
           </div>
         )}
 
-        {/* Estado vazio (sem email selecionado em desktop) */}
-        {!selectedEmail && (
+        {/* Estado vazio - só aparece em desktop quando não há email selecionado E não há emails na lista */}
+        {!selectedEmail && currentEmails.length === 0 && !loading && (
           <div className="hidden md:flex flex-1 flex-col items-center justify-center text-gray-400 p-12 text-center bg-slate-50/20">
             <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mb-6 shadow-sm border border-slate-100">
               <Mail className="h-10 w-10 text-slate-200" />
