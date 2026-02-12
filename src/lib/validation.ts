@@ -53,11 +53,11 @@ export const CampaignCreateSchema = z.object({
   description: z.string().optional().nullable(),
   hashtag: z.string().optional().nullable(),
   platform: z.nativeEnum(Platform).optional().nullable(),
-  startDate: z.string().datetime().optional().nullable(),
-  endDate: z.string().datetime().optional().nullable(),
-  budget: z.number().optional().nullable(),
-  targetViews: z.number().int().optional().nullable(),
-  targetSales: z.number().int().optional().nullable(),
+  startDate: z.coerce.date().optional().nullable(),
+  endDate: z.coerce.date().optional().nullable(),
+  budget: z.coerce.number().optional().nullable(),
+  targetViews: z.coerce.number().int().optional().nullable(),
+  targetSales: z.coerce.number().int().optional().nullable(),
 });
 
 export const CampaignUpdateSchema = CampaignCreateSchema.partial();

@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { CampaignCreateSchema } from '@/lib/validation';
 import { handleApiError } from '@/lib/api-error';
 import { logger } from '@/lib/logger';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 
 export async function GET(request: Request) {
   try {
@@ -74,12 +76,27 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const validated = CampaignCreateSchema.parse(body);
+    
+    // Converte strings vazias para null para evitar erros de validação
+    const cleanBody = Object.fromEntries(
+      Object.entries(body).map(([k, v]) => [k, v === '' ? null : v])
+    );
+    
+    const validated = CampaignCreateSchema.parse(cleanBody);
+
+    // Obter user da sessão ou fallback para o primeiro admin
+    const session = await getServerSession(authOptions);
+    let createdById = session?.user?.id;
+    
+    if (!createdById) {
+      const firstUser = await prisma.user.findFirst();
+      createdById = firstUser?.id || 'system'; 
+    }
 
     const campaign = await prisma.campaign.create({
       data: {
         ...validated,
-        createdById: 'system', // TODO: auth
+        createdById: createdById as string,
       },
     });
 
