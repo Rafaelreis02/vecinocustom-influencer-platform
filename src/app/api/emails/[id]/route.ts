@@ -8,6 +8,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { handleApiError } from '@/lib/api-error';
 import { logger } from '@/lib/logger';
+import { serializeBigInt } from '@/lib/serialize';
 
 export async function GET(request: Request, { params }: any) {
   try {
@@ -45,7 +46,7 @@ export async function GET(request: Request, { params }: any) {
       return NextResponse.json({ error: 'Email not found' }, { status: 404 });
     }
 
-    return NextResponse.json(email);
+    return NextResponse.json(serializeBigInt(email));
   } catch (error) {
     logger.error('GET /api/emails/[id] failed', error);
     return handleApiError(error);
@@ -69,7 +70,7 @@ export async function PUT(request: Request, { params }: any) {
       },
     });
 
-    return NextResponse.json(email);
+    return NextResponse.json(serializeBigInt(email));
   } catch (error) {
     logger.error('PUT /api/emails/[id] failed', error);
     return handleApiError(error);
