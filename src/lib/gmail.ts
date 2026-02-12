@@ -35,13 +35,13 @@ export function getAuthClient() {
 // FETCH EMAILS
 // ============================================
 
-export async function fetchEmails(auth: any) {
+export async function fetchEmails(auth: any, maxResults = 250) {
   try {
     const res = await gmail.users.messages.list({
       userId: 'me',
       auth,
       q: 'is:unread', // Only unread emails (easier to sync)
-      maxResults: 10,
+      maxResults,
     });
 
     const messages = res.data.messages || [];
