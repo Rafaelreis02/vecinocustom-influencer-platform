@@ -274,7 +274,7 @@ export default function MessagesPage() {
   const currentEmails = filteredList.slice((currentPage - 1) * emailsPerPage, currentPage * emailsPerPage);
 
   return (
-    <div className="h-[calc(100vh-64px)] bg-white overflow-hidden text-slate-900 font-sans">
+    <div className="h-full bg-white overflow-hidden text-slate-900 font-sans">
       {/* Container Principal - Lista + Collapsive */}
       <div className="h-full flex">
         {/* Lista de Mensagens */}
