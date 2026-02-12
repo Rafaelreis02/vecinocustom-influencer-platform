@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Plus,
   Search,
@@ -67,12 +66,8 @@ type Influencer = {
   activeCoupons: number;
 };
 
-export default function InfluencersPage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const initialTab = searchParams.get('tab') || 'prospecting';
-  
-  const [activeTab, setActiveTab] = useState(initialTab);
+function InfluencersContent() {
+  const [activeTab, setActiveTab] = useState('prospecting');
   const [searchQuery, setSearchQuery] = useState('');
   const [allInfluencers, setAllInfluencers] = useState<Influencer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -339,5 +334,18 @@ export default function InfluencersPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Main export with Suspense
+export default function InfluencersPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+      </div>
+    }>
+      <InfluencersContent />
+    </Suspense>
   );
 }
