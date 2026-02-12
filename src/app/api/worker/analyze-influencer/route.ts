@@ -18,7 +18,7 @@ const AnalyzeSchema = z.object({
 });
 
 // ============================================
-// AI ANALYSIS (GEMINI FLASH)
+// AI ANALYSIS (GEMINI 3.0 FLASH PREVIEW)
 // ============================================
 
 interface AIAnalysis {
@@ -35,8 +35,10 @@ async function analyzeWithGemini(
   profile: ParsedProfile
 ): Promise<AIAnalysis> {
   const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || '');
-  // Using gemini-1.5-flash (stable model, high speed)
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  
+  // Usando o modelo solicitado: Gemini 3.0 Flash Preview
+  // Nota: O nome do modelo na API costuma ser 'gemini-3.0-flash-preview' ou 'gemini-3.0-flash'
+  const model = genAI.getGenerativeModel({ model: 'gemini-3.0-flash-preview' });
 
   // Build video descriptions with URLs from posts (max 5 for Gemini)
   const videoInfo = profile.rawData?.posts && profile.rawData.posts.length > 0
@@ -152,7 +154,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Step 2: Analyze with Gemini Flash
+    // Step 2: Analyze with Gemini Flash 3.0
     logger.info('Starting Gemini analysis...', { handle });
     let analysis: AIAnalysis;
     try {
