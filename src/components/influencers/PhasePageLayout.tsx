@@ -74,10 +74,10 @@ export default function PhasePageLayout({ phaseId }: PhasePageLayoutProps) {
       
       // Se a tab ativa não tem ninguém mas outra tem, muda para a primeira com gente
       if (phaseInfluencers.length > 0) {
-        const hasActivePeople = phaseInfluencers.some(i => i.status.toUpperCase() === activeTab.toUpperCase());
+        const hasActivePeople = phaseInfluencers.some((i: Influencer) => i.status.toUpperCase() === activeTab.toUpperCase());
         if (!hasActivePeople) {
           const firstAvailableStatus = phase.statuses.find(s => 
-            phaseInfluencers.some(i => i.status.toUpperCase() === s.toUpperCase())
+            phaseInfluencers.some((i: Influencer) => i.status.toUpperCase() === s.toUpperCase())
           );
           if (firstAvailableStatus) setActiveTab(firstAvailableStatus.toUpperCase());
         }
