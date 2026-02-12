@@ -275,31 +275,10 @@ export default function MessagesPage() {
 
   return (
     <div className="flex h-[calc(100vh-theme(spacing.16))] bg-white overflow-hidden text-slate-900 font-sans">
-      {/* Sidebar de Navegação */}
-      <div className="hidden md:flex w-16 lg:w-64 flex-col border-r border-gray-200 bg-slate-50">
-        <div className="p-3 border-b border-gray-200 bg-white">
-          <button onClick={handleSyncNow} disabled={syncing} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm transition active:scale-95 disabled:bg-gray-400 shadow-md" style={{ backgroundColor: 'rgb(18,24,39)', color: 'white' }}>
-            <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
-            <span className="hidden lg:inline">{syncing ? 'A Sincronizar...' : 'Sincronizar'}</span>
-          </button>
-        </div>
-        <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
-          <button onClick={() => setFilter('inbox')} className={`w-full flex items-center justify-center lg:justify-start gap-3 px-3 py-2.5 rounded-xl text-sm transition ${filter === 'inbox' ? 'bg-blue-100 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-100'}`}>
-            <Inbox className="h-4 w-4" /> <span className="hidden lg:inline">Entrada</span>
-          </button>
-          <button onClick={() => setFilter('unread')} className={`w-full flex items-center justify-center lg:justify-start gap-3 px-3 py-2.5 rounded-xl text-sm transition ${filter === 'unread' ? 'bg-blue-100 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-100'}`}>
-            <EyeOff className="h-4 w-4" /> <span className="hidden lg:inline">Não lidas</span>
-          </button>
-          <button onClick={() => setFilter('flagged')} className={`w-full flex items-center justify-center lg:justify-start gap-3 px-3 py-2.5 rounded-xl text-sm transition ${filter === 'flagged' ? 'bg-blue-100 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-100'}`}>
-            <Flag className="h-4 w-4" /> <span className="hidden lg:inline">Marcadas</span>
-          </button>
-        </nav>
-      </div>
-
       {/* Container Principal - Lista + Collapsive */}
       <div className="flex-1 flex overflow-hidden">
         {/* Lista de Mensagens */}
-        <div className={`${selectedEmail ? 'hidden md:flex md:w-[450px] lg:w-[550px]' : 'flex w-full'} flex-col border-r border-gray-200 bg-white shadow-sm z-10`}>
+        <div className={`${selectedEmail ? 'hidden md:flex md:w-[500px] lg:w-[600px] xl:w-[700px]' : 'flex w-full'} flex-col border-r border-gray-200 bg-white shadow-sm z-10`}>
           {/* Header com Dropdowns */}
           <div className="p-3 border-b border-gray-200 space-y-3">
             <div className="relative">
@@ -307,8 +286,20 @@ export default function MessagesPage() {
               <input type="text" placeholder="Pesquisar emails..." value={searchQuery} onChange={(e) => {setSearchQuery(e.target.value); setCurrentPage(1);}} className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
             </div>
             
-            {/* Dropdowns */}
+            {/* Dropdowns + Sync */}
             <div className="flex gap-2">
+              {/* Botão Sincronizar */}
+              <button 
+                onClick={handleSyncNow} 
+                disabled={syncing} 
+                className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-white hover:opacity-90 transition active:scale-95 disabled:opacity-50"
+                style={{ backgroundColor: 'rgb(18,24,39)' }}
+                title="Sincronizar emails"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${syncing ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">{syncing ? '...' : 'Sync'}</span>
+              </button>
+              
               {/* Dropdown Caixa de Entrada */}
               <div className="relative flex-1">
                 <button 
