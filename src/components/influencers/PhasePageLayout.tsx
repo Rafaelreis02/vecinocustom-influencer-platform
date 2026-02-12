@@ -51,25 +51,40 @@ export default function PhasePageLayout({ phaseId }: PhasePageLayoutProps) {
 
   useEffect(() => {
     fetchInfluencers();
-  }, []);
+  }, [phaseId]);
 
   const fetchInfluencers = async () => {
     setLoading(true);
     try {
-      // Adicionado { cache: 'no-store' } para garantir dados sempre frescos
-      const res = await fetch(`/api/influencers`, { cache: 'no-store' });
+      // Forçar refresh total para ignorar cache
+      const res = await fetch(`/api/influencers?t=${Date.now()}`, { cache: 'no-store' });
       const data = await res.json();
       
-      // Filtro rigoroso e case-insensitive pela fase
+      console.log(`[DEBUG] Loaded ${data.length} influencers for phase ${phaseId}`);
+      
+      // Filtrar influencers que pertencem a esta fase
+      const phaseStatuses = phase.statuses.map(s => s.toUpperCase());
       const phaseInfluencers = data.filter((inf: Influencer) => {
-        const influencerStatus = (inf.status || 'UNKNOWN').toUpperCase();
-        const phaseStatuses = phase.statuses.map(s => s.toUpperCase());
-        return phaseStatuses.includes(influencerStatus);
+        const infStatus = (inf.status || 'UNKNOWN').toUpperCase();
+        return phaseStatuses.includes(infStatus);
       });
       
+      console.log(`[DEBUG] ${phaseInfluencers.length} influencers match this phase`);
       setAllInfluencers(phaseInfluencers);
+      
+      // Se a tab ativa não tem ninguém mas outra tem, muda para a primeira com gente
+      if (phaseInfluencers.length > 0) {
+        const hasActivePeople = phaseInfluencers.some(i => i.status.toUpperCase() === activeTab.toUpperCase());
+        if (!hasActivePeople) {
+          const firstAvailableStatus = phase.statuses.find(s => 
+            phaseInfluencers.some(i => i.status.toUpperCase() === s.toUpperCase())
+          );
+          if (firstAvailableStatus) setActiveTab(firstAvailableStatus.toUpperCase());
+        }
+      }
     } catch (error) {
       console.error('Error fetching influencers:', error);
+      addToast('Erro ao carregar lista de influencers', 'error');
     } finally {
       setLoading(false);
     }
@@ -106,7 +121,7 @@ export default function PhasePageLayout({ phaseId }: PhasePageLayoutProps) {
 
   // Filter by active tab and search query
   const filteredInfluencers = allInfluencers.filter(inf => {
-    // RIGOR TOTAL: Comparação case-insensitive para garantir que bate sempre
+    // Comparação absoluta em maiúsculas
     if (inf.status?.toUpperCase() !== activeTab?.toUpperCase()) return false;
     
     // Filtro de pesquisa
@@ -123,11 +138,10 @@ export default function PhasePageLayout({ phaseId }: PhasePageLayoutProps) {
     return true;
   });
 
-  // Sincronizar as abas com a configuração oficial e contar corretamente
   const tabs = phase.statuses.map(status => {
     const config = getStatusConfig(status);
     return {
-      id: status,
+      id: status.toUpperCase(),
       label: config.label,
       icon: config.icon,
       count: allInfluencers.filter(i => i.status?.toUpperCase() === status?.toUpperCase()).length,
@@ -137,12 +151,13 @@ export default function PhasePageLayout({ phaseId }: PhasePageLayoutProps) {
   return (
     <div className="space-y-6 max-w-full overflow-x-hidden">
       <ToastContainer toasts={toasts} onClose={removeToast} />
+      {dialog}
       
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="min-w-0 flex-1">
           <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 flex items-center gap-2">
-            <span>{phase.icon}</span>
+            <span>{phase.icon || <Users className="h-8 w-8" />}</span>
             <span>{phase.label}</span>
           </h1>
           <p className="mt-1 text-xs sm:text-sm text-gray-600 line-clamp-2">
@@ -163,7 +178,7 @@ export default function PhasePageLayout({ phaseId }: PhasePageLayoutProps) {
       <div className="border-b border-gray-200 -mx-4 px-4 sm:mx-0 sm:px-0">
         <nav className="flex gap-3 sm:gap-8 overflow-x-auto scrollbar-hide">
           {tabs.map((tab) => {
-            const isActive = activeTab === tab.id;
+            const isActive = activeTab.toUpperCase() === tab.id.toUpperCase();
             return (
               <button
                 key={tab.id}
@@ -211,8 +226,19 @@ export default function PhasePageLayout({ phaseId }: PhasePageLayoutProps) {
         </div>
       )}
 
+      {/* Empty State */}
+      {!loading && filteredInfluencers.length === 0 && (
+        <div className="text-center py-16 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+          <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900">Nenhum influencer nesta tab</h3>
+          <p className="text-sm text-gray-500 max-w-xs mx-auto mt-1">
+            Não encontrámos influencers com o estado "{tabs.find(t => t.id === activeTab)?.label}" nesta fase.
+          </p>
+        </div>
+      )}
+
       {/* Influencers List */}
-      {!loading && (
+      {!loading && filteredInfluencers.length > 0 && (
         <div className="space-y-3">
           {filteredInfluencers.map((influencer) => (
             <Link
@@ -250,57 +276,57 @@ export default function PhasePageLayout({ phaseId }: PhasePageLayoutProps) {
                 <div className="hidden lg:flex items-center gap-8 px-8">
                   {/* Status Badge */}
                   <div className="text-center">
-                    <p className="text-xs text-gray-500 mb-1">Status</p>
+                    <p className="text-xs text-gray-500 mb-1 text-left">Status</p>
                     {(() => {
                       const statusConfig = getStatusConfig(influencer.status);
                       return (
-                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium border ${statusConfig.color}`}>
-                          <span>{statusConfig.icon}</span>
-                          <span>{statusConfig.label}</span>
-                        </span>
+                        <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md border text-xs font-medium ${statusConfig.color}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${statusConfig.dotColor}`} />
+                          {statusConfig.label}
+                        </div>
                       );
                     })()}
                   </div>
-                  <div className="text-center">
+
+                  {/* Followers */}
+                  <div className="text-center min-w-[80px]">
                     <p className="text-xs text-gray-500 mb-1">Followers</p>
-                    <p className="font-semibold text-gray-900">
-                      {influencer.totalFollowers > 0 ? (influencer.totalFollowers / 1000).toFixed(1) + 'K' : '-'}
+                    <p className="font-semibold text-gray-900 text-sm">
+                      {influencer.totalFollowers > 1000 
+                        ? `${(influencer.totalFollowers / 1000).toFixed(1)}k` 
+                        : influencer.totalFollowers}
                     </p>
                   </div>
-                  <div className="text-center">
-                    <p className="text-xs text-gray-500 mb-1">Engagement</p>
-                    <p className="font-semibold text-purple-600">
-                      {influencer.engagement > 0 ? influencer.engagement.toFixed(1) + '%' : '-'}
+
+                  {/* Engagement */}
+                  <div className="text-center min-w-[60px]">
+                    <p className="text-xs text-gray-500 mb-1">Eng.</p>
+                    <p className="font-semibold text-gray-900 text-sm">
+                      {influencer.engagement}%
                     </p>
                   </div>
-                  {influencer.matchScore && (
-                    <div className="text-center">
-                      <p className="text-xs text-gray-500 mb-1">Fit Score</p>
-                      <p className="font-semibold text-gray-900 flex items-center justify-center gap-1">
-                        {influencer.matchScore}/5
-                        <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                      </p>
-                    </div>
-                  )}
+
+                  {/* Match Score */}
+                  <div className="text-center min-w-[60px]">
+                    <p className="text-xs text-gray-500 mb-1 flex items-center justify-center gap-1">
+                      Fit <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
+                    </p>
+                    <p className="font-semibold text-gray-900 text-sm">
+                      {influencer.matchScore || 'N/A'}
+                    </p>
+                  </div>
                 </div>
 
                 {/* Right: Actions */}
-                <div className="flex items-center gap-1 sm:gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
-                  <Link
-                    href={`/dashboard/influencers/${influencer.id}/edit`}
-                    className="p-1.5 sm:p-2 rounded-md hover:bg-gray-100 text-gray-600 hover:text-gray-900 transition-colors active:scale-95"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Link>
-                  <button 
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <button
                     onClick={(e) => {
-                      e.stopPropagation();
+                      e.preventDefault();
                       handleDelete(influencer.id, influencer.name);
                     }}
-                    className="p-1.5 sm:p-2 rounded-md hover:bg-gray-100 text-gray-600 hover:text-red-600 transition-colors active:scale-95"
+                    className="p-2 text-gray-400 hover:text-red-600 transition-colors"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
                   </button>
                 </div>
               </div>
@@ -308,29 +334,6 @@ export default function PhasePageLayout({ phaseId }: PhasePageLayoutProps) {
           ))}
         </div>
       )}
-
-      {/* Empty State */}
-      {!loading && filteredInfluencers.length === 0 && (
-        <div className="text-center py-16 rounded-lg bg-white border border-gray-200">
-          <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            Nenhum influencer nesta categoria
-          </h3>
-          <p className="text-gray-500 mb-6">
-            Adiciona influencers em fase de {phase.label.toLowerCase()}
-          </p>
-          <Link
-            href="/dashboard/influencers/new"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-md text-sm font-medium hover:bg-gray-800 transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            Adicionar Influencer
-          </Link>
-        </div>
-      )}
-
-      {/* Confirm Dialog */}
-      <ConfirmDialog {...dialog} />
     </div>
   );
 }
