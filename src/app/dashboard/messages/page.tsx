@@ -479,10 +479,17 @@ export default function MessagesPage() {
             <div 
               className="fixed inset-0 bg-black/40 z-40 transition-opacity duration-300"
               onClick={() => setSelectedEmail(null)}
+              role="presentation"
+              aria-hidden="true"
             />
             
             {/* Drawer Panel - desliza da direita */}
-            <div className="fixed top-0 right-0 h-full w-full md:w-[80%] lg:w-[75%] xl:w-[70%] bg-white z-50 shadow-2xl flex flex-row animate-slide-in-right">
+            <div 
+              className="fixed top-0 right-0 h-full w-full md:w-[80%] lg:w-[75%] xl:w-[70%] bg-white z-50 shadow-2xl flex flex-row animate-slide-in-right"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="email-subject-heading"
+            >
               {/* Influencer Panel (desktop only) - mesmo conteúdo que já existe */}
               <div className="hidden md:flex w-[30%] min-w-[280px] max-w-[350px] border-r border-gray-200 flex-col h-full overflow-hidden">
                 {selectedEmail.influencer ? (
@@ -554,7 +561,7 @@ export default function MessagesPage() {
                 {/* Conteúdo da mensagem */}
                 <div className="flex-1 overflow-y-auto p-6">
                   <div className="max-w-3xl mx-auto">
-                    <h1 className="text-xl font-black text-slate-900 mb-6">{selectedEmail.subject}</h1>
+                    <h1 id="email-subject-heading" className="text-xl font-black text-slate-900 mb-6">{selectedEmail.subject}</h1>
                     
                     {selectedEmail.htmlBody ? (
                       <div className="prose prose-blue max-w-none text-slate-700 text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: selectedEmail.htmlBody }} />
