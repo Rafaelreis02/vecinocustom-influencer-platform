@@ -93,34 +93,39 @@ export default function NewInfluencerPage() {
 
       const analysisData = await analyzeRes.json();
       console.log(`[IMPORT] Analysis complete:`, analysisData);
+      console.log(`[IMPORT] Avatar URL received:`, analysisData.avatar);
 
       // Step 2: Create influencer with analyzed data
+      const influencerData = {
+        name: importHandle,
+        tiktokHandle: importPlatform === 'tiktok' ? importHandle : '',
+        instagramHandle: importPlatform === 'instagram' ? importHandle : '',
+        tiktokFollowers: importPlatform === 'tiktok' ? analysisData.followers : undefined,
+        instagramFollowers: importPlatform === 'instagram' ? analysisData.followers : undefined,
+        avatarUrl: analysisData.avatar,
+        engagementRate: analysisData.engagement,
+        averageViews: analysisData.averageViews,
+        totalLikes: analysisData.totalLikes,
+        biography: analysisData.biography,
+        verified: analysisData.verified,
+        videoCount: analysisData.videoCount,
+        fitScore: analysisData.fitScore,
+        tier: analysisData.tier,
+        niche: analysisData.niche,
+        estimatedPrice: analysisData.estimatedPrice,
+        status: 'ANALYZING',
+        notes: `📊 Análise automática (${new Date().toLocaleDateString('pt-PT')}):\n\nFit: ${analysisData.fitScore}/5 ⭐\nNível: ${analysisData.tier}\nNiche: ${analysisData.niche}\n\nPontos Fortes:\n${analysisData.strengths?.map((s: string) => `• ${s}`).join('\n') || 'N/A'}\n\nOportunidades:\n${analysisData.opportunities?.map((o: string) => `• ${o}`).join('\n') || 'N/A'}\n\n---\n${analysisData.summary || ''}`,
+        country: analysisData.country || '',
+        language: 'PT',
+        primaryPlatform: importPlatform.toUpperCase(),
+      };
+      
+      console.log(`[IMPORT] Creating influencer with data:`, influencerData);
+
       const createRes = await fetch('/api/influencers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: importHandle,
-          tiktokHandle: importPlatform === 'tiktok' ? importHandle : '',
-          instagramHandle: importPlatform === 'instagram' ? importHandle : '',
-          tiktokFollowers: importPlatform === 'tiktok' ? analysisData.followers : undefined,
-          instagramFollowers: importPlatform === 'instagram' ? analysisData.followers : undefined,
-          avatarUrl: analysisData.avatar,
-          engagementRate: analysisData.engagement,
-          averageViews: analysisData.averageViews,
-          totalLikes: analysisData.totalLikes,
-          biography: analysisData.biography,
-          verified: analysisData.verified,
-          videoCount: analysisData.videoCount,
-          fitScore: analysisData.fitScore,
-          tier: analysisData.tier,
-          niche: analysisData.niche,
-          estimatedPrice: analysisData.estimatedPrice,
-          status: 'ANALYZING',
-          notes: `📊 Análise automática (${new Date().toLocaleDateString('pt-PT')}):\n\nFit: ${analysisData.fitScore}/5 ⭐\nNível: ${analysisData.tier}\nNiche: ${analysisData.niche}\n\nPontos Fortes:\n${analysisData.strengths?.map((s: string) => `• ${s}`).join('\n') || 'N/A'}\n\nOportunidades:\n${analysisData.opportunities?.map((o: string) => `• ${o}`).join('\n') || 'N/A'}\n\n---\n${analysisData.summary || ''}`,
-          country: analysisData.country || '',
-          language: 'PT',
-          primaryPlatform: importPlatform.toUpperCase(),
-        }),
+        body: JSON.stringify(influencerData),
       });
 
       if (createRes.ok) {

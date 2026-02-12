@@ -202,7 +202,8 @@ export async function POST(request: Request) {
       country: null, // TODO: infer from content/bio
     };
 
-    logger.info('Analysis complete', { handle, fitScore: result.fitScore });
+    logger.info('Analysis complete', { handle, fitScore: result.fitScore, avatarUrl: result.avatar });
+    console.log('[ANALYZE] Avatar URL:', result.avatar);
 
     return NextResponse.json(result);
   } catch (error) {
