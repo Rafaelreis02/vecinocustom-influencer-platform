@@ -104,6 +104,7 @@ export default function NewInfluencerPage() {
           instagramHandle: importPlatform === 'instagram' ? importHandle : '',
           tiktokFollowers: importPlatform === 'tiktok' ? analysisData.followers : undefined,
           instagramFollowers: importPlatform === 'instagram' ? analysisData.followers : undefined,
+          avatarUrl: analysisData.avatar,
           engagementRate: analysisData.engagement,
           averageViews: analysisData.averageViews,
           totalLikes: analysisData.totalLikes,

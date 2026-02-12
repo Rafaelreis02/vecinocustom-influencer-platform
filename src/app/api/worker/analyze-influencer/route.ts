@@ -188,6 +188,7 @@ export async function POST(request: Request) {
       verified: profile.verified,
       videoCount: profile.videoCount,
       estimatedPrice: profile.estimatedPrice,
+      avatar: profile.avatar,
       
       // From AI
       fitScore: analysis.fitScore,
