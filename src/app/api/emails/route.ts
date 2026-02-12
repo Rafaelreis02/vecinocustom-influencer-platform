@@ -36,8 +36,10 @@ export async function GET(request: Request) {
           select: {
             id: true,
             name: true,
+            status: true,
             tiktokHandle: true,
             instagramHandle: true,
+            avatarUrl: true,
             fitScore: true,
             tier: true,
           },

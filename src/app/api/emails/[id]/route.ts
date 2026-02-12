@@ -22,10 +22,12 @@ export async function GET(request: Request, { params }: any) {
             phone: true,
             tiktokHandle: true,
             instagramHandle: true,
+            avatarUrl: true,
             fitScore: true,
             tier: true,
             tags: true,
             notes: true,
+            status: true,
             videos: {
               select: { id: true, views: true, likes: true },
               take: 5,
