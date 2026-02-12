@@ -41,7 +41,8 @@ interface PhasePageLayoutProps {
 
 export default function PhasePageLayout({ phaseId }: PhasePageLayoutProps) {
   const phase = PHASES[phaseId];
-  const [activeTab, setActiveTab] = useState<string>(phase.statuses[0]);
+  // Garante que o status inicial está em maiúsculas
+  const [activeTab, setActiveTab] = useState<string>(phase.statuses[0].toUpperCase());
   const [searchQuery, setSearchQuery] = useState('');
   const [allInfluencers, setAllInfluencers] = useState<Influencer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -102,8 +103,8 @@ export default function PhasePageLayout({ phaseId }: PhasePageLayoutProps) {
 
   // Filter by active tab and search query
   const filteredInfluencers = allInfluencers.filter(inf => {
-    // RIGOR TOTAL: Só mostra se o status bater exatamente com a sub-aba ativa
-    if (inf.status !== activeTab) return false;
+    // RIGOR TOTAL: Comparação case-insensitive para garantir que bate sempre
+    if (inf.status?.toUpperCase() !== activeTab?.toUpperCase()) return false;
     
     // Filtro de pesquisa
     if (searchQuery) {
@@ -119,14 +120,14 @@ export default function PhasePageLayout({ phaseId }: PhasePageLayoutProps) {
     return true;
   });
 
-  // Sincronizar as abas com a configuração oficial
+  // Sincronizar as abas com a configuração oficial e contar corretamente
   const tabs = phase.statuses.map(status => {
     const config = getStatusConfig(status);
     return {
       id: status,
       label: config.label,
       icon: config.icon,
-      count: allInfluencers.filter(i => i.status === status).length,
+      count: allInfluencers.filter(i => i.status?.toUpperCase() === status?.toUpperCase()).length,
     };
   });
 
