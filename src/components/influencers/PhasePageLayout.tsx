@@ -58,12 +58,10 @@ export default function PhasePageLayout({ phaseId }: PhasePageLayoutProps) {
       const res = await fetch(`/api/influencers`);
       const data = await res.json();
       
-      // Filtro inteligente: Se o status do influencer diz que ele pertence a esta FASE, 
-      // mostramos, mesmo que a sub-aba ativa seja outra.
-      const phaseInfluencers = data.filter((inf: Influencer) => {
-        const config = getStatusConfig(inf.status);
-        return config.phase === phaseId;
-      });
+      // Filtro rigoroso: O influencer TEM de pertencer a um dos status desta fase
+      const phaseInfluencers = data.filter((inf: Influencer) => 
+        (phase.statuses as readonly string[]).includes(inf.status)
+      );
       
       setAllInfluencers(phaseInfluencers);
     } catch (error) {
@@ -104,10 +102,10 @@ export default function PhasePageLayout({ phaseId }: PhasePageLayoutProps) {
 
   // Filter by active tab and search query
   const filteredInfluencers = allInfluencers.filter(inf => {
-    // Filter by status/tab
+    // RIGOR TOTAL: Só mostra se o status bater exatamente com a sub-aba ativa
     if (inf.status !== activeTab) return false;
     
-    // Filter by search query
+    // Filtro de pesquisa
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       return (
@@ -121,6 +119,7 @@ export default function PhasePageLayout({ phaseId }: PhasePageLayoutProps) {
     return true;
   });
 
+  // Sincronizar as abas com a configuração oficial
   const tabs = phase.statuses.map(status => {
     const config = getStatusConfig(status);
     return {
