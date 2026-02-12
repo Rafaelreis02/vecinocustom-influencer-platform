@@ -78,6 +78,11 @@ export async function PATCH(
     const { id } = await params;
     const body = await request.json();
     
+    // Converte o status para MAIÚSCULAS se ele existir, para bater com o ENUM da Base de Dados
+    if (body.status && typeof body.status === 'string') {
+      body.status = body.status.toUpperCase();
+    }
+    
     const validated = InfluencerUpdateSchema.parse(body);
 
     const influencer = await prisma.influencer.update({

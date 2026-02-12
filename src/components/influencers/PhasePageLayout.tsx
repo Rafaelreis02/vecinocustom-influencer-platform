@@ -56,13 +56,16 @@ export default function PhasePageLayout({ phaseId }: PhasePageLayoutProps) {
   const fetchInfluencers = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/influencers`);
+      // Adicionado { cache: 'no-store' } para garantir dados sempre frescos
+      const res = await fetch(`/api/influencers`, { cache: 'no-store' });
       const data = await res.json();
       
-      // Filtro rigoroso: O influencer TEM de pertencer a um dos status desta fase
-      const phaseInfluencers = data.filter((inf: Influencer) => 
-        (phase.statuses as readonly string[]).includes(inf.status)
-      );
+      // Filtro rigoroso e case-insensitive pela fase
+      const phaseInfluencers = data.filter((inf: Influencer) => {
+        const influencerStatus = (inf.status || 'UNKNOWN').toUpperCase();
+        const phaseStatuses = phase.statuses.map(s => s.toUpperCase());
+        return phaseStatuses.includes(influencerStatus);
+      });
       
       setAllInfluencers(phaseInfluencers);
     } catch (error) {
