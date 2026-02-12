@@ -93,6 +93,11 @@ export async function PATCH(
   }
 }
 
+// Suporte para PUT (mudar status do influencer usa PUT no frontend)
+export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
+  return PATCH(request, context);
+}
+
 // DELETE /api/influencers/[id]
 export async function DELETE(
   request: Request,
