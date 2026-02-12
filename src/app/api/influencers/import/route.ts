@@ -132,6 +132,9 @@ export async function POST(request: Request) {
       instagramHandle: platform === 'instagram' ? cleanHandle : null,
       instagramFollowers: platform === 'instagram' ? profileData.followers : null,
       
+      // Avatar
+      avatarUrl: profileData.avatar,
+      
       // Metrics
       totalLikes: profileData.totalLikes ? profileData.totalLikes.toString() : null,
       engagementRate: profileData.engagementRate,

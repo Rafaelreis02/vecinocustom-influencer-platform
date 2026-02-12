@@ -53,6 +53,7 @@ model Influencer {
   tiktokFollowers   Int?
   youtubeHandle     String?
   youtubeFollowers  Int?
+  avatarUrl         String?             // Foto de perfil do influencer
   
   // Metrics & Performance
   totalLikes        BigInt?             // Total de likes

@@ -8,6 +8,7 @@ interface InfluencerPanelProps {
     name: string;
     status?: string;
     email?: string;
+    avatarUrl?: string | null;
     socialProfiles?: { platform: string; url: string; followers: number }[];
   } | null;
   onClose?: () => void;
@@ -24,9 +25,20 @@ export function InfluencerPanel({ influencer, onClose }: InfluencerPanelProps) {
 
   return (
     <div className="h-full bg-white border-r border-slate-200 overflow-y-auto p-6 space-y-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <h3 className="font-black text-lg text-slate-900">{influencer.name}</h3>
+      <div className="flex items-start gap-3">
+        {influencer.avatarUrl ? (
+          <img 
+            src={influencer.avatarUrl} 
+            alt={influencer.name}
+            className="w-12 h-12 rounded-full object-cover border border-slate-200"
+          />
+        ) : (
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-bold text-lg">
+            {influencer.name.charAt(0).toUpperCase()}
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <h3 className="font-black text-lg text-slate-900 truncate">{influencer.name}</h3>
           <p className="text-xs text-slate-400 uppercase tracking-wider">Influencer</p>
         </div>
         {onClose && (

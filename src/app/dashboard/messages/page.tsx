@@ -20,7 +20,7 @@ interface Email {
   isRead: boolean;
   isFlagged: boolean;
   body?: string;
-  influencer?: { id: string; name: string; status?: string } | null;
+  influencer?: { id: string; name: string; status?: string; avatarUrl?: string | null } | null;
 }
 
 interface EmailDetail extends Email {
@@ -396,9 +396,17 @@ export default function MessagesPage() {
                   className={`group p-3 cursor-pointer hover:bg-slate-50 transition border-b border-slate-100 flex items-center gap-3 ${selectedEmail?.id === email.id ? 'bg-blue-50/50' : ''} ${!email.isRead ? 'bg-blue-50/20' : ''}`}
                 >
                   {/* Avatar */}
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-slate-400 to-slate-500 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
-                    {email.from.charAt(0).toUpperCase()}
-                  </div>
+                  {email.influencer?.avatarUrl ? (
+                    <img 
+                      src={email.influencer.avatarUrl} 
+                      alt={email.influencer.name}
+                      className="w-9 h-9 rounded-full object-cover border border-slate-200 flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-slate-400 to-slate-500 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
+                      {email.from.charAt(0).toUpperCase()}
+                    </div>
+                  )}
                   
                   {/* Info principal */}
                   <div className="flex-1 min-w-0 flex items-center gap-3">
