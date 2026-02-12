@@ -113,6 +113,11 @@ export async function PATCH(
   }
 }
 
+// Suporte para PUT (alguns componentes do frontend usam PUT em vez de PATCH)
+export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
+  return PATCH(request, context);
+}
+
 // DELETE /api/campaigns/[id]
 export async function DELETE(
   request: Request,
