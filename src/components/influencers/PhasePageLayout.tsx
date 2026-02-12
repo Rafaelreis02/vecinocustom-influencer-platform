@@ -57,10 +57,14 @@ export default function PhasePageLayout({ phaseId }: PhasePageLayoutProps) {
     try {
       const res = await fetch(`/api/influencers`);
       const data = await res.json();
-      // Filter by phase statuses
-      const phaseInfluencers = data.filter((inf: Influencer) => 
-        (phase.statuses as readonly string[]).includes(inf.status)
-      );
+      
+      // Filtro inteligente: Se o status do influencer diz que ele pertence a esta FASE, 
+      // mostramos, mesmo que a sub-aba ativa seja outra.
+      const phaseInfluencers = data.filter((inf: Influencer) => {
+        const config = getStatusConfig(inf.status);
+        return config.phase === phaseId;
+      });
+      
       setAllInfluencers(phaseInfluencers);
     } catch (error) {
       console.error('Error fetching influencers:', error);
