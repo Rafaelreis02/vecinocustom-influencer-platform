@@ -246,7 +246,11 @@ export default function CampaignDetailPage() {
     );
   }
 
-  const statusInfo = statusConfig[campaign.status as keyof typeof statusConfig];
+  const statusInfo = statusConfig[campaign.status as keyof typeof statusConfig] || { 
+    label: campaign.status, 
+    color: 'text-gray-700 bg-gray-50 border-gray-200', 
+    icon: Clock 
+  };
   const StatusIcon = statusInfo.icon;
   const budgetPercent = campaign.budget ? (campaign.spent / campaign.budget) * 100 : 0;
   
