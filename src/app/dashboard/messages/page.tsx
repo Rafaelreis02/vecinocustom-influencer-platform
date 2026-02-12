@@ -319,20 +319,49 @@ export default function MessagesPage() {
       const influencerData: any = {
         name: analysisData.handle || newInfluencerHandle,
         email: selectedEmail.from,
-        engagementRate: analysisData.engagement,
-        averageViews: analysisData.averageViews,
-        totalLikes: analysisData.totalLikes,
-        fitScore: analysisData.fitScore,
-        tier: analysisData.tier,
-        niche: analysisData.niche,
         status: 'ANALYZING',
         primaryPlatform: newInfluencerPlatform,
         language: 'PT',
       };
       
+      // Only add numeric fields if they are valid numbers
+      if (analysisData.engagement !== null && analysisData.engagement !== undefined) {
+        const engagement = parseFloat(analysisData.engagement);
+        if (!isNaN(engagement)) {
+          influencerData.engagementRate = engagement;
+        }
+      }
+      
+      if (analysisData.totalLikes !== null && analysisData.totalLikes !== undefined) {
+        const likes = parseInt(analysisData.totalLikes);
+        if (!isNaN(likes)) {
+          influencerData.totalLikes = likes;
+        }
+      }
+      
+      if (analysisData.fitScore !== null && analysisData.fitScore !== undefined) {
+        const fit = parseInt(analysisData.fitScore);
+        if (!isNaN(fit)) {
+          influencerData.fitScore = fit;
+        }
+      }
+      
+      // String fields
+      if (analysisData.averageViews) {
+        influencerData.averageViews = String(analysisData.averageViews);
+      }
+      
+      if (analysisData.tier) {
+        influencerData.tier = String(analysisData.tier);
+      }
+      
+      if (analysisData.niche) {
+        influencerData.niche = String(analysisData.niche);
+      }
+      
       // Only add avatar if exists
       if (analysisData.avatar) {
-        influencerData.avatarUrl = analysisData.avatar;
+        influencerData.avatarUrl = String(analysisData.avatar);
       }
       
       // Only add the correct platform handle
