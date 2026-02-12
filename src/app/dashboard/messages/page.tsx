@@ -68,6 +68,17 @@ export default function MessagesPage() {
     return () => clearInterval(interval);
   }, []);
 
+  // Handle Escape key to close drawer
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && selectedEmail && !showInfluencerModal) {
+        setSelectedEmail(null);
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [selectedEmail, showInfluencerModal]);
+
   async function fetchUserSettings() {
     try {
       const res = await fetch('/api/user/settings');
@@ -278,7 +289,7 @@ export default function MessagesPage() {
       {/* Container Principal - Lista + Collapsive */}
       <div className="h-full flex">
         {/* Lista de Mensagens */}
-        <div className={`${selectedEmail ? 'hidden md:flex md:w-[500px] lg:w-[600px] xl:w-[700px]' : 'flex w-full'} h-full flex-col border-r border-gray-200 bg-white shadow-sm z-10`}>
+        <div className="flex w-full h-full flex-col border-r border-gray-200 bg-white shadow-sm z-10">
           {/* Header com Dropdowns */}
           <div className="p-3 border-b border-gray-200 space-y-3">
             <div className="relative">
@@ -472,163 +483,180 @@ export default function MessagesPage() {
           )}
         </div>
 
-        {/* Collapsive Direito - Quando Email Selecionado */}
+        {/* Drawer Overlay */}
         {selectedEmail && (
-          <div className="absolute inset-0 md:static md:relative md:flex-1 md:h-full flex flex-row bg-white z-50 md:z-10 animate-in slide-in-from-right duration-300">
-            {/* Influencer Panel (30%) - Desktop only */}
-            <div className="hidden md:flex w-[30%] min-w-[280px] max-w-[350px] border-r border-gray-200 flex-col h-full overflow-hidden">
-              {selectedEmail.influencer ? (
-                <InfluencerPanel influencer={selectedEmail.influencer} />
-              ) : (
-                <div className="h-full bg-slate-50 p-6 flex flex-col items-center justify-center text-center space-y-4">
-                  <div className="w-16 h-16 rounded-full bg-slate-200 flex items-center justify-center">
-                    <UserPlus className="h-8 w-8 text-slate-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-600 mb-1">Sem influencer associado</p>
-                    <p className="text-xs text-slate-400">Adiciona um influencer a este email</p>
-                  </div>
-                  <button 
-                    onClick={openInfluencerModal}
-                    className="px-4 py-2 rounded-lg font-bold text-xs text-white hover:opacity-90 transition"
-                    style={{ backgroundColor: 'rgb(18,24,39)' }}
-                  >
-                    + Adicionar Influencer
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Email Detail + Reply (70%) */}
-            <div className="flex-1 flex flex-col h-full w-full overflow-hidden bg-white">
-              {/* Header */}
-              <div className="p-4 px-6 border-b border-gray-100 flex items-center justify-between bg-white z-20">
-                <div className="flex items-center gap-3">
-                  {/* Mobile back button */}
-                  <button onClick={() => setSelectedEmail(null)} className="md:hidden flex items-center gap-1 text-slate-600">
-                    <ChevronLeft className="h-5 w-5" />
-                    <span className="text-sm">Voltar</span>
-                  </button>
-                  {/* Desktop close button */}
-                  <button onClick={() => setSelectedEmail(null)} className="hidden md:block p-2 hover:bg-slate-100 rounded-lg text-slate-400">
-                    <X className="h-4 w-4" />
-                  </button>
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-bold text-xs">
-                    {selectedEmail.from.charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-slate-900">{selectedEmail.from}</p>
-                    <p className="text-[10px] text-slate-400">{new Date(selectedEmail.receivedAt).toLocaleString('pt-PT')}</p>
-                  </div>
-                </div>
-                
-                <div className="flex gap-1">
-                  <button 
-                    onClick={() => toggleEmailRead(selectedEmail.id, selectedEmail.isRead)}
-                    className="p-2 text-slate-400 hover:bg-blue-100 hover:text-blue-600 rounded-lg transition"
-                    title={selectedEmail.isRead ? 'Marcar como não-lido' : 'Marcar como lido'}
-                  >
-                    {selectedEmail.isRead ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                  <button 
-                    onClick={() => toggleEmailFlag(selectedEmail.id)}
-                    className="p-2 text-slate-400 hover:bg-blue-100 hover:text-blue-600 rounded-lg transition"
-                    title={selectedEmail.isFlagged ? 'Remover flag' : 'Adicionar flag'}
-                  >
-                    <Flag className={`h-4 w-4 ${selectedEmail.isFlagged ? 'fill-blue-600 text-blue-600' : ''}`} />
-                  </button>
-                  <button onClick={() => deleteEmail(selectedEmail.id)} className="p-2 text-slate-400 hover:bg-red-100 hover:text-red-600 transition-colors rounded-lg" title="Eliminar">
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Conteúdo da Mensagem */}
-              <div className="flex-1 overflow-y-auto p-6">
-                <div className="max-w-3xl mx-auto">
-                  <h1 className="text-xl font-black text-slate-900 mb-6">{selectedEmail.subject}</h1>
-                  
-                  {selectedEmail.htmlBody ? (
-                    <div className="prose prose-blue max-w-none text-slate-700 text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: selectedEmail.htmlBody }} />
-                  ) : (
-                    <p className="text-sm text-slate-600 whitespace-pre-wrap leading-relaxed">{selectedEmail.body}</p>
-                  )}
-
-                  {/* Anexos */}
-                  {selectedEmail.attachments?.length > 0 && (
-                    <div className="mt-6 pt-4 border-t border-slate-100">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Anexos ({selectedEmail.attachments.length})</p>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedEmail.attachments.map((att, idx) => (
-                          <button key={idx} onClick={() => window.open(`/api/emails/${selectedEmail.id}/attachments/${att.attachmentId}`)} className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg hover:bg-blue-50 transition text-xs font-semibold text-slate-600">
-                            <Download className="h-3 w-3" /> {att.filename}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Sticky Reply Footer */}
-              <div className="border-t border-gray-100 bg-white">
-                {showReplyPanel ? (
-                  <div className="p-4 max-h-80 overflow-y-auto">
-                    <div className="max-w-3xl mx-auto space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Responder</span>
-                        <button onClick={() => setShowReplyPanel(false)} className="p-1 hover:bg-slate-100 rounded text-slate-400"><X className="h-4 w-4" /></button>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-3">
-                        <input value={replySubject} onChange={e => setReplySubject(e.target.value)} className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Assunto" />
-                        <input value={replyCC} onChange={e => setReplyCC(e.target.value)} placeholder="CC" className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 outline-none" />
-                      </div>
-
-                      <div className="flex gap-2">
-                        <button 
-                          onClick={generateAISuggestion}
-                          disabled={generatingAI}
-                          className="flex-1 flex items-center justify-center gap-2 py-2 bg-blue-100 text-blue-600 rounded-lg font-bold text-xs hover:bg-blue-200 transition disabled:opacity-50"
-                        >
-                          {generatingAI ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                          Sugestão IA
-                        </button>
-                      </div>
-
-                      <textarea 
-                        value={replyText}
-                        onChange={(e) => setReplyText(e.target.value)}
-                        placeholder="Escreve a tua mensagem..."
-                        className="w-full h-20 p-3 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
-                      />
-
-                      <div className="flex gap-2">
-                        <button 
-                          onClick={handleSendReply}
-                          disabled={sendingReply || !replyText.trim()}
-                          className="flex-1 py-2 rounded-lg font-bold text-sm text-white hover:opacity-90 transition disabled:bg-slate-300 flex items-center justify-center gap-2"
-                          style={{ backgroundColor: 'rgb(18,24,39)' }}
-                        >
-                          <Send className="h-4 w-4" /> {sendingReply ? 'A enviar...' : 'Enviar'}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+          <>
+            {/* Backdrop escuro clicável */}
+            <div 
+              className="fixed inset-0 bg-black/40 z-40 transition-opacity duration-300"
+              onClick={() => setSelectedEmail(null)}
+              role="presentation"
+              aria-hidden="true"
+            />
+            
+            {/* Drawer Panel - desliza da direita */}
+            <div 
+              className="fixed top-0 right-0 h-full w-full md:w-[80%] lg:w-[75%] xl:w-[70%] bg-white z-50 shadow-2xl flex flex-row animate-slide-in-right"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="email-subject-heading"
+              aria-label="Email detail panel"
+            >
+              {/* Influencer Panel (desktop only) - mesmo conteúdo que já existe */}
+              <div className="hidden md:flex w-[30%] min-w-[280px] max-w-[350px] border-r border-gray-200 flex-col h-full overflow-hidden">
+                {selectedEmail.influencer ? (
+                  <InfluencerPanel influencer={selectedEmail.influencer} />
                 ) : (
-                  <div className="p-3 px-6 flex items-center justify-between">
-                    <span className="text-sm text-slate-500">Pronto para responder?</span>
+                  <div className="h-full bg-slate-50 p-6 flex flex-col items-center justify-center text-center space-y-4">
+                    <div className="w-16 h-16 rounded-full bg-slate-200 flex items-center justify-center">
+                      <UserPlus className="h-8 w-8 text-slate-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-600 mb-1">Sem influencer associado</p>
+                      <p className="text-xs text-slate-400">Adiciona um influencer a este email</p>
+                    </div>
                     <button 
-                      onClick={() => setShowReplyPanel(true)}
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-600 rounded-lg font-bold text-sm hover:bg-blue-200 transition"
+                      onClick={openInfluencerModal}
+                      className="px-4 py-2 rounded-lg font-bold text-xs text-white hover:opacity-90 transition"
+                      style={{ backgroundColor: 'rgb(18,24,39)' }}
                     >
-                      <Reply className="h-4 w-4" /> Responder
+                      + Adicionar Influencer
                     </button>
                   </div>
                 )}
               </div>
+
+              {/* Email Detail + Reply - mesmo conteúdo que já existe */}
+              <div className="flex-1 flex flex-col h-full w-full overflow-hidden bg-white">
+                {/* Header com botão voltar/fechar */}
+                <div className="p-4 px-6 border-b border-gray-100 flex items-center justify-between bg-white z-20">
+                  <div className="flex items-center gap-3">
+                    {/* Mobile back button */}
+                    <button onClick={() => setSelectedEmail(null)} className="md:hidden flex items-center gap-1 text-slate-600">
+                      <ChevronLeft className="h-5 w-5" />
+                      <span className="text-sm">Voltar</span>
+                    </button>
+                    {/* Desktop close button */}
+                    <button onClick={() => setSelectedEmail(null)} className="hidden md:block p-2 hover:bg-slate-100 rounded-lg text-slate-400">
+                      <X className="h-4 w-4" />
+                    </button>
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-bold text-xs">
+                      {selectedEmail.from.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-slate-900">{selectedEmail.from}</p>
+                      <p className="text-[10px] text-slate-400">{new Date(selectedEmail.receivedAt).toLocaleString('pt-PT')}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-1">
+                    <button 
+                      onClick={() => toggleEmailRead(selectedEmail.id, selectedEmail.isRead)}
+                      className="p-2 text-slate-400 hover:bg-blue-100 hover:text-blue-600 rounded-lg transition"
+                      title={selectedEmail.isRead ? 'Marcar como não-lido' : 'Marcar como lido'}
+                    >
+                      {selectedEmail.isRead ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                    <button 
+                      onClick={() => toggleEmailFlag(selectedEmail.id)}
+                      className="p-2 text-slate-400 hover:bg-blue-100 hover:text-blue-600 rounded-lg transition"
+                      title={selectedEmail.isFlagged ? 'Remover flag' : 'Adicionar flag'}
+                    >
+                      <Flag className={`h-4 w-4 ${selectedEmail.isFlagged ? 'fill-blue-600 text-blue-600' : ''}`} />
+                    </button>
+                    <button onClick={() => deleteEmail(selectedEmail.id)} className="p-2 text-slate-400 hover:bg-red-100 hover:text-red-600 transition-colors rounded-lg" title="Eliminar">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Conteúdo da mensagem */}
+                <div className="flex-1 overflow-y-auto p-6">
+                  <div className="max-w-3xl mx-auto">
+                    <h1 id="email-subject-heading" className="text-xl font-black text-slate-900 mb-6">{selectedEmail.subject}</h1>
+                    
+                    {selectedEmail.htmlBody ? (
+                      <div className="prose prose-blue max-w-none text-slate-700 text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: selectedEmail.htmlBody }} />
+                    ) : (
+                      <p className="text-sm text-slate-600 whitespace-pre-wrap leading-relaxed">{selectedEmail.body}</p>
+                    )}
+
+                    {/* Anexos */}
+                    {selectedEmail.attachments?.length > 0 && (
+                      <div className="mt-6 pt-4 border-t border-slate-100">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Anexos ({selectedEmail.attachments.length})</p>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedEmail.attachments.map((att, idx) => (
+                            <button key={idx} onClick={() => window.open(`/api/emails/${selectedEmail.id}/attachments/${att.attachmentId}`)} className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg hover:bg-blue-50 transition text-xs font-semibold text-slate-600">
+                              <Download className="h-3 w-3" /> {att.filename}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Reply footer */}
+                <div className="border-t border-gray-100 bg-white">
+                  {showReplyPanel ? (
+                    <div className="p-4 max-h-80 overflow-y-auto">
+                      <div className="max-w-3xl mx-auto space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Responder</span>
+                          <button onClick={() => setShowReplyPanel(false)} className="p-1 hover:bg-slate-100 rounded text-slate-400"><X className="h-4 w-4" /></button>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-3">
+                          <input value={replySubject} onChange={e => setReplySubject(e.target.value)} className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Assunto" />
+                          <input value={replyCC} onChange={e => setReplyCC(e.target.value)} placeholder="CC" className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 outline-none" />
+                        </div>
+
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={generateAISuggestion}
+                            disabled={generatingAI}
+                            className="flex-1 flex items-center justify-center gap-2 py-2 bg-blue-100 text-blue-600 rounded-lg font-bold text-xs hover:bg-blue-200 transition disabled:opacity-50"
+                          >
+                            {generatingAI ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                            Sugestão IA
+                          </button>
+                        </div>
+
+                        <textarea 
+                          value={replyText}
+                          onChange={(e) => setReplyText(e.target.value)}
+                          placeholder="Escreve a tua mensagem..."
+                          className="w-full h-20 p-3 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                        />
+
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={handleSendReply}
+                            disabled={sendingReply || !replyText.trim()}
+                            className="flex-1 py-2 rounded-lg font-bold text-sm text-white hover:opacity-90 transition disabled:bg-slate-300 flex items-center justify-center gap-2"
+                            style={{ backgroundColor: 'rgb(18,24,39)' }}
+                          >
+                            <Send className="h-4 w-4" /> {sendingReply ? 'A enviar...' : 'Enviar'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-3 px-6 flex items-center justify-between">
+                      <span className="text-sm text-slate-500">Pronto para responder?</span>
+                      <button 
+                        onClick={() => setShowReplyPanel(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-600 rounded-lg font-bold text-sm hover:bg-blue-200 transition"
+                      >
+                        <Reply className="h-4 w-4" /> Responder
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
+          </>
         )}
 
         {/* Estado vazio - só aparece em desktop quando não há email selecionado E não há emails na lista */}
