@@ -309,22 +309,29 @@ export default function MessagesPage() {
                 </div>
               </div>
               
-              <div className="flex gap-2">
+              <div className="flex gap-1">
                 <button 
                   onClick={() => toggleEmailRead(selectedEmail.id, selectedEmail.isRead)}
-                  className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-semibold text-sm transition"
+                  className="p-2 text-slate-400 hover:bg-blue-100 hover:text-blue-600 rounded-lg transition"
                   title={selectedEmail.isRead ? 'Marcar como não-lido' : 'Marcar como lido'}
                 >
                   {selectedEmail.isRead ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
                 <button 
+                  onClick={() => toggleEmailFlag(selectedEmail.id)}
+                  className="p-2 text-slate-400 hover:bg-blue-100 hover:text-blue-600 rounded-lg transition"
+                  title={selectedEmail.isFlagged ? 'Remover flag' : 'Adicionar flag'}
+                >
+                  <Flag className={`h-4 w-4 ${selectedEmail.isFlagged ? 'fill-blue-600 text-blue-600' : ''}`} />
+                </button>
+                <button 
                   onClick={() => setShowReplyPanel(true)}
-                  className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition shadow-lg active:scale-95"
+                  className="px-4 py-2 bg-blue-100 text-blue-600 rounded-lg font-bold text-sm hover:bg-blue-200 transition flex items-center gap-2"
                 >
                   <Reply className="h-4 w-4" /> Responder
                 </button>
-                <button onClick={() => deleteEmail(selectedEmail.id)} className="p-2.5 text-slate-300 hover:text-red-500 transition-colors" title="Eliminar">
-                  <Trash2 className="h-5 w-5" />
+                <button onClick={() => deleteEmail(selectedEmail.id)} className="p-2 text-slate-400 hover:bg-red-100 hover:text-red-600 transition-colors rounded-lg" title="Eliminar">
+                  <Trash2 className="h-4 w-4" />
                 </button>
               </div>
             </div>
