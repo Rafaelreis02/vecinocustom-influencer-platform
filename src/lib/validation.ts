@@ -39,6 +39,9 @@ export const InfluencerCreateSchema = z.object({
   fitScore: z.number().int().optional().nullable(),
   tier: z.string().optional().nullable(),
   
+  // Avatar
+  avatarUrl: z.string().optional().nullable(),
+
   // Status & Metadata
   status: z.nativeEnum(InfluencerStatus).default(InfluencerStatus.UNKNOWN),
   notes: z.string().optional().nullable(),
