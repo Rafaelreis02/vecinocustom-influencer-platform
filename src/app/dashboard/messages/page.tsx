@@ -333,14 +333,14 @@ export default function MessagesPage() {
       }
       
       if (analysisData.totalLikes !== null && analysisData.totalLikes !== undefined) {
-        const likes = parseInt(analysisData.totalLikes);
+        const likes = Math.round(parseFloat(analysisData.totalLikes));
         if (!isNaN(likes)) {
           influencerData.totalLikes = likes;
         }
       }
       
       if (analysisData.fitScore !== null && analysisData.fitScore !== undefined) {
-        const fit = parseInt(analysisData.fitScore);
+        const fit = Math.round(parseFloat(analysisData.fitScore));
         if (!isNaN(fit)) {
           influencerData.fitScore = fit;
         }
