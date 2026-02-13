@@ -9,7 +9,6 @@ import {
   Filter,
   ChevronDown,
   ChevronUp,
-  CreditCard,
 } from 'lucide-react';
 import { useGlobalToast } from '@/contexts/ToastContext';
 
@@ -27,7 +26,6 @@ interface PaymentBatch {
   totalAmount: number;
   currency: string;
   paidAt: string;
-  reference: string | null;
   influencer: Influencer;
 }
 
@@ -267,23 +265,13 @@ function PaidCommissionsContent() {
 
                 {/* Detalhes - Collapsible */}
                 {isExpanded && (
-                  <div className="border-t border-gray-100 bg-gray-50 px-4 py-3">
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="text-gray-500">Referência:</span>
-                        <span className="ml-2 font-medium text-gray-900">
-                          {batch.reference || '-'}
-                        </span>
-                      </div>
-                      <div className="text-right">
-                        <Link 
-                          href={`/dashboard/influencers/${batch.influencer.id}`}
-                          className="text-blue-600 hover:text-blue-800 font-medium"
-                        >
-                          Ver perfil →
-                        </Link>
-                      </div>
-                    </div>
+                  <div className="border-t border-gray-100 bg-gray-50 px-4 py-3 text-right">
+                    <Link 
+                      href={`/dashboard/influencers/${batch.influencer.id}`}
+                      className="text-blue-600 hover:text-blue-800 font-medium text-sm"
+                    >
+                      Ver perfil →
+                    </Link>
                   </div>
                 )}
               </div>
