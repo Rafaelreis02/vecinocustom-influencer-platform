@@ -9,6 +9,7 @@ import {
   Banknote,
   Smartphone,
   Calendar,
+  Filter,
 } from 'lucide-react';
 import { useGlobalToast } from '@/contexts/ToastContext';
 
@@ -48,16 +49,45 @@ function PaidCommissionsContent() {
   const { addToast } = useGlobalToast();
   const [batches, setBatches] = useState<PaymentBatch[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Filtros de data
+  const [dateFilter, setDateFilter] = useState('30'); // 30, 60, 90, custom
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
+  const [showCustomFilter, setShowCustomFilter] = useState(false);
 
+  // Carregar ao iniciar ou mudar filtro
   useEffect(() => {
     loadPaidBatches();
-  }, []);
+  }, [dateFilter, customStartDate, customEndDate]);
 
   async function loadPaidBatches() {
     try {
       setLoading(true);
-      // Buscar batches de pagamento (pagamentos agregados)
-      const res = await fetch('/api/commissions/batches');
+      
+      // Calcular datas baseado no filtro
+      let startDate: string | null = null;
+      let endDate: string | null = null;
+      
+      if (dateFilter === 'custom' && customStartDate && customEndDate) {
+        startDate = new Date(customStartDate).toISOString();
+        endDate = new Date(customEndDate).toISOString();
+      } else if (dateFilter !== 'custom') {
+        const days = parseInt(dateFilter);
+        const end = new Date();
+        const start = new Date();
+        start.setDate(start.getDate() - days);
+        startDate = start.toISOString();
+        endDate = end.toISOString();
+      }
+      
+      // Construir URL com params
+      let url = '/api/commissions/batches';
+      if (startDate && endDate) {
+        url += `?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
+      }
+      
+      const res = await fetch(url);
       
       if (!res.ok) throw new Error('Erro ao carregar histórico');
       
@@ -101,6 +131,10 @@ function PaidCommissionsContent() {
     }
   }
 
+  // Calcular totais
+  const totalPaid = batches.reduce((sum, b) => sum + b.totalAmount, 0);
+  const totalCount = batches.length;
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -109,35 +143,119 @@ function PaidCommissionsContent() {
     );
   }
 
-  const totalPaid = batches.reduce((sum, b) => sum + b.totalAmount, 0);
-
   return (
-    <div className="space-y-4">
-      {/* Header Info */}
-      <div className="bg-green-50 p-4 rounded-lg border border-green-100">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-green-800">
-              <strong>Histórico de Pagamentos:</strong> Registo de pagamentos realizados aos influencers.
-            </p>
-            <p className="text-xs text-green-600 mt-1">
-              Cada card representa um pagamento efetuado numa data específica.
-            </p>
+    <div className="space-y-6">
+      {/* Filtros */}
+      <div className="bg-white p-4 rounded-xl border border-gray-200">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Filter className="h-5 w-5 text-gray-500" />
+            <span className="text-sm font-medium text-gray-700">Período:</span>
           </div>
-          <div className="text-right">
-            <p className="text-sm text-green-600">Total Pago</p>
-            <p className="text-2xl font-bold text-green-900">{formatCurrency(totalPaid)}</p>
+          
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => { setDateFilter('30'); setShowCustomFilter(false); }}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                dateFilter === '30' 
+                  ? 'bg-slate-900 text-white' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Últimos 30 dias
+            </button>
+            <button
+              onClick={() => { setDateFilter('60'); setShowCustomFilter(false); }}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                dateFilter === '60' 
+                  ? 'bg-slate-900 text-white' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Últimos 60 dias
+            </button>
+            <button
+              onClick={() => { setDateFilter('90'); setShowCustomFilter(false); }}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                dateFilter === '90' 
+                  ? 'bg-slate-900 text-white' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Últimos 90 dias
+            </button>
+            <button
+              onClick={() => { setDateFilter('custom'); setShowCustomFilter(true); }}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                dateFilter === 'custom' 
+                  ? 'bg-slate-900 text-white' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Personalizado
+            </button>
+          </div>
+        </div>
+        
+        {/* Filtro Custom */}
+        {showCustomFilter && (
+          <div className="mt-4 pt-4 border-t border-gray-100 flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <label className="block text-xs text-gray-500 mb-1">Data Inicial</label>
+              <input
+                type="date"
+                value={customStartDate}
+                onChange={(e) => setCustomStartDate(e.target.value)}
+                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-xs text-gray-500 mb-1">Data Final</label>
+              <input
+                type="date"
+                value={customEndDate}
+                onChange={(e) => setCustomEndDate(e.target.value)}
+                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Cards de Totais */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="bg-green-50 p-4 rounded-xl border border-green-100">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-green-100 rounded-lg">
+              <DollarSign className="h-5 w-5 text-green-600" />
+            </div>
+            <div>
+              <p className="text-sm text-green-700">Total Pago</p>
+              <p className="text-2xl font-bold text-green-900">{formatCurrency(totalPaid)}</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Calendar className="h-5 w-5 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-sm text-blue-700">Nº de Pagamentos</p>
+              <p className="text-2xl font-bold text-blue-900">{totalCount}</p>
+            </div>
           </div>
         </div>
       </div>
 
+      {/* Lista de Cards */}
       {batches.length === 0 ? (
         <div className="text-center py-16 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
           <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900">Nenhum pagamento registado</h3>
+          <h3 className="text-lg font-medium text-gray-900">Nenhum pagamento encontrado</h3>
           <p className="text-sm text-gray-500 max-w-xs mx-auto mt-1">
-            Ainda não foram efetuados pagamentos.
-            Processa pagamentos na aba "Pagamentos" primeiro.
+            Não existem pagamentos no período selecionado.
           </p>
         </div>
       ) : (
