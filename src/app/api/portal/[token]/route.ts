@@ -104,7 +104,7 @@ export async function PUT(
 
     // If status is ANALYZING or beyond, personal fields cannot be changed
     if (currentStatusIndex >= statusOrder.indexOf('ANALYZING')) {
-      const personalFields = ['name', 'instagramHandle', 'tiktokHandle', 'phone', 'ddiCode'];
+      const personalFields = ['name', 'email', 'instagramHandle', 'tiktokHandle', 'phone', 'ddiCode'];
       const isAttemptingPersonalChange = personalFields.some(field => 
         body[field] !== undefined && body[field] !== (influencer as any)[field]
       );
@@ -146,6 +146,8 @@ export async function PUT(
       'productSuggestion1',
       'productSuggestion2',
       'productSuggestion3',
+      'chosenProduct',
+      'trackingUrl',
       'status',
     ];
 

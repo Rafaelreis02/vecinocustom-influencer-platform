@@ -261,7 +261,9 @@ function Step1({ data, token, onUpdate, onNext }: StepProps) {
   const hasPrice = data.agreedPrice && data.agreedPrice > 0;
   const priceChanged = formData.agreedPrice !== originalPrice;
   
-  const allFieldsDisabled = isAnalyzing;
+  // Only editable in these initial statuses. Once agreed or beyond, fields are locked
+  const isEditableStatus = ['UNKNOWN', 'COUNTER_PROPOSAL', 'ANALYZING'].includes(data.status);
+  const allFieldsDisabled = !isEditableStatus;
 
   const handleChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -424,7 +426,7 @@ function Step1({ data, token, onUpdate, onNext }: StepProps) {
             type="email"
             value={formData.email}
             onChange={(e) => handleChange('email', e.target.value)}
-            disabled={allFieldsDisabled || !!formData.email}
+            disabled={allFieldsDisabled || (!!formData.email && isEditableStatus)}
             className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E1E37] disabled:bg-gray-50 disabled:cursor-not-allowed"
           />
         </div>
