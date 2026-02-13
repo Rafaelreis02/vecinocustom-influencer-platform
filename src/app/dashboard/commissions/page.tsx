@@ -40,6 +40,13 @@ interface Commission {
   reference: string | null;
   createdAt: string;
   influencer: Influencer;
+  // Order details
+  orderNumber: string | null;
+  orderDate: string | null;
+  customerEmail: string | null;
+  baseAmount: number | null;
+  commissionRate: number | null;
+  couponCode: string | null;
 }
 
 interface InfluencerSummary {
@@ -48,6 +55,7 @@ interface InfluencerSummary {
   pendingAmount: number;
   paidAmount: number;
   count: number;
+  commissions: Commission[]; // Individual commissions
 }
 
 interface Totals {
@@ -192,11 +200,6 @@ function CommissionsContent() {
   // Toggle expandir influencer
   function toggleExpand(influencerId: string) {
     setExpandedInfluencer(expandedInfluencer === influencerId ? null : influencerId);
-  }
-
-  // Comissões de um influencer específico
-  function getInfluencerCommissions(influencerId: string) {
-    return commissions.filter(c => c.influencer.id === influencerId);
   }
 
   // Formatar moeda
@@ -401,7 +404,7 @@ function CommissionsContent() {
         ) : (
           influencerSummaries.map((summary) => {
             const isExpanded = expandedInfluencer === summary.influencer.id;
-            const influencerCommissions = getInfluencerCommissions(summary.influencer.id);
+            const influencerCommissions = summary.commissions || [];
 
             return (
               <div 
@@ -470,9 +473,12 @@ function CommissionsContent() {
                       <table className="w-full">
                         <thead className="bg-gray-50">
                           <tr>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Encomenda</th>
                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Descrição</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
                             <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Valor</th>
+                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Comissão</th>
+                            <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Taxa</th>
                             <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
                             <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Ação</th>
                           </tr>
@@ -480,14 +486,26 @@ function CommissionsContent() {
                         <tbody className="divide-y divide-gray-200">
                           {influencerCommissions.map((commission) => (
                             <tr key={commission.id} className="hover:bg-gray-50">
-                              <td className="px-4 py-3 text-sm text-gray-600">
-                                {formatDate(commission.createdAt)}
+                              <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                                {commission.orderNumber || 'N/A'}
+                                {commission.couponCode && (
+                                  <span className="block text-xs text-gray-500">{commission.couponCode}</span>
+                                )}
                               </td>
-                              <td className="px-4 py-3 text-sm text-gray-900">
-                                {commission.description || 'Comissão'}
+                              <td className="px-4 py-3 text-sm text-gray-600">
+                                {commission.orderDate ? formatDate(commission.orderDate) : formatDate(commission.createdAt)}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-600">
+                                {commission.customerEmail || 'N/A'}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                                {commission.baseAmount ? formatCurrency(commission.baseAmount) : '-'}
                               </td>
                               <td className="px-4 py-3 text-sm text-gray-900 text-right font-medium">
                                 {formatCurrency(commission.amount)}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-600 text-center">
+                                {commission.commissionRate ? `${commission.commissionRate}%` : '-'}
                               </td>
                               <td className="px-4 py-3 text-center">
                                 <StatusBadge status={commission.status} />
@@ -539,10 +557,24 @@ function CommissionsContent() {
                       {influencerCommissions.map((commission) => (
                         <div key={commission.id} className="p-4 space-y-3">
                           <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-500">{formatDate(commission.createdAt)}</span>
+                            <div>
+                              <span className="text-sm font-medium text-gray-900">{commission.orderNumber || 'N/A'}</span>
+                              {commission.couponCode && (
+                                <span className="block text-xs text-gray-500">{commission.couponCode}</span>
+                              )}
+                            </div>
                             <StatusBadge status={commission.status} />
                           </div>
-                          <p className="text-sm text-gray-900">{commission.description || 'Comissão'}</p>
+                          <div className="text-sm text-gray-600">
+                            <p>Data: {commission.orderDate ? formatDate(commission.orderDate) : formatDate(commission.createdAt)}</p>
+                            <p>Cliente: {commission.customerEmail || 'N/A'}</p>
+                            {commission.baseAmount && (
+                              <p>Valor: {formatCurrency(commission.baseAmount)}</p>
+                            )}
+                            {commission.commissionRate && (
+                              <p>Taxa: {commission.commissionRate}%</p>
+                            )}
+                          </div>
                           <div className="flex items-center justify-between">
                             <span className="text-lg font-bold text-gray-900">
                               {formatCurrency(commission.amount)}
