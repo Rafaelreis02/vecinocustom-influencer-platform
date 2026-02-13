@@ -544,3 +544,16 @@ model WebhookMigrationLog {
   @@map("webhook_migration_logs")
 }
 
+model AccountChangeLog {
+  id             String   @id @default(cuid())
+  platform       String   // SHOPIFY, GMAIL, etc
+  oldValue       String   // Old shop domain, email, etc
+  newValue       String   // New shop domain, email, etc
+  changeType     String   // DOMAIN, EMAIL, ACCOUNT_ID
+  changedAt      DateTime @default(now())
+  
+  @@index([platform])
+  @@index([changedAt])
+  @@map("account_change_logs")
+}
+
