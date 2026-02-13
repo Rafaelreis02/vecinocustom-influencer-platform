@@ -1,208 +1,59 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { useState, useEffect } from 'react';
 import {
-  ChevronDown,
-  ChevronUp,
-  Check,
-  X,
-  Filter,
   DollarSign,
-  ArrowLeft,
+  TrendingUp,
+  Users,
+  ShoppingBag,
   Loader2,
-  CreditCard,
-  Banknote,
-  Smartphone,
+  Calendar,
 } from 'lucide-react';
 import { useGlobalToast } from '@/contexts/ToastContext';
 
-// Interfaces
-interface Influencer {
-  id: string;
-  name: string;
-  email: string | null;
-  avatarUrl: string | null;
-  instagramHandle: string | null;
-  tiktokHandle: string | null;
-  paymentMethod: string | null;
-}
-
-interface Commission {
-  id: string;
-  amount: number;
-  currency: string;
-  description: string | null;
-  status: 'PENDING' | 'PROCESSING' | 'PAID' | 'CANCELLED' | 'FAILED';
-  paidAt: string | null;
-  method: string;
-  reference: string | null;
-  createdAt: string;
-  influencer: Influencer;
-  // Order details
-  orderNumber: string | null;
-  orderDate: string | null;
-  customerEmail: string | null;
-  baseAmount: number | null;
-  commissionRate: number | null;
-  couponCode: string | null;
-}
-
-interface InfluencerSummary {
-  influencer: Influencer;
-  totalAmount: number;
-  pendingAmount: number;
-  paidAmount: number;
-  count: number;
-  commissions: Commission[]; // Individual commissions
-}
-
-interface Totals {
+interface Stats {
   total: number;
   pending: number;
+  processing: number;
   paid: number;
-  count: number;
+  totalOrders: number;
+  totalInfluencers: number;
 }
 
-// Componente principal com Suspense
-export default function CommissionsPage() {
-  return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center h-96">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-      </div>
-    }>
-      <CommissionsContent />
-    </Suspense>
-  );
-}
-
-// Componente de conteúdo
-function CommissionsContent() {
+export default function CommissionsOverviewPage() {
   const { addToast } = useGlobalToast();
-
-  // Estados
-  const [commissions, setCommissions] = useState<Commission[]>([]);
-  const [influencerSummaries, setInfluencerSummaries] = useState<InfluencerSummary[]>([]);
-  const [totals, setTotals] = useState<Totals | null>(null);
+  const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [expandedInfluencer, setExpandedInfluencer] = useState<string | null>(null);
-  const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
+  const [dateRange, setDateRange] = useState('30'); // default: 30 dias
 
-  // Filtros
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
-
-  // Carregar comissões
   useEffect(() => {
-    loadCommissions();
-  }, [startDate, endDate, statusFilter]);
+    loadStats();
+  }, [dateRange]);
 
-  async function loadCommissions() {
+  async function loadStats() {
     try {
       setLoading(true);
-
-      const params = new URLSearchParams();
-      if (startDate) params.append('startDate', startDate);
-      if (endDate) params.append('endDate', endDate);
-      if (statusFilter) params.append('status', statusFilter);
-
-      const res = await fetch(`/api/commissions?${params.toString()}`);
       
-      if (!res.ok) throw new Error('Erro ao carregar comissões');
+      // Calcular datas
+      const end = new Date();
+      const start = new Date();
+      start.setDate(start.getDate() - parseInt(dateRange));
+
+      const res = await fetch(`/api/commissions/overview?start=${start.toISOString()}&end=${end.toISOString()}`);
+      
+      if (!res.ok) throw new Error('Erro ao carregar estatísticas');
       
       const data = await res.json();
-      setCommissions(data.commissions || []);
-      setInfluencerSummaries(data.influencerSummaries || []);
-      setTotals(data.totals || null);
+      setStats(data);
 
     } catch (error) {
-      console.error('Error loading commissions:', error);
-      addToast('Erro ao carregar comissões', 'error');
+      console.error('Error loading stats:', error);
+      addToast('Erro ao carregar estatísticas', 'error');
     } finally {
       setLoading(false);
     }
   }
 
-  // Aprovar comissão
-  async function handleApprove(commissionId: string) {
-    try {
-      setProcessingIds(prev => new Set(prev).add(commissionId));
-
-      const res = await fetch(`/api/commissions/${commissionId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'PAID' }),
-      });
-
-      if (!res.ok) throw new Error('Erro ao aprovar comissão');
-
-      // Atualizar estado local
-      setCommissions(prev => prev.map(c => 
-        c.id === commissionId ? { ...c, status: 'PAID' } : c
-      ));
-
-      // Recarregar totais
-      await loadCommissions();
-      
-      addToast('Comissão aprovada', 'success');
-
-    } catch (error) {
-      console.error('Error approving commission:', error);
-      addToast('Erro ao aprovar comissão', 'error');
-    } finally {
-      setProcessingIds(prev => {
-        const next = new Set(prev);
-        next.delete(commissionId);
-        return next;
-      });
-    }
-  }
-
-  // Rejeitar comissão
-  async function handleReject(commissionId: string) {
-    if (!window.confirm('Tens a certeza que queres rejeitar esta comissão?')) return;
-
-    try {
-      setProcessingIds(prev => new Set(prev).add(commissionId));
-
-      const res = await fetch(`/api/commissions/${commissionId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'CANCELLED' }),
-      });
-
-      if (!res.ok) throw new Error('Erro ao rejeitar comissão');
-
-      setCommissions(prev => prev.map(c => 
-        c.id === commissionId ? { ...c, status: 'CANCELLED' } : c
-      ));
-
-      await loadCommissions();
-      
-      addToast('Comissão rejeitada', 'success');
-
-    } catch (error) {
-      console.error('Error rejecting commission:', error);
-      addToast('Erro ao rejeitar comissão', 'error');
-    } finally {
-      setProcessingIds(prev => {
-        const next = new Set(prev);
-        next.delete(commissionId);
-        return next;
-      });
-    }
-  }
-
-  // Toggle expandir influencer
-  function toggleExpand(influencerId: string) {
-    setExpandedInfluencer(expandedInfluencer === influencerId ? null : influencerId);
-  }
-
-  // Formatar moeda
   function formatCurrency(amount: number) {
     return new Intl.NumberFormat('pt-PT', {
       style: 'currency',
@@ -210,45 +61,7 @@ function CommissionsContent() {
     }).format(amount);
   }
 
-  // Formatar data
-  function formatDate(dateString: string) {
-    return new Date(dateString).toLocaleDateString('pt-PT');
-  }
-
-  // Badge de status
-  function StatusBadge({ status }: { status: string }) {
-    const configs: Record<string, { label: string; className: string }> = {
-      PENDING: { label: 'Pendente', className: 'bg-yellow-100 text-yellow-800' },
-      PROCESSING: { label: 'Em Processamento', className: 'bg-blue-100 text-blue-800' },
-      PAID: { label: 'Pago', className: 'bg-green-100 text-green-800' },
-      CANCELLED: { label: 'Rejeitado', className: 'bg-red-100 text-red-800' },
-      FAILED: { label: 'Falhou', className: 'bg-gray-100 text-gray-800' },
-    };
-
-    const config = configs[status] || configs.PENDING;
-
-    return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${config.className}`}>
-        {config.label}
-      </span>
-    );
-  }
-
-  // Ícone de método de pagamento
-  function PaymentMethodIcon({ method }: { method: string }) {
-    switch (method) {
-      case 'BANK_TRANSFER':
-        return <Banknote className="h-4 w-4" />;
-      case 'PAYPAL':
-        return <CreditCard className="h-4 w-4" />;
-      case 'MBWAY':
-        return <Smartphone className="h-4 w-4" />;
-      default:
-        return <DollarSign className="h-4 w-4" />;
-    }
-  }
-
-  if (loading && commissions.length === 0) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
         <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
@@ -256,375 +69,109 @@ function CommissionsContent() {
     );
   }
 
+  if (!stats) {
+    return (
+      <div className="text-center py-16">
+        <p className="text-gray-500">Erro ao carregar estatísticas</p>
+      </div>
+    );
+  }
+
+  const cards = [
+    {
+      title: 'Total em Comissões',
+      value: formatCurrency(stats.total),
+      icon: DollarSign,
+      color: 'bg-blue-100 text-blue-600',
+      description: 'Valor total gerado',
+    },
+    {
+      title: 'Pendentes',
+      value: formatCurrency(stats.pending),
+      icon: TrendingUp,
+      color: 'bg-yellow-100 text-yellow-600',
+      description: `${((stats.pending / stats.total) * 100).toFixed(1)}% do total`,
+    },
+    {
+      title: 'Aprovadas (Aguardam Pagamento)',
+      value: formatCurrency(stats.processing),
+      icon: ShoppingBag,
+      color: 'bg-indigo-100 text-indigo-600',
+      description: 'Prontas para pagar',
+    },
+    {
+      title: 'Já Pagas',
+      value: formatCurrency(stats.paid),
+      icon: DollarSign,
+      color: 'bg-green-100 text-green-600',
+      description: 'Pagamentos realizados',
+    },
+    {
+      title: 'Total de Encomendas',
+      value: stats.totalOrders,
+      icon: ShoppingBag,
+      color: 'bg-purple-100 text-purple-600',
+      description: 'Encomendas com comissão',
+    },
+    {
+      title: 'Influencers Ativos',
+      value: stats.totalInfluencers,
+      icon: Users,
+      color: 'bg-pink-100 text-pink-600',
+      description: 'Com comissões geradas',
+    },
+  ];
+
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Comissões</h1>
-          <p className="text-sm text-gray-600 mt-1">
-            Gestão de comissões e pagamentos aos influencers
-          </p>
+      {/* Filtro de Data */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Calendar className="h-5 w-5 text-gray-500" />
+          <span className="text-sm text-gray-600">Período:</span>
+          <select
+            value={dateRange}
+            onChange={(e) => setDateRange(e.target.value)}
+            className="rounded-md border border-gray-200 px-3 py-1.5 text-sm focus:border-gray-900 focus:outline-none"
+          >
+            <option value="7">Últimos 7 dias</option>
+            <option value="30">Últimos 30 dias</option>
+            <option value="90">Últimos 90 dias</option>
+            <option value="365">Último ano</option>
+          </select>
         </div>
-        
-        {/* Botão Filtros */}
-        <button
-          onClick={() => setShowFilters(!showFilters)}
-          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition"
-        >
-          <Filter className="h-4 w-4" />
-          Filtros
-          {(startDate || endDate || statusFilter) && (
-            <span className="ml-1 w-2 h-2 bg-blue-500 rounded-full" />
-          )}
-        </button>
       </div>
 
-      {/* Filtros */}
-      {showFilters && (
-        <div className="bg-white p-4 rounded-xl border border-gray-200 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {/* Data Inicial */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Data Inicial
-              </label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
-              />
-            </div>
-
-            {/* Data Final */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Data Final
-              </label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
-              />
-            </div>
-
-            {/* Status */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Status
-              </label>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
-              >
-                <option value="">Todos</option>
-                <option value="PENDING">Pendentes</option>
-                <option value="PAID">Pagas</option>
-                <option value="CANCELLED">Rejeitadas</option>
-                <option value="PROCESSING">Em Processamento</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Limpar Filtros */}
-          {(startDate || endDate || statusFilter) && (
-            <button
-              onClick={() => {
-                setStartDate('');
-                setEndDate('');
-                setStatusFilter('');
-              }}
-              className="text-sm text-blue-600 hover:text-blue-800"
-            >
-              Limpar filtros
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Cards de Resumo */}
-      {totals && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-white p-4 rounded-xl border border-gray-200">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <DollarSign className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Total em Comissões</p>
-                <p className="text-xl font-bold text-gray-900">{formatCurrency(totals.total)}</p>
+      {/* Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {cards.map((card, index) => {
+          const Icon = card.icon;
+          return (
+            <div key={index} className="bg-white p-6 rounded-xl border border-gray-200">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">{card.title}</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">{card.value}</p>
+                  <p className="text-xs text-gray-500 mt-1">{card.description}</p>
+                </div>
+                <div className={`p-3 rounded-lg ${card.color}`}>
+                  <Icon className="h-5 w-5" />
+                </div>
               </div>
             </div>
-          </div>
-
-          <div className="bg-white p-4 rounded-xl border border-gray-200">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <svg className="h-5 w-5 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <circle cx="12" cy="12" r="10" strokeWidth={2} />
-                  <path strokeWidth={2} strokeLinecap="round" d="M12 6v6l4 2" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Pendentes</p>
-                <p className="text-xl font-bold text-gray-900">{formatCurrency(totals.pending)}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white p-4 rounded-xl border border-gray-200">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Check className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Já Pagas</p>
-                <p className="text-xl font-bold text-gray-900">{formatCurrency(totals.paid)}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Lista de Influencers com Comissões */}
-      <div className="space-y-4">
-        {influencerSummaries.length === 0 ? (
-          <div className="text-center py-16 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
-            <DollarSign className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900">Nenhuma comissão encontrada</h3>
-            <p className="text-sm text-gray-500 max-w-xs mx-auto mt-1">
-              {commissions.length === 0 
-                ? 'Ainda não existem comissões registadas.' 
-                : 'Nenhuma comissão corresponde aos filtros selecionados.'}
-            </p>
-          </div>
-        ) : (
-          influencerSummaries.map((summary) => {
-            const isExpanded = expandedInfluencer === summary.influencer.id;
-            const influencerCommissions = summary.commissions || [];
-
-            return (
-              <div 
-                key={summary.influencer.id} 
-                className="bg-white rounded-xl border border-gray-200 overflow-hidden"
-              >
-                {/* Header do Influencer */}
-                <button
-                  onClick={() => toggleExpand(summary.influencer.id)}
-                  className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition"
-                >
-                  <div className="flex items-center gap-4">
-                    {/* Avatar */}
-                    <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-bold text-lg shrink-0 overflow-hidden">
-                      {summary.influencer.avatarUrl ? (
-                        <img 
-                          src={summary.influencer.avatarUrl} 
-                          alt={summary.influencer.name}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        summary.influencer.name.charAt(0).toUpperCase()
-                      )}
-                    </div>
-
-                    {/* Info */}
-                    <div className="text-left">
-                      <h3 className="font-semibold text-gray-900">{summary.influencer.name}</h3>
-                      <div className="flex items-center gap-2 text-sm text-gray-500">
-                        <span>{summary.count} comissões</span>
-                        <span>•</span>
-                        <span className="flex items-center gap-1">
-                          <PaymentMethodIcon method={summary.influencer.paymentMethod || 'BANK_TRANSFER'} />
-                          {summary.influencer.paymentMethod === 'MBWAY' ? 'MBWay' : 
-                           summary.influencer.paymentMethod === 'PAYPAL' ? 'PayPal' : 'Transferência'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Totais */}
-                  <div className="flex items-center gap-6">
-                    <div className="text-right hidden sm:block">
-                      <p className="text-xs text-gray-500">Total</p>
-                      <p className="font-bold text-gray-900">{formatCurrency(summary.totalAmount)}</p>
-                    </div>
-                    
-                    {summary.pendingAmount > 0 && (
-                      <div className="text-right hidden sm:block">
-                        <p className="text-xs text-yellow-600">Pendente</p>
-                        <p className="font-bold text-yellow-700">{formatCurrency(summary.pendingAmount)}</p>
-                      </div>
-                    )}
-
-                    <ChevronDown 
-                      className={`h-5 w-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
-                    />
-                  </div>
-                </button>
-
-                {/* Detalhes das Comissões */}
-                {isExpanded && (
-                  <div className="border-t border-gray-200">
-                    {/* Desktop Table */}
-                    <div className="hidden sm:block overflow-x-auto">
-                      <table className="w-full">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Encomenda</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
-                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Valor</th>
-                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Comissão</th>
-                            <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Taxa</th>
-                            <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-                            <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Ação</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200">
-                          {influencerCommissions.map((commission) => (
-                            <tr key={commission.id} className="hover:bg-gray-50">
-                              <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                                {commission.orderNumber || 'N/A'}
-                                {commission.couponCode && (
-                                  <span className="block text-xs text-gray-500">{commission.couponCode}</span>
-                                )}
-                              </td>
-                              <td className="px-4 py-3 text-sm text-gray-600">
-                                {commission.orderDate ? formatDate(commission.orderDate) : formatDate(commission.createdAt)}
-                              </td>
-                              <td className="px-4 py-3 text-sm text-gray-600">
-                                {commission.customerEmail || 'N/A'}
-                              </td>
-                              <td className="px-4 py-3 text-sm text-gray-600 text-right">
-                                {commission.baseAmount ? formatCurrency(commission.baseAmount) : '-'}
-                              </td>
-                              <td className="px-4 py-3 text-sm text-gray-900 text-right font-medium">
-                                {formatCurrency(commission.amount)}
-                              </td>
-                              <td className="px-4 py-3 text-sm text-gray-600 text-center">
-                                {commission.commissionRate ? `${commission.commissionRate}%` : '-'}
-                              </td>
-                              <td className="px-4 py-3 text-center">
-                                <StatusBadge status={commission.status} />
-                              </td>
-                              <td className="px-4 py-3">
-                                <div className="flex items-center justify-center gap-2">
-                                  {commission.status === 'PENDING' && (
-                                    <>
-                                      <button
-                                        onClick={() => handleApprove(commission.id)}
-                                        disabled={processingIds.has(commission.id)}
-                                        className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition"
-                                        title="Aprovar e marcar como pago"
-                                      >
-                                        {processingIds.has(commission.id) ? (
-                                          <Loader2 className="h-4 w-4 animate-spin" />
-                                        ) : (
-                                          <Check className="h-4 w-4" />
-                                        )}
-                                      </button>
-                                      <button
-                                        onClick={() => handleReject(commission.id)}
-                                        disabled={processingIds.has(commission.id)}
-                                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition"
-                                        title="Rejeitar"
-                                      >
-                                        <X className="h-4 w-4" />
-                                      </button>
-                                    </>
-                                  )}
-                                  {commission.status === 'PAID' && (
-                                    <span className="text-xs text-green-600">
-                                      Pago em {commission.paidAt && formatDate(commission.paidAt)}
-                                    </span>
-                                  )}
-                                  {commission.status === 'CANCELLED' && (
-                                    <span className="text-xs text-red-600">Rejeitado</span>
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {/* Mobile Cards */}
-                    <div className="sm:hidden divide-y divide-gray-200">
-                      {influencerCommissions.map((commission) => (
-                        <div key={commission.id} className="p-4 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <span className="text-sm font-medium text-gray-900">{commission.orderNumber || 'N/A'}</span>
-                              {commission.couponCode && (
-                                <span className="block text-xs text-gray-500">{commission.couponCode}</span>
-                              )}
-                            </div>
-                            <StatusBadge status={commission.status} />
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            <p>Data: {commission.orderDate ? formatDate(commission.orderDate) : formatDate(commission.createdAt)}</p>
-                            <p>Cliente: {commission.customerEmail || 'N/A'}</p>
-                            {commission.baseAmount && (
-                              <p>Valor: {formatCurrency(commission.baseAmount)}</p>
-                            )}
-                            {commission.commissionRate && (
-                              <p>Taxa: {commission.commissionRate}%</p>
-                            )}
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-lg font-bold text-gray-900">
-                              {formatCurrency(commission.amount)}
-                            </span>
-                            
-                            {commission.status === 'PENDING' && (
-                              <div className="flex items-center gap-2">
-                                <button
-                                  onClick={() => handleApprove(commission.id)}
-                                  disabled={processingIds.has(commission.id)}
-                                  className="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-sm font-medium"
-                                >
-                                  {processingIds.has(commission.id) ? '...' : 'Aprovar'}
-                                </button>
-                                <button
-                                  onClick={() => handleReject(commission.id)}
-                                  disabled={processingIds.has(commission.id)}
-                                  className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-sm font-medium"
-                                >
-                                  Rejeitar
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Footer com total do influencer */}
-                    <div className="bg-gray-50 px-4 py-3 border-t border-gray-200">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">
-                          Total de {influencerCommissions.length} comissões
-                        </span>
-                        <Link
-                          href={`/dashboard/influencers/${summary.influencer.id}`}
-                          className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
-                        >
-                          Ver influencer <ArrowLeft className="h-3 w-3 rotate-180" />
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })
-        )}
+          );
+        })}
       </div>
 
+      {/* Info */}
+      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+        <h3 className="font-semibold text-gray-900 mb-2">Como funciona?</h3>
+        <ul className="text-sm text-gray-600 space-y-1">
+          <li>• <strong>Pendentes:</strong> Comissões que precisam de aprovação (encomenda por encomenda)</li>
+          <li>• <strong>Aprovadas:</strong> Comissões validadas, aguardam pagamento ao influencer</li>
+          <li>• <strong>Pagas:</strong> Pagamentos já realizados aos influencers</li>
+        </ul>
+      </div>
     </div>
   );
 }
