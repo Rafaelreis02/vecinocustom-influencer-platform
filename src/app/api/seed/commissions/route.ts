@@ -104,3 +104,4 @@ export async function GET() {
     return NextResponse.json({ error: 'Erro ao buscar influencers' }, { status: 500 });
   }
 }
+
