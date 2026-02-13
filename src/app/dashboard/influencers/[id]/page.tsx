@@ -137,6 +137,11 @@ export default function InfluencerDetailPage() {
   const [trackingUrl, setTrackingUrl] = useState('');
   const [savingField, setSavingField] = useState<string | null>(null);
   const [advancingStatus, setAdvancingStatus] = useState(false);
+  
+  // Notas internas
+  const [notes, setNotes] = useState('');
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [savingNotes, setSavingNotes] = useState(false);
 
   useEffect(() => {
     fetchInfluencer();
@@ -152,6 +157,9 @@ export default function InfluencerDetailPage() {
       setAgreedPrice(data.agreedPrice?.toString() || '');
       setChosenProduct(data.chosenProduct || '');
       setTrackingUrl(data.trackingUrl || '');
+      
+      // Load notes
+      setNotes(data.notes || '');
       
       // Reconstruct portal URL if portalToken exists
       if (data.portalToken && typeof window !== 'undefined') {
@@ -265,6 +273,28 @@ export default function InfluencerDetailPage() {
         error instanceof Error ? error.message : 'Erro ao apagar cupom',
         'error'
       );
+    }
+  };
+
+  const handleSaveNotes = async () => {
+    try {
+      setSavingNotes(true);
+      const res = await fetch(`/api/influencers/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes }),
+      });
+
+      if (!res.ok) throw new Error('Erro ao guardar notas');
+
+      addToast('Notas guardadas com sucesso', 'success');
+      setEditingNotes(false);
+      fetchInfluencer();
+    } catch (error) {
+      console.error('Error saving notes:', error);
+      addToast('Erro ao guardar notas', 'error');
+    } finally {
+      setSavingNotes(false);
     }
   };
 
@@ -1144,13 +1174,56 @@ export default function InfluencerDetailPage() {
         </CollapsibleSection>
 
         {/* Notas */}
-        {influencer.notes && (
-          <CollapsibleSection title="Notas Internas" icon={Sparkles} defaultOpen={false}>
-            <div className="pt-4 text-sm text-gray-700 whitespace-pre-line">
-              {influencer.notes}
-            </div>
-          </CollapsibleSection>
-        )}
+        <CollapsibleSection title="Notas Internas" icon={Sparkles} defaultOpen={!!influencer.notes}>
+          <div className="pt-4 space-y-3">
+            {editingNotes ? (
+              <>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Adiciona notas internas sobre este influencer..."
+                  className="w-full h-32 p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSaveNotes}
+                    disabled={savingNotes}
+                    className="px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 disabled:opacity-50 transition"
+                  >
+                    {savingNotes ? 'A guardar...' : 'Guardar'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditingNotes(false);
+                      setNotes(influencer.notes || '');
+                    }}
+                    className="px-4 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {influencer.notes ? (
+                  <div className="text-sm text-gray-700 whitespace-pre-line">
+                    {influencer.notes}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500 italic">
+                    Nenhuma nota adicionada.
+                  </p>
+                )}
+                <button
+                  onClick={() => setEditingNotes(true)}
+                  className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                >
+                  {influencer.notes ? 'Editar notas' : 'Adicionar notas'}
+                </button>
+              </>
+            )}
+          </div>
+        </CollapsibleSection>
       </div>
 
       {/* Confirm Dialog */}
