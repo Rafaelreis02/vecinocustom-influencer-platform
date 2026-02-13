@@ -14,9 +14,7 @@ export default withAuth(
         if (
           pathname === '/' || 
           pathname === '/login' || 
-          pathname.startsWith('/api/auth') ||  // NextAuth endpoints
-          pathname.startsWith('/api/portal') || // Portal public routes
-          pathname.includes('/api/auth/callback') // Explicitamente permitir callbacks
+          pathname.startsWith('/api/auth')
         ) {
           return true;
         }
@@ -36,14 +34,5 @@ export default withAuth(
 );
 
 export const config = {
-  matcher: [
-    /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
-  ],
+  matcher: ['/dashboard/:path*', '/api/:path*'],
 };
