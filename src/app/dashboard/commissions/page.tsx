@@ -89,12 +89,6 @@ function CommissionsContent() {
   const [loading, setLoading] = useState(true);
   const [expandedInfluencer, setExpandedInfluencer] = useState<string | null>(null);
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
-  
-  // Modal de aprovação com data
-  const [showApproveModal, setShowApproveModal] = useState(false);
-  const [approvingCommissionId, setApprovingCommissionId] = useState<string | null>(null);
-  const [paymentDate, setPaymentDate] = useState('');
-  const [paymentReference, setPaymentReference] = useState('');
 
   // Filtros
   const [startDate, setStartDate] = useState('');
@@ -133,53 +127,28 @@ function CommissionsContent() {
     }
   }
 
-  // Abrir modal de aprovação
-  function openApproveModal(commissionId: string) {
-    setApprovingCommissionId(commissionId);
-    setPaymentDate(new Date().toISOString().split('T')[0]); // Data atual como default
-    setPaymentReference('');
-    setShowApproveModal(true);
-  }
-
-  // Fechar modal
-  function closeApproveModal() {
-    setShowApproveModal(false);
-    setApprovingCommissionId(null);
-    setPaymentDate('');
-    setPaymentReference('');
-  }
-
-  // Confirmar pagamento com data
-  async function confirmPayment() {
-    if (!approvingCommissionId) return;
-    
+  // Aprovar comissão
+  async function handleApprove(commissionId: string) {
     try {
-      setProcessingIds(prev => new Set(prev).add(approvingCommissionId));
+      setProcessingIds(prev => new Set(prev).add(commissionId));
 
-      const res = await fetch(`/api/commissions/${approvingCommissionId}`, {
+      const res = await fetch(`/api/commissions/${commissionId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          status: 'PAID',
-          paidAt: paymentDate,
-          reference: paymentReference || undefined,
-        }),
+        body: JSON.stringify({ status: 'PAID' }),
       });
 
       if (!res.ok) throw new Error('Erro ao aprovar comissão');
 
       // Atualizar estado local
       setCommissions(prev => prev.map(c => 
-        c.id === approvingCommissionId ? { ...c, status: 'PAID', paidAt: paymentDate } : c
+        c.id === commissionId ? { ...c, status: 'PAID' } : c
       ));
-
-      // Fechar modal
-      closeApproveModal();
 
       // Recarregar totais
       await loadCommissions();
       
-      addToast('Comissão marcada como paga', 'success');
+      addToast('Comissão aprovada', 'success');
 
     } catch (error) {
       console.error('Error approving commission:', error);
@@ -187,7 +156,7 @@ function CommissionsContent() {
     } finally {
       setProcessingIds(prev => {
         const next = new Set(prev);
-        next.delete(approvingCommissionId);
+        next.delete(commissionId);
         return next;
       });
     }
@@ -546,7 +515,7 @@ function CommissionsContent() {
                                   {commission.status === 'PENDING' && (
                                     <>
                                       <button
-                                        onClick={() => openApproveModal(commission.id)}
+                                        onClick={() => handleApprove(commission.id)}
                                         disabled={processingIds.has(commission.id)}
                                         className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition"
                                         title="Aprovar e marcar como pago"
@@ -614,7 +583,7 @@ function CommissionsContent() {
                             {commission.status === 'PENDING' && (
                               <div className="flex items-center gap-2">
                                 <button
-                                  onClick={() => openApproveModal(commission.id)}
+                                  onClick={() => handleApprove(commission.id)}
                                   disabled={processingIds.has(commission.id)}
                                   className="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-sm font-medium"
                                 >
@@ -656,63 +625,6 @@ function CommissionsContent() {
         )}
       </div>
 
-      {/* Modal de Aprovação com Data */}
-      {showApproveModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Aprovar Comissão
-            </h3>
-            <p className="text-sm text-gray-600">
-              Define a data em que esta comissão foi paga ao influencer.
-            </p>
-            
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Data do Pagamento *
-                </label>
-                <input
-                  type="date"
-                  value={paymentDate}
-                  onChange={(e) => setPaymentDate(e.target.value)}
-                  className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Referência (opcional)
-                </label>
-                <input
-                  type="text"
-                  value={paymentReference}
-                  onChange={(e) => setPaymentReference(e.target.value)}
-                  placeholder="Ex: Transferência #12345, PayPal ID, etc."
-                  className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
-                />
-              </div>
-            </div>
-            
-            <div className="flex gap-3 pt-2">
-              <button
-                onClick={confirmPayment}
-                disabled={!paymentDate || processingIds.has(approvingCommissionId || '')}
-                className="flex-1 px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
-              >
-                {processingIds.has(approvingCommissionId || '') ? 'A guardar...' : 'Confirmar Pagamento'}
-              </button>
-              <button
-                onClick={closeApproveModal}
-                disabled={processingIds.has(approvingCommissionId || '')}
-                className="px-4 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 transition"
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
