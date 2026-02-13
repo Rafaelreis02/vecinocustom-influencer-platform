@@ -2,10 +2,8 @@
 
 import { signIn } from 'next-auth/react';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -17,21 +15,22 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
+      // Usar redirect: true para deixar o NextAuth gerir o redirect
+      // Isso garante que a sessão está estabelecida antes do redirect
       const result = await signIn('credentials', {
         email,
         password,
-        redirect: false,
+        redirect: true,
+        callbackUrl: '/dashboard',
       });
 
+      // Se chegarmos aqui, algo correu mal (redirect: true normalmente não retorna)
       if (result?.error) {
         setError('Email ou password incorretos');
-      } else {
-        router.push('/dashboard');
-        router.refresh();
+        setLoading(false);
       }
     } catch (err) {
       setError('Erro ao fazer login');
-    } finally {
       setLoading(false);
     }
   };

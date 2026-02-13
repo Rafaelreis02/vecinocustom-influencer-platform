@@ -15,7 +15,8 @@ export default withAuth(
           pathname === '/' || 
           pathname === '/login' || 
           pathname.startsWith('/api/auth') ||  // NextAuth endpoints
-          pathname.startsWith('/api/portal')    // Portal public routes
+          pathname.startsWith('/api/portal') || // Portal public routes
+          pathname.includes('/api/auth/callback') // Explicitamente permitir callbacks
         ) {
           return true;
         }
