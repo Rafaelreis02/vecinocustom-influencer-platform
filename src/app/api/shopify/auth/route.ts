@@ -1,95 +1,78 @@
 /**
  * GET /api/shopify/auth
  * 
- * Inicia o fluxo OAuth com Shopify
- * Redireciona o user para a página de autorização da Shopify
+ * Conecta usando o token da env var (Custom App já instalado)
+ * Valida o token e guarda na BD
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import crypto from 'crypto';
+import { prisma } from '@/lib/prisma';
 
-// Configurações da App Shopify
-const SHOPIFY_CLIENT_ID = process.env.SHOPIFY_CLIENT_ID!;
-const SHOPIFY_CLIENT_SECRET = process.env.SHOPIFY_CLIENT_SECRET!;
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://vecinocustom-influencer-platform.vercel.app';
-
-// Scopes necessários (permissões)
-const SHOPIFY_SCOPES = [
-  'read_orders',
-  'read_customers', 
-  'read_discounts',
-  'write_discounts',  // Para criar cupões
-  'read_products',
-].join(',');
+const SHOPIFY_ACCESS_TOKEN = process.env.SHOPIFY_ACCESS_TOKEN;
+const SHOPIFY_SHOP_DOMAIN = process.env.SHOPIFY_SHOP_DOMAIN;
 
 export async function GET(request: NextRequest) {
   try {
-    // Verificar se temos as credenciais configuradas
-    if (!SHOPIFY_CLIENT_ID || !SHOPIFY_CLIENT_SECRET) {
+    // Verificar se temos o token configurado
+    if (!SHOPIFY_ACCESS_TOKEN || !SHOPIFY_SHOP_DOMAIN) {
       return NextResponse.json(
-        { error: 'Shopify não configurado. Verifica as variáveis de ambiente.' },
+        { error: 'Token Shopify não configurado nas variáveis de ambiente' },
         { status: 500 }
       );
     }
 
-    // Obter shop domain (opcional, senão usa o default)
-    const { searchParams } = new URL(request.url);
-    const shop = searchParams.get('shop');
-    
-    // Se não especificar shop, usa o da env var
-    const shopDomain = shop || process.env.SHOPIFY_SHOP_DOMAIN;
-    
-    if (!shopDomain) {
+    const shop = SHOPIFY_SHOP_DOMAIN.includes('.myshopify.com') 
+      ? SHOPIFY_SHOP_DOMAIN 
+      : `${SHOPIFY_SHOP_DOMAIN}.myshopify.com`;
+
+    // Testar se o token é válido
+    const testResponse = await fetch(
+      `https://${shop}/admin/api/2024-01/shop.json`,
+      {
+        headers: {
+          'X-Shopify-Access-Token': SHOPIFY_ACCESS_TOKEN,
+        },
+      }
+    );
+
+    if (!testResponse.ok) {
+      const error = await testResponse.text();
+      console.error('[Shopify Auth] Token inválido:', error);
       return NextResponse.json(
-        { error: 'Loja Shopify não especificada' },
-        { status: 400 }
+        { error: 'Token inválido ou expirado' },
+        { status: 401 }
       );
     }
 
-    // Normalizar domain (adicionar .myshopify.com se não tiver)
-    const normalizedShop = shopDomain.includes('.') 
-      ? shopDomain 
-      : `${shopDomain}.myshopify.com`;
+    const shopData = await testResponse.json();
 
-    // Gerar state (CSRF protection)
-    const state = crypto.randomBytes(16).toString('hex');
-    
-    // Guardar state num cookie temporário (1 hora)
-    const redirectUrl = new URL('/api/shopify/callback', APP_URL).toString();
-    
-    // Construir URL de autorização
-    const authUrl = new URL(`https://${normalizedShop}/admin/oauth/authorize`);
-    authUrl.searchParams.set('client_id', SHOPIFY_CLIENT_ID);
-    authUrl.searchParams.set('scope', SHOPIFY_SCOPES);
-    authUrl.searchParams.set('redirect_uri', redirectUrl);
-    authUrl.searchParams.set('state', state);
-
-    // Criar response com redirect e cookie
-    const response = NextResponse.redirect(authUrl.toString());
-    
-    // Guardar state e shop em cookies seguros
-    response.cookies.set('shopify_oauth_state', state, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 3600, // 1 hora
-      path: '/',
-    });
-    
-    response.cookies.set('shopify_oauth_shop', normalizedShop, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 3600,
-      path: '/',
+    // Guardar na BD
+    await prisma.shopifyAuth.upsert({
+      where: { shop },
+      update: {
+        accessToken: SHOPIFY_ACCESS_TOKEN,
+        scope: 'read_orders,read_customers,read_discounts,write_discounts,read_products',
+        updatedAt: new Date(),
+      },
+      create: {
+        shop,
+        accessToken: SHOPIFY_ACCESS_TOKEN,
+        scope: 'read_orders,read_customers,read_discounts,write_discounts,read_products',
+      },
     });
 
-    return response;
+    console.log('[Shopify Auth] Conectado com sucesso:', shop);
+
+    return NextResponse.json({
+      success: true,
+      shop: shopData.shop,
+      message: 'Shopify conectado com sucesso',
+    });
 
   } catch (error) {
     console.error('[Shopify Auth] Error:', error);
     return NextResponse.json(
-      { error: 'Erro ao iniciar autorização' },
+      { error: 'Erro ao conectar com Shopify' },
       { status: 500 }
     );
   }
