@@ -66,6 +66,23 @@ function ShopifyIntegration() {
     checkConnection();
   }, []);
 
+  // Verificar query params (retorno do OAuth)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const shopifyStatus = params.get('shopify');
+    const errorMsg = params.get('message');
+
+    if (shopifyStatus === 'connected') {
+      addToast('Shopify conectado com sucesso!', 'success');
+      // Limpar URL
+      window.history.replaceState({}, '', window.location.pathname);
+      checkConnection();
+    } else if (shopifyStatus === 'error' && errorMsg) {
+      addToast(`Erro: ${decodeURIComponent(errorMsg)}`, 'error');
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
+
   async function checkConnection() {
     try {
       const res = await fetch('/api/shopify/check');
@@ -83,18 +100,10 @@ function ShopifyIntegration() {
   async function handleConnect() {
     try {
       setConnecting(true);
-      const res = await fetch('/api/shopify/auth');
-      const data = await res.json();
-
-      if (res.ok && data.success) {
-        addToast('Shopify conectado com sucesso!', 'success');
-        checkConnection();
-      } else {
-        addToast(data.error || 'Erro ao conectar', 'error');
-      }
+      // Redirecionar para o endpoint de auth (OAuth flow)
+      window.location.href = '/api/shopify/auth';
     } catch (error) {
-      addToast('Erro ao conectar com Shopify', 'error');
-    } finally {
+      addToast('Erro ao iniciar conexão', 'error');
       setConnecting(false);
     }
   }
