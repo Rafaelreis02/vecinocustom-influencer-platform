@@ -8,37 +8,17 @@ import {
   ChevronUp,
   Check,
   X,
-  Calendar,
   Filter,
   DollarSign,
-  Users,
-  ShoppingBag,
   ArrowLeft,
   Loader2,
   CreditCard,
   Banknote,
   Smartphone,
-  Search,
-  Download,
-  Eye
 } from 'lucide-react';
 import { useGlobalToast } from '@/contexts/ToastContext';
 
-// Componente principal envolvido em Suspense
-export default function CommissionsPage() {
-  return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center h-96">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-      </div>
-    }>
-      <CommissionsContent />
-    </Suspense>
-  );
-}
-
-function CommissionsContent() {
-
+// Interfaces
 interface Influencer {
   id: string;
   name: string;
@@ -77,9 +57,21 @@ interface Totals {
   count: number;
 }
 
+// Componente principal com Suspense
 export default function CommissionsPage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+      </div>
+    }>
+      <CommissionsContent />
+    </Suspense>
+  );
+}
+
+// Componente de conteúdo
+function CommissionsContent() {
   const { addToast } = useGlobalToast();
 
   // Estados
@@ -140,8 +132,6 @@ export default function CommissionsPage() {
 
       if (!res.ok) throw new Error('Erro ao aprovar comissão');
 
-      const data = await res.json();
-      
       // Atualizar estado local
       setCommissions(prev => prev.map(c => 
         c.id === commissionId ? { ...c, status: 'PAID', paidAt: new Date().toISOString() } : c
@@ -179,12 +169,10 @@ export default function CommissionsPage() {
 
       if (!res.ok) throw new Error('Erro ao rejeitar comissão');
 
-      // Atualizar estado local
       setCommissions(prev => prev.map(c => 
         c.id === commissionId ? { ...c, status: 'CANCELLED' } : c
       ));
 
-      // Recarregar totais
       await loadCommissions();
       
       addToast('Comissão rejeitada', 'success');
@@ -372,7 +360,10 @@ export default function CommissionsPage() {
           <div className="bg-white p-4 rounded-xl border border-gray-200">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-yellow-100 rounded-lg">
-                <Clock className="h-5 w-5 text-yellow-600" />
+                <svg className="h-5 w-5 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <circle cx="12" cy="12" r="10" strokeWidth={2} />
+                  <path strokeWidth={2} strokeLinecap="round" d="M12 6v6l4 2" />
+                </svg>
               </div>
               <div>
                 <p className="text-sm text-gray-600">Pendentes</p>
@@ -602,20 +593,5 @@ export default function CommissionsPage() {
         )}
       </div>
     </div>
-  );
-}
-
-// Componente Clock (faltava no import)
-function Clock({ className }: { className?: string }) {
-  return (
-    <svg 
-      className={className} 
-      fill="none" 
-      viewBox="0 0 24 24" 
-      stroke="currentColor"
-    >
-      <circle cx="12" cy="12" r="10" strokeWidth={2} />
-      <path strokeWidth={2} strokeLinecap="round" d="M12 6v6l4 2" />
-    </svg>
   );
 }
