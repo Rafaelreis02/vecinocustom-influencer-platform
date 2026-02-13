@@ -1,14 +1,11 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import Link from 'next/link';
 import {
   DollarSign,
   Loader2,
   Calendar,
   Filter,
-  ChevronDown,
-  ChevronUp,
 } from 'lucide-react';
 import { useGlobalToast } from '@/contexts/ToastContext';
 
@@ -45,7 +42,6 @@ function PaidCommissionsContent() {
   const { addToast } = useGlobalToast();
   const [batches, setBatches] = useState<PaymentBatch[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   
   // Filtros de data
   const [dateFilter, setDateFilter] = useState('30');
@@ -56,18 +52,6 @@ function PaidCommissionsContent() {
   useEffect(() => {
     loadPaidBatches();
   }, [dateFilter, customStartDate, customEndDate]);
-
-  function toggleExpand(batchId: string) {
-    setExpandedIds(prev => {
-      const next = new Set(prev);
-      if (next.has(batchId)) {
-        next.delete(batchId);
-      } else {
-        next.add(batchId);
-      }
-      return next;
-    });
-  }
 
   async function loadPaidBatches() {
     try {
@@ -203,83 +187,46 @@ function PaidCommissionsContent() {
         </div>
       </div>
 
-      {/* Lista Horizontal */}
+      {/* Lista Simples - Uma linha por item */}
       {batches.length === 0 ? (
         <div className="text-center py-16 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
           <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900">Nenhum pagamento encontrado</h3>
         </div>
       ) : (
-        <div className="space-y-3">
-          {batches.map((batch) => {
-            const isExpanded = expandedIds.has(batch.id);
-            
-            return (
-              <div 
-                key={batch.id} 
-                className="bg-white rounded-lg border border-gray-200 overflow-hidden"
-              >
-                {/* Linha Principal - Sempre visível */}
-                <div className="p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    {/* Avatar */}
-                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 text-white flex items-center justify-center font-bold text-sm shrink-0 overflow-hidden">
-                      {batch.influencer.avatarUrl ? (
-                        <img 
-                          src={batch.influencer.avatarUrl} 
-                          alt={batch.influencer.name} 
-                          className="h-full w-full object-cover" 
-                        />
-                      ) : (
-                        batch.influencer.name.charAt(0).toUpperCase()
-                      )}
-                    </div>
-                    
-                    {/* Info */}
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{batch.influencer.name}</h3>
-                      <p className="text-sm text-gray-500">
-                        {formatDate(batch.paidAt)}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Valor + Data + Toggle */}
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <span className="text-xl font-bold text-green-600">
-                        {formatCurrency(batch.totalAmount)}
-                      </span>
-                      <p className="text-xs text-gray-500">{formatDate(batch.paidAt)}</p>
-                    </div>
-                    
-                    <button
-                      onClick={() => toggleExpand(batch.id)}
-                      className="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition"
-                    >
-                      {isExpanded ? (
-                        <><ChevronUp className="h-4 w-4" /></>
-                      ) : (
-                        <><ChevronDown className="h-4 w-4" /></>
-                      )}
-                    </button>
-                  </div>
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          {batches.map((batch, index) => (
+            <div 
+              key={batch.id} 
+              className={`p-4 flex items-center justify-between ${index !== batches.length - 1 ? 'border-b border-gray-100' : ''}`}
+            >
+              <div className="flex items-center gap-4">
+                {/* Avatar */}
+                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 text-white flex items-center justify-center font-bold text-sm shrink-0 overflow-hidden">
+                  {batch.influencer.avatarUrl ? (
+                    <img 
+                      src={batch.influencer.avatarUrl} 
+                      alt={batch.influencer.name} 
+                      className="h-full w-full object-cover" 
+                    />
+                  ) : (
+                    batch.influencer.name.charAt(0).toUpperCase()
+                  )}
                 </div>
-
-                {/* Detalhes - Collapsible */}
-                {isExpanded && (
-                  <div className="border-t border-gray-100 bg-gray-50 px-4 py-3 text-right">
-                    <Link 
-                      href={`/dashboard/influencers/${batch.influencer.id}`}
-                      className="text-blue-600 hover:text-blue-800 font-medium text-sm"
-                    >
-                      Ver perfil →
-                    </Link>
-                  </div>
-                )}
+                
+                {/* Nome */}
+                <h3 className="font-semibold text-gray-900">{batch.influencer.name}</h3>
               </div>
-            );
-          })}
+
+              {/* Valor + Data */}
+              <div className="text-right">
+                <span className="text-lg font-bold text-green-600">
+                  {formatCurrency(batch.totalAmount)}
+                </span>
+                <p className="text-xs text-gray-500">{formatDate(batch.paidAt)}</p>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
