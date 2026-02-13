@@ -244,11 +244,14 @@ function PaidCommissionsContent() {
                     </div>
                   </div>
 
-                  {/* Valor + Toggle */}
+                  {/* Valor + Data + Toggle */}
                   <div className="flex items-center gap-4">
-                    <span className="text-xl font-bold text-green-600">
-                      {formatCurrency(batch.totalAmount)}
-                    </span>
+                    <div className="text-right">
+                      <span className="text-xl font-bold text-green-600">
+                        {formatCurrency(batch.totalAmount)}
+                      </span>
+                      <p className="text-xs text-gray-500">{formatDate(batch.paidAt)}</p>
+                    </div>
                     
                     <button
                       onClick={() => toggleExpand(batch.id)}

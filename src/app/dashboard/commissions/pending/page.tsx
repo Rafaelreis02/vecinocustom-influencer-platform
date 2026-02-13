@@ -7,7 +7,6 @@ import {
   ChevronUp,
   Check,
   X,
-  Filter,
   DollarSign,
   Loader2,
   CreditCard,
@@ -70,15 +69,9 @@ function PendingCommissionsContent() {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
 
-  // Filtros de data
-  const [dateFilter, setDateFilter] = useState('30');
-  const [customStartDate, setCustomStartDate] = useState('');
-  const [customEndDate, setCustomEndDate] = useState('');
-  const [showCustomFilter, setShowCustomFilter] = useState(false);
-
   useEffect(() => {
     loadCommissions();
-  }, [dateFilter, customStartDate, customEndDate]);
+  }, []);
 
   function toggleExpand(influencerId: string) {
     setExpandedIds(prev => {
@@ -95,28 +88,7 @@ function PendingCommissionsContent() {
   async function loadCommissions() {
     try {
       setLoading(true);
-      
-      let startDate: string | null = null;
-      let endDate: string | null = null;
-      
-      if (dateFilter === 'custom' && customStartDate && customEndDate) {
-        startDate = new Date(customStartDate).toISOString();
-        endDate = new Date(customEndDate).toISOString();
-      } else if (dateFilter !== 'custom') {
-        const days = parseInt(dateFilter);
-        const end = new Date();
-        const start = new Date();
-        start.setDate(start.getDate() - days);
-        startDate = start.toISOString();
-        endDate = end.toISOString();
-      }
-      
-      let url = '/api/commissions?status=PENDING';
-      if (startDate && endDate) {
-        url += `&startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
-      }
-      
-      const res = await fetch(url);
+      const res = await fetch('/api/commissions?status=PENDING');
       
       if (!res.ok) throw new Error('Erro ao carregar comissões');
       
@@ -217,65 +189,6 @@ function PendingCommissionsContent() {
           <strong>Comissões Pendentes:</strong> Aprova ou rejeita comissões. 
           As aprovadas vão para a aba "Pagamentos".
         </p>
-      </div>
-
-      {/* Filtros */}
-      <div className="bg-white p-4 rounded-xl border border-gray-200">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Filter className="h-5 w-5 text-gray-500" />
-            <span className="text-sm font-medium text-gray-700">Período:</span>
-          </div>
-          
-          <div className="flex flex-wrap gap-2">
-            {['30', '60', '90'].map(days => (
-              <button
-                key={days}
-                onClick={() => { setDateFilter(days); setShowCustomFilter(false); }}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-                  dateFilter === days 
-                    ? 'bg-slate-900 text-white' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                Últimos {days} dias
-              </button>
-            ))}
-            <button
-              onClick={() => { setDateFilter('custom'); setShowCustomFilter(true); }}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-                dateFilter === 'custom' 
-                  ? 'bg-slate-900 text-white' 
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              Personalizado
-            </button>
-          </div>
-        </div>
-        
-        {showCustomFilter && (
-          <div className="mt-4 pt-4 border-t border-gray-100 flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <label className="block text-xs text-gray-500 mb-1">Data Inicial</label>
-              <input
-                type="date"
-                value={customStartDate}
-                onChange={(e) => setCustomStartDate(e.target.value)}
-                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
-              />
-            </div>
-            <div className="flex-1">
-              <label className="block text-xs text-gray-500 mb-1">Data Final</label>
-              <input
-                type="date"
-                value={customEndDate}
-                onChange={(e) => setCustomEndDate(e.target.value)}
-                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
-              />
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Totais */}
