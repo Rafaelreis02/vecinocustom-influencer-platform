@@ -399,6 +399,26 @@ export default function MessagesPage() {
         influencerData.avatarUrl = String(analysisData.avatar).trim();
       }
       
+      // Dados da análise AI
+      if (analysisData.followers != null) {
+        influencerData.tiktokFollowers = analysisData.followers;
+      }
+      if (analysisData.biography) {
+        influencerData.biography = analysisData.biography;
+      }
+      if (analysisData.verified != null) {
+        influencerData.verified = analysisData.verified;
+      }
+      if (analysisData.videoCount != null) {
+        influencerData.videoCount = analysisData.videoCount;
+      }
+      if (analysisData.estimatedPrice != null) {
+        influencerData.estimatedPrice = analysisData.estimatedPrice;
+      }
+      
+      // NOTAS com análise completa (igual ao new/page.tsx)
+      influencerData.notes = `📊 Análise automática (${new Date().toLocaleDateString('pt-PT')}):\n\nFit: ${analysisData.fitScore || '?'}/5 ⭐\nNível: ${analysisData.tier || 'N/A'}\nNicho: ${analysisData.niche || 'N/A'}\n\nPontos Fortes:\n${analysisData.strengths?.map((s: string) => `• ${s}`).join('\n') || 'N/A'}\n\nOportunidades:\n${analysisData.opportunities?.map((o: string) => `• ${o}`).join('\n') || 'N/A'}\n\n---\n${analysisData.summary || ''}`;
+      
       // Platform handle
       if (newInfluencerPlatform === 'TIKTOK') {
         influencerData.tiktokHandle = newInfluencerHandle.trim();
