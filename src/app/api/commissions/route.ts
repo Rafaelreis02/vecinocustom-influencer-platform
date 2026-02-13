@@ -59,7 +59,6 @@ export async function GET(request: NextRequest) {
             avatarUrl: true,
             instagramHandle: true,
             tiktokHandle: true,
-            paymentMethod: true,
           },
         },
       },

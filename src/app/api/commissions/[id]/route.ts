@@ -113,7 +113,6 @@ export async function GET(
             avatarUrl: true,
             instagramHandle: true,
             tiktokHandle: true,
-            paymentMethod: true,
             phone: true,
           },
         },

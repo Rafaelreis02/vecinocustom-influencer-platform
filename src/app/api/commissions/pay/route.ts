@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     // Buscar influencer
     const influencer = await prisma.influencer.findUnique({
       where: { id: influencerId },
-      select: { id: true, name: true, email: true, paymentMethod: true },
+      select: { id: true, name: true, email: true },
     });
 
     if (!influencer) {
@@ -63,7 +63,6 @@ export async function POST(request: NextRequest) {
         totalAmount: totalPaid,
         currency: 'EUR',
         paidAt: now,
-        method: influencer.paymentMethod || 'BANK_TRANSFER',
         commissionIds: JSON.stringify(commissionIds),
       },
     });
