@@ -102,9 +102,9 @@ export async function PUT(
       );
     }
 
-    // If status is ANALYZING or beyond, personal fields cannot be changed
+    // If status is ANALYZING or beyond, personal fields cannot be changed (but email is optional)
     if (currentStatusIndex >= statusOrder.indexOf('ANALYZING')) {
-      const personalFields = ['name', 'email', 'instagramHandle', 'tiktokHandle', 'phone', 'ddiCode'];
+      const personalFields = ['name', 'instagramHandle', 'tiktokHandle', 'phone', 'ddiCode'];
       const isAttemptingPersonalChange = personalFields.some(field => 
         body[field] !== undefined && body[field] !== (influencer as any)[field]
       );
@@ -137,6 +137,7 @@ export async function PUT(
     
     const allowedFields = [
       'name',
+      'email',
       'instagramHandle',
       'tiktokHandle',
       'phone',
