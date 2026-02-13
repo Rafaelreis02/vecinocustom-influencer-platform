@@ -272,6 +272,7 @@ function Step1({ data, token, onUpdate, onNext }: StepProps) {
 
   const validateForm = () => {
     if (!formData.name.trim()) return 'Name is required';
+    if (!formData.email.trim()) return 'Email is required';
     if (!formData.instagramHandle.trim()) return 'Instagram is required';
     if (!formData.tiktokHandle.trim()) return 'TikTok is required';
     if (!formData.phone.trim()) return 'WhatsApp is required';
@@ -420,7 +421,7 @@ function Step1({ data, token, onUpdate, onNext }: StepProps) {
         
         {/* Email */}
         <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">E-mail</label>
+          <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">E-mail *</label>
           <input
             type="email"
             value={formData.email}
