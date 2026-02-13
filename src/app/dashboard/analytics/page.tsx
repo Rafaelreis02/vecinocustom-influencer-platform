@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { KPICards } from './components/KPICards';
 import { TopInfluencersTable } from './components/TopInfluencersTable';
 import { TopCouponsTable } from './components/TopCouponsTable';
@@ -8,7 +8,12 @@ import { useAnalyticsData } from './hooks/useAnalyticsData';
 import { Calendar } from 'lucide-react';
 
 export default function AnalyticsPage() {
+  const [mounted, setMounted] = useState(false);
   const [days, setDays] = useState(30);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const getDateRange = (d: number) => {
     const end = new Date();
@@ -20,6 +25,8 @@ export default function AnalyticsPage() {
     
     return { startDate: startStr, endDate: endStr };
   };
+
+  if (!mounted) return <div className="p-6">Carregando...</div>;
 
   const dateRange = getDateRange(days);
   const { data, loading, error } = useAnalyticsData(
