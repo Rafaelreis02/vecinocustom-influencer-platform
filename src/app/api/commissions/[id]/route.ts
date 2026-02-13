@@ -52,7 +52,6 @@ export async function PATCH(
     if (status === 'PAID') {
       updateData.paidAt = paidAt ? new Date(paidAt) : new Date();
       if (reference) updateData.reference = reference;
-      if (method) updateData.method = method;
     }
 
     // Atualizar

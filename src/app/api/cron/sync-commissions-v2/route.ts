@@ -115,7 +115,6 @@ export async function GET(request: NextRequest) {
               currency: 'EUR',
               description: `Comissão Encomenda #${order.name} | Cupão: ${coupon.code} | Cliente: ${order.email || 'N/A'} | Valor: €${base.toFixed(2)}`,
               status: 'PENDING',
-              method: coupon.influencer.paymentMethod || 'BANK_TRANSFER',
               // Store order details in reference field (JSON)
               reference: JSON.stringify({
                 shopifyOrderId: shopifyOrderId,

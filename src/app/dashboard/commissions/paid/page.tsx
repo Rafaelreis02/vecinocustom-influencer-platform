@@ -27,7 +27,6 @@ interface PaymentBatch {
   totalAmount: number;
   currency: string;
   paidAt: string;
-  method: string;
   reference: string | null;
   influencer: Influencer;
 }

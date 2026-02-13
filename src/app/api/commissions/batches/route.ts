@@ -26,10 +26,16 @@ export async function GET(request: NextRequest) {
     if (startDate || endDate) {
       where.paidAt = {};
       if (startDate) {
-        where.paidAt.gte = new Date(startDate);
+        // Usar início do dia para startDate
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        where.paidAt.gte = start;
       }
       if (endDate) {
-        where.paidAt.lte = new Date(endDate);
+        // Usar fim do dia para endDate
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        where.paidAt.lte = end;
       }
     }
 
@@ -57,6 +63,7 @@ export async function GET(request: NextRequest) {
     logger.info('[API] Payment batches listed', { 
       count: batches.length,
       totalPaid,
+      filters: { startDate, endDate }
     });
 
     return NextResponse.json(serializeBigInt({

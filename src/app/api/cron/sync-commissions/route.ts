@@ -120,7 +120,6 @@ export async function GET(request: NextRequest) {
                 currency: 'EUR',
                 description: `Comissão cupão ${coupon.code} (${orderCount} vendas)`,
                 status: 'PENDING',
-                method: coupon.influencer.paymentMethod || 'BANK_TRANSFER',
               },
             });
           }

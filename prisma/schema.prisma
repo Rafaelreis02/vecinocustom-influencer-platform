@@ -74,7 +74,6 @@ model Influencer {
   // Business
   nif               String?             // Tax ID
   address           String?
-  paymentMethod     PaymentMethod?      @default(BANK_TRANSFER)
   bankDetails       String?             // JSON or encrypted
   estimatedPrice    Float?              // Preço estimado por vídeo
   fitScore          Int?                // 1-5 score para joias
@@ -142,14 +141,6 @@ enum InfluencerStatus {
   // Especiais
   CANCELLED          // ❌ Cancelado
   BLACKLISTED        // 🚫 Bloqueado
-}
-
-enum PaymentMethod {
-  BANK_TRANSFER
-  PAYPAL
-  REVOLUT
-  MBWAY
-  OTHER
 }
 
 // ============================================
@@ -348,8 +339,7 @@ model Payment {
   status          PaymentStatus @default(PENDING)
   paidAt          DateTime?
   
-  // Method
-  method          PaymentMethod @default(BANK_TRANSFER)
+  // Reference (optional)
   reference       String?       // Transaction ID, etc.
   
   // Metadata
@@ -383,9 +373,6 @@ model PaymentBatch {
   
   // Data do pagamento
   paidAt          DateTime      @default(now())
-  
-  // Método de pagamento usado
-  method          PaymentMethod @default(BANK_TRANSFER)
   
   // Referência (opcional: nº transferência, etc.)
   reference       String?

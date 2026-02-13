@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { InfluencerStatus, PaymentMethod, Platform, DiscountType } from '@prisma/client';
+import { InfluencerStatus, Platform, DiscountType } from '@prisma/client';
 
 // Influencer Schemas
 export const InfluencerCreateSchema = z.object({
@@ -34,7 +34,6 @@ export const InfluencerCreateSchema = z.object({
   // Business
   nif: z.string().optional().nullable(),
   address: z.string().optional().nullable(),
-  paymentMethod: z.nativeEnum(PaymentMethod).optional().nullable(),
   estimatedPrice: z.number().optional().nullable(),
   fitScore: z.number().int().optional().nullable(),
   tier: z.string().optional().nullable(),
