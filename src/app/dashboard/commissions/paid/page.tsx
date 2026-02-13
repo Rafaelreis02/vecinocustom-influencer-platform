@@ -8,7 +8,6 @@ import {
   CreditCard,
   Banknote,
   Smartphone,
-  Check,
   Calendar,
 } from 'lucide-react';
 import { useGlobalToast } from '@/contexts/ToastContext';
@@ -23,19 +22,14 @@ interface Influencer {
   paymentMethod: string | null;
 }
 
-interface Commission {
+interface PaymentBatch {
   id: string;
-  amount: number;
+  totalAmount: number;
+  currency: string;
   paidAt: string;
-  orderNumber: string | null;
-  orderDate: string | null;
-  couponCode: string | null;
-}
-
-interface PaidGroup {
+  method: string;
+  reference: string | null;
   influencer: Influencer;
-  totalPaid: number;
-  commissions: Commission[];
 }
 
 export default function PaidCommissionsPage() {
@@ -52,28 +46,26 @@ export default function PaidCommissionsPage() {
 
 function PaidCommissionsContent() {
   const { addToast } = useGlobalToast();
-  const [paidGroups, setPaidGroups] = useState<PaidGroup[]>([]);
+  const [batches, setBatches] = useState<PaymentBatch[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadPaidCommissions();
+    loadPaidBatches();
   }, []);
 
-  async function loadPaidCommissions() {
+  async function loadPaidBatches() {
     try {
       setLoading(true);
-      const res = await fetch('/api/commissions?status=PAID');
+      // Buscar batches de pagamento (pagamentos agregados)
+      const res = await fetch('/api/commissions/batches');
       
       if (!res.ok) throw new Error('Erro ao carregar histórico');
       
       const data = await res.json();
-      
-      // Agrupar por influencer
-      const groups = data.influencerSummaries || [];
-      setPaidGroups(groups);
+      setBatches(data.batches || []);
 
     } catch (error) {
-      console.error('Error loading paid commissions:', error);
+      console.error('Error loading paid batches:', error);
       addToast('Erro ao carregar histórico', 'error');
     } finally {
       setLoading(false);
@@ -100,6 +92,15 @@ function PaidCommissionsContent() {
     }
   }
 
+  function PaymentMethodLabel({ method }: { method: string }) {
+    switch (method) {
+      case 'BANK_TRANSFER': return 'Transferência';
+      case 'PAYPAL': return 'PayPal';
+      case 'MBWAY': return 'MBWay';
+      default: return 'Transferência';
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -108,7 +109,7 @@ function PaidCommissionsContent() {
     );
   }
 
-  const totalPaid = paidGroups.reduce((sum, g) => sum + g.totalPaid, 0);
+  const totalPaid = batches.reduce((sum, b) => sum + b.totalAmount, 0);
 
   return (
     <div className="space-y-4">
@@ -117,10 +118,10 @@ function PaidCommissionsContent() {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm text-green-800">
-              <strong>Histórico de Pagamentos:</strong> Comissões já pagas aos influencers.
+              <strong>Histórico de Pagamentos:</strong> Registo de pagamentos realizados aos influencers.
             </p>
             <p className="text-xs text-green-600 mt-1">
-              Estes valores já foram pagos e registados.
+              Cada card representa um pagamento efetuado numa data específica.
             </p>
           </div>
           <div className="text-right">
@@ -130,88 +131,83 @@ function PaidCommissionsContent() {
         </div>
       </div>
 
-      {paidGroups.length === 0 ? (
+      {batches.length === 0 ? (
         <div className="text-center py-16 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
           <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900">Nenhum pagamento registado</h3>
           <p className="text-sm text-gray-500 max-w-xs mx-auto mt-1">
-            Ainda não foram registados pagamentos.
+            Ainda não foram efetuados pagamentos.
             Processa pagamentos na aba "Pagamentos" primeiro.
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
-          {paidGroups.map((group) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {batches.map((batch) => (
             <div 
-              key={group.influencer.id} 
-              className="bg-white rounded-xl border border-gray-200 overflow-hidden"
+              key={batch.id} 
+              className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-md transition-shadow"
             >
-              <div className="p-4">
-                <div className="flex items-center justify-between">
-                  {/* Info do Influencer */}
-                  <div className="flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 text-white flex items-center justify-center font-bold text-lg shrink-0 overflow-hidden">
-                      {group.influencer.avatarUrl ? (
-                        <img src={group.influencer.avatarUrl} alt={group.influencer.name} className="h-full w-full object-cover" />
-                      ) : (
-                        group.influencer.name.charAt(0).toUpperCase()
-                      )}
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{group.influencer.name}</h3>
-                      <div className="flex items-center gap-2 text-sm text-gray-500">
-                        <PaymentMethodIcon method={group.influencer.paymentMethod || 'BANK_TRANSFER'} />
-                        <span>{group.commissions.length} pagamentos</span>
-                      </div>
-                      <Link 
-                        href={`/dashboard/influencers/${group.influencer.id}`}
-                        className="text-xs text-blue-600 hover:text-blue-800 mt-0.5 inline-block"
-                      >
-                        Ver perfil →
-                      </Link>
-                    </div>
-                  </div>
-
-                  {/* Total */}
-                  <div className="text-right">
-                    <p className="text-xs text-gray-500">Total Pago</p>
-                    <p className="text-xl font-bold text-green-600">{formatCurrency(group.totalPaid)}</p>
+              {/* Avatar e Nome */}
+              <div className="flex items-center gap-4 mb-4">
+                <div className="h-14 w-14 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 text-white flex items-center justify-center font-bold text-xl shrink-0 overflow-hidden">
+                  {batch.influencer.avatarUrl ? (
+                    <img 
+                      src={batch.influencer.avatarUrl} 
+                      alt={batch.influencer.name} 
+                      className="h-full w-full object-cover" 
+                    />
+                  ) : (
+                    batch.influencer.name.charAt(0).toUpperCase()
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-gray-900 truncate">
+                    {batch.influencer.name}
+                  </h3>
+                  <div className="flex items-center gap-1 text-sm text-gray-500">
+                    <PaymentMethodIcon method={batch.method} />
+                    <span>{PaymentMethodLabel(batch.method)}</span>
                   </div>
                 </div>
+              </div>
 
-                {/* Lista de Pagamentos */}
-                <div className="mt-4 pt-4 border-t border-gray-100">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="text-left text-xs text-gray-500">
-                        <th className="pb-2">Encomenda</th>
-                        <th className="pb-2">Data Pagamento</th>
-                        <th className="pb-2 text-right">Valor</th>
-                      </tr>
-                    </thead>
-                    <tbody className="text-sm">
-                      {group.commissions.map((commission) => (
-                        <tr key={commission.id} className="border-t border-gray-50">
-                          <td className="py-2 text-gray-900">
-                            {commission.orderNumber || 'N/A'}
-                            {commission.couponCode && (
-                              <span className="block text-xs text-gray-400">{commission.couponCode}</span>
-                            )}
-                          </td>
-                          <td className="py-2 text-gray-600">
-                            <span className="flex items-center gap-1">
-                              <Check className="h-3 w-3 text-green-500" />
-                              {formatDate(commission.paidAt)}
-                            </span>
-                          </td>
-                          <td className="py-2 text-right font-medium text-gray-900">
-                            {formatCurrency(commission.amount)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+              {/* Data e Valor */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between py-2 border-t border-gray-100">
+                  <span className="text-sm text-gray-500 flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Data do Pagamento
+                  </span>
+                  <span className="font-medium text-gray-900">
+                    {formatDate(batch.paidAt)}
+                  </span>
                 </div>
+
+                <div className="flex items-center justify-between py-2 border-t border-gray-100">
+                  <span className="text-sm text-gray-500">Total Pago</span>
+                  <span className="text-xl font-bold text-green-600">
+                    {formatCurrency(batch.totalAmount)}
+                  </span>
+                </div>
+
+                {batch.reference && (
+                  <div className="flex items-center justify-between py-2 border-t border-gray-100">
+                    <span className="text-sm text-gray-500">Referência</span>
+                    <span className="text-sm font-medium text-gray-700 truncate max-w-[150px]">
+                      {batch.reference}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Link para perfil */}
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <Link 
+                  href={`/dashboard/influencers/${batch.influencer.id}`}
+                  className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                >
+                  Ver perfil do influencer →
+                </Link>
               </div>
             </div>
           ))}

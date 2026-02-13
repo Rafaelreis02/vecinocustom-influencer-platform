@@ -115,6 +115,7 @@ model Influencer {
   videos            Video[]
   coupons           Coupon[]
   payments          Payment[]
+  paymentBatches    PaymentBatch[]    // Pagamentos agregados efetuados
   files             File[]
   emails            Email[]           @relation("InfluencerEmails")
   
@@ -364,6 +365,38 @@ enum PaymentStatus {
   PAID
   FAILED
   CANCELLED
+}
+
+// ============================================
+// PAYMENT BATCHES (Pagamentos agregados)
+// ============================================
+
+model PaymentBatch {
+  id              String        @id @default(cuid())
+  
+  influencerId    String
+  influencer      Influencer    @relation(fields: [influencerId], references: [id], onDelete: Cascade)
+  
+  // Total pago neste lote
+  totalAmount     Float
+  currency        String        @default("EUR")
+  
+  // Data do pagamento
+  paidAt          DateTime      @default(now())
+  
+  // Método de pagamento usado
+  method          PaymentMethod @default(BANK_TRANSFER)
+  
+  // Referência (opcional: nº transferência, etc.)
+  reference       String?
+  
+  // IDs das comissões pagas neste lote (JSON array)
+  commissionIds   String
+  
+  // Metadata
+  createdAt       DateTime      @default(now())
+  
+  @@map("payment_batches")
 }
 
 // ============================================

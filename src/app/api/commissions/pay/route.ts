@@ -54,6 +54,19 @@ export async function POST(request: NextRequest) {
 
     // Calcular total
     const totalPaid = commissions.reduce((sum, c) => sum + c.amount, 0);
+    const now = new Date();
+
+    // Criar o PaymentBatch (registo agregado do pagamento)
+    const batch = await prisma.paymentBatch.create({
+      data: {
+        influencerId,
+        totalAmount: totalPaid,
+        currency: 'EUR',
+        paidAt: now,
+        method: influencer.paymentMethod || 'BANK_TRANSFER',
+        commissionIds: JSON.stringify(commissionIds),
+      },
+    });
 
     // Atualizar todas as comissões para PAID
     const updatePromises = commissionIds.map(id =>
@@ -61,27 +74,27 @@ export async function POST(request: NextRequest) {
         where: { id },
         data: {
           status: 'PAID',
-          paidAt: new Date(),
+          paidAt: now,
+          reference: JSON.stringify({ batchId: batch.id }), // Link para o batch
         },
       })
     );
 
     await Promise.all(updatePromises);
 
-    // Criar registo no histórico do influencer (opcional - podemos usar os payments já existentes)
-    // Como já temos os payments com status PAID, isso serve como histórico
-
     logger.info('[API] Payments marked as paid', {
       influencerId,
       influencerName: influencer.name,
       count: commissionIds.length,
       totalPaid,
+      batchId: batch.id,
     });
 
     return NextResponse.json(serializeBigInt({
       success: true,
       message: `${commissionIds.length} comissões marcadas como pagas`,
       totalPaid,
+      paidAt: now,
       influencer: {
         id: influencer.id,
         name: influencer.name,
