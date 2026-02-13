@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -23,6 +23,21 @@ import {
   Eye
 } from 'lucide-react';
 import { useGlobalToast } from '@/contexts/ToastContext';
+
+// Componente principal envolvido em Suspense
+export default function CommissionsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+      </div>
+    }>
+      <CommissionsContent />
+    </Suspense>
+  );
+}
+
+function CommissionsContent() {
 
 interface Influencer {
   id: string;
