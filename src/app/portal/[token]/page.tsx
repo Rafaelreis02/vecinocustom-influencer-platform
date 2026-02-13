@@ -417,14 +417,15 @@ function Step1({ data, token, onUpdate, onNext }: StepProps) {
           />
         </div>
         
-        {/* Email (readonly) */}
+        {/* Email */}
         <div>
           <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">E-mail *</label>
           <input
             type="email"
             value={formData.email}
-            readOnly
-            className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg bg-gray-50 cursor-not-allowed"
+            onChange={(e) => handleChange('email', e.target.value)}
+            disabled={allFieldsDisabled || !!formData.email}
+            className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E1E37] disabled:bg-gray-50 disabled:cursor-not-allowed"
           />
         </div>
         
