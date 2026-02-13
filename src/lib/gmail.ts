@@ -5,6 +5,8 @@
 
 import { google } from 'googleapis';
 import { prisma } from './prisma';
+import { findInfluencerBySenderEmail, autoLinkEmailsBySender } from './email-auto-link';
+import { logger } from './logger';
 
 const gmail = google.gmail({ version: 'v1' });
 
@@ -92,8 +94,9 @@ export async function getMessageDetails(auth: any, messageId: string) {
 
 export async function syncEmails(auth: any) {
   try {
-    console.log('[GMAIL SYNC] Starting incremental sync...');
+    logger.info('[GMAIL SYNC] Starting incremental sync...');
     let totalSynced = 0;
+    let autoLinked = 0;
 
     const lastEmail = await prisma.email.findFirst({
       orderBy: { receivedAt: 'desc' },
@@ -115,26 +118,60 @@ export async function syncEmails(auth: any) {
 
     const messages = res.data.messages || [];
     
+    // Track which senders we've auto-linked to avoid duplicate calls
+    const processedSenders = new Set<string>();
+    
     for (const msg of messages) {
       const exists = await prisma.email.findUnique({ where: { gmailId: msg.id! } });
       if (exists) continue;
 
       const emailData = await getMessageDetails(auth, msg.id!);
-      const influencer = await prisma.influencer.findFirst({ where: { email: emailData.from } });
+      
+      // Tentar encontrar influencer pelo email do remetente
+      let influencerId: string | null = null;
+      const existingInfluencer = await findInfluencerBySenderEmail(emailData.from);
+      
+      if (existingInfluencer) {
+        influencerId = existingInfluencer.id;
+        
+        // Auto-link todos os emails deste remetente (só uma vez por sender)
+        if (!processedSenders.has(emailData.from)) {
+          processedSenders.add(emailData.from);
+          try {
+            const linkResult = await autoLinkEmailsBySender(emailData.from, influencerId);
+            autoLinked += linkResult.linked;
+            logger.info('[GMAIL SYNC] Auto-linked emails for sender', {
+              sender: emailData.from,
+              influencerId,
+              linked: linkResult.linked
+            });
+          } catch (autoLinkError) {
+            logger.error('[GMAIL SYNC] Auto-link failed', { 
+              sender: emailData.from, 
+              error: autoLinkError 
+            });
+          }
+        }
+      }
 
       await prisma.email.create({
         data: {
           ...emailData,
-          influencerId: influencer?.id || null,
+          influencerId: influencerId,
         },
       });
       totalSynced++;
     }
 
-    console.log(`[GMAIL SYNC] Done. +${totalSynced} emails.`);
+    logger.info('[GMAIL SYNC] Completed', { 
+      synced: totalSynced, 
+      autoLinked,
+      uniqueSenders: processedSenders.size 
+    });
+    
     return totalSynced;
   } catch (error: any) {
-    console.error('[GMAIL SYNC ERROR]', error.message);
+    logger.error('[GMAIL SYNC ERROR]', error);
     throw error;
   }
 }

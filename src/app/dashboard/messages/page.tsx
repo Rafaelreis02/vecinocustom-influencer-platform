@@ -277,12 +277,36 @@ export default function MessagesPage() {
         throw new Error(errorData.error || 'Failed to associate');
       }
       
-      // 3. Refresh
-      const emailRes = await fetch(`/api/emails/${selectedEmail.id}`);
-      if (!emailRes.ok) throw new Error('Failed to refresh email');
-      const emailData = await emailRes.json();
-      setSelectedEmail(emailData);
+      // 3. AUTO-LINK: Associar TODOS os emails deste remetente ao mesmo influencer
+      addToast('A associar emails relacionados...', 'info');
+      try {
+        const autoLinkRes = await fetch('/api/emails/auto-link', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            senderEmail: cleanEmail, 
+            influencerId 
+          }),
+        });
+        
+        if (autoLinkRes.ok) {
+          const autoLinkData = await autoLinkRes.json();
+          if (autoLinkData.linked > 0) {
+            addToast(`+${autoLinkData.linked} emails do mesmo remetente associados`, 'success');
+          }
+        }
+      } catch (autoLinkError) {
+        // Não falhar se auto-link der erro, apenas log
+        console.warn('Auto-link failed (non-critical):', autoLinkError);
+      }
+      
+      // 4. Refresh
       await fetchEmails();
+      const emailRes = await fetch(`/api/emails/${selectedEmail.id}`);
+      if (emailRes.ok) {
+        const emailData = await emailRes.json();
+        setSelectedEmail(emailData);
+      }
       
       addToast('Influencer associado com sucesso!', 'success');
       setShowInfluencerModal(false);
@@ -407,12 +431,35 @@ export default function MessagesPage() {
         throw new Error(errorData.error || 'Falha ao associar ao email');
       }
       
-      // 4. Refresh
-      const emailRes = await fetch(`/api/emails/${selectedEmail.id}`);
-      if (!emailRes.ok) throw new Error('Failed to refresh email data');
-      const emailData = await emailRes.json();
-      setSelectedEmail(emailData);
+      // 4. AUTO-LINK: Associar TODOS os emails deste remetente ao novo influencer
+      addToast('A associar emails relacionados...', 'info');
+      try {
+        const autoLinkRes = await fetch('/api/emails/auto-link', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            senderEmail: cleanEmail, 
+            influencerId: newInfluencer.id 
+          }),
+        });
+        
+        if (autoLinkRes.ok) {
+          const autoLinkData = await autoLinkRes.json();
+          if (autoLinkData.linked > 0) {
+            addToast(`+${autoLinkData.linked} emails do mesmo remetente associados`, 'success');
+          }
+        }
+      } catch (autoLinkError) {
+        console.warn('Auto-link failed (non-critical):', autoLinkError);
+      }
+      
+      // 5. Refresh
       await fetchEmails();
+      const emailRes = await fetch(`/api/emails/${selectedEmail.id}`);
+      if (emailRes.ok) {
+        const emailData = await emailRes.json();
+        setSelectedEmail(emailData);
+      }
       
       addToast('Influencer criado e associado com sucesso!', 'success');
       setShowInfluencerModal(false);
