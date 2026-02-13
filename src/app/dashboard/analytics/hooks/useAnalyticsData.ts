@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { logger } from '@/lib/logger';
 
 export interface AnalyticsData {
   summary: {
@@ -65,7 +64,7 @@ export function useAnalyticsData(
         const analyticsData = await response.json();
         setData(analyticsData);
       } catch (err) {
-        logger.error('Error fetching analytics data', err);
+        console.error('Error fetching analytics data', err);
         setError(err instanceof Error ? err.message : 'Unknown error');
       } finally {
         setLoading(false);

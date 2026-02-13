@@ -6,27 +6,26 @@ import { TopInfluencersTable } from './components/TopInfluencersTable';
 import { TopCouponsTable } from './components/TopCouponsTable';
 import { useAnalyticsData } from './hooks/useAnalyticsData';
 import { Calendar } from 'lucide-react';
-import { format, subDays } from 'date-fns';
 
 export default function AnalyticsPage() {
-  const [dateRange, setDateRange] = useState({
-    startDate: format(subDays(new Date(), 30), 'yyyy-MM-dd'),
-    endDate: format(new Date(), 'yyyy-MM-dd'),
-  });
+  const [days, setDays] = useState(30);
 
+  const getDateRange = (d: number) => {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(start.getDate() - d);
+    
+    const startStr = start.toISOString().split('T')[0];
+    const endStr = end.toISOString().split('T')[0];
+    
+    return { startDate: startStr, endDate: endStr };
+  };
+
+  const dateRange = getDateRange(days);
   const { data, loading, error } = useAnalyticsData(
     dateRange.startDate,
     dateRange.endDate
   );
-
-  const handleDateRangeChange = (days: number) => {
-    const end = new Date();
-    const start = subDays(end, days);
-    setDateRange({
-      startDate: format(start, 'yyyy-MM-dd'),
-      endDate: format(end, 'yyyy-MM-dd'),
-    });
-  };
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -38,19 +37,19 @@ export default function AnalyticsPage() {
         <div className="flex gap-2 mt-4 sm:mt-0 flex-wrap">
           <button 
             className="px-3 py-2 text-sm border rounded hover:bg-gray-50"
-            onClick={() => handleDateRangeChange(7)}
+            onClick={() => setDays(7)}
           >
             <Calendar className="h-3 w-3 inline mr-1" /> 7 dias
           </button>
           <button 
             className="px-3 py-2 text-sm border rounded hover:bg-gray-50"
-            onClick={() => handleDateRangeChange(30)}
+            onClick={() => setDays(30)}
           >
             <Calendar className="h-3 w-3 inline mr-1" /> 30 dias
           </button>
           <button 
             className="px-3 py-2 text-sm border rounded hover:bg-gray-50"
-            onClick={() => handleDateRangeChange(90)}
+            onClick={() => setDays(90)}
           >
             <Calendar className="h-3 w-3 inline mr-1" /> 90 dias
           </button>
