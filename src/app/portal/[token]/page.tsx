@@ -578,6 +578,11 @@ function Step2({ data, token, onUpdate, onBack, onNext }: StepProps) {
   const [loading, setLoading] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
+  // Block all fields if status has moved beyond AGREED
+  const statusOrder = ['UNKNOWN', 'COUNTER_PROPOSAL', 'ANALYZING', 'AGREED', 'PRODUCT_SELECTION', 'CONTRACT_PENDING', 'SHIPPED'];
+  const isEditableStatus = ['AGREED'].includes(data.status);
+  const fieldsDisabled = !isEditableStatus;
+
   const handleChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (validationError) setValidationError(null);
@@ -698,9 +703,10 @@ function Step2({ data, token, onUpdate, onBack, onNext }: StepProps) {
           <textarea
             value={formData.shippingAddress}
             onChange={(e) => handleChange('shippingAddress', e.target.value)}
+            disabled={fieldsDisabled}
             rows={3}
             placeholder="Street, Number, City, Zip Code"
-            className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E1E37]"
+            className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E1E37] disabled:bg-gray-50 disabled:cursor-not-allowed"
           />
         </div>
 
@@ -712,8 +718,9 @@ function Step2({ data, token, onUpdate, onBack, onNext }: StepProps) {
               type="text"
               value={searchQuery1}
               onChange={(e) => setSearchQuery1(e.target.value)}
+              disabled={fieldsDisabled}
               placeholder="Search for a product..."
-              className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E1E37]"
+              className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E1E37] disabled:bg-gray-50 disabled:cursor-not-allowed"
             />
             {searchResults1.length > 0 && (
               <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
@@ -745,8 +752,9 @@ function Step2({ data, token, onUpdate, onBack, onNext }: StepProps) {
               type="text"
               value={searchQuery2}
               onChange={(e) => setSearchQuery2(e.target.value)}
+              disabled={fieldsDisabled}
               placeholder="Search for a product..."
-              className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E1E37]"
+              className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E1E37] disabled:bg-gray-50 disabled:cursor-not-allowed"
             />
             {searchResults2.length > 0 && (
               <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
@@ -778,8 +786,9 @@ function Step2({ data, token, onUpdate, onBack, onNext }: StepProps) {
               type="text"
               value={searchQuery3}
               onChange={(e) => setSearchQuery3(e.target.value)}
+              disabled={fieldsDisabled}
               placeholder="Search for a product..."
-              className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E1E37]"
+              className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E1E37] disabled:bg-gray-50 disabled:cursor-not-allowed"
             />
             {searchResults3.length > 0 && (
               <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
@@ -805,22 +814,24 @@ function Step2({ data, token, onUpdate, onBack, onNext }: StepProps) {
       </div>
 
       {/* Action Buttons */}
-      <div className="mt-6 space-y-3">
-        <button
-          onClick={onBack}
-          disabled={loading}
-          className="w-full py-3 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Review details
-        </button>
-        <button
-          onClick={handleSubmit}
-          disabled={loading}
-          className="w-full py-3 bg-[#0E1E37] text-white font-semibold rounded-lg hover:bg-[#1a2f4f] transition disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {loading ? 'Processing...' : 'Send details'}
-        </button>
-      </div>
+      {!fieldsDisabled && (
+        <div className="mt-6 space-y-3">
+          <button
+            onClick={onBack}
+            disabled={loading}
+            className="w-full py-3 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Review details
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={loading}
+            className="w-full py-3 bg-[#0E1E37] text-white font-semibold rounded-lg hover:bg-[#1a2f4f] transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Processing...' : 'Send details'}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
