@@ -122,7 +122,7 @@ function PaidCommissionsContent() {
     }
   }
 
-  function PaymentMethodLabel({ method }: { method: string }) {
+  function PaymentMethodLabel(method: string) {
     switch (method) {
       case 'BANK_TRANSFER': return 'Transferência';
       case 'PAYPAL': return 'PayPal';
