@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     // Buscar influencer
     const influencer = await prisma.influencer.findUnique({
       where: { id: influencerId },
-      select: { id: true, name: true, email: true },
+      select: { id: true, name: true, email: true, paymentMethod: true },
     });
 
     if (!influencer) {
