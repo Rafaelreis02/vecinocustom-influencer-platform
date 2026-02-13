@@ -116,12 +116,13 @@ export async function POST(request: NextRequest) {
           const totalShipping = parseFloat(order.total_shipping);
 
           const base = totalPrice - totalTax - totalShipping;
-          const commission = base * (coupon.commissionRate / 100);
+          const commissionRate = coupon.commissionRate ?? 0;
+          const commission = base * (commissionRate / 100);
 
           logger.info('[Shopify Webhook] Calculating commission', {
             code: discount.code,
             base,
-            commissionRate: coupon.commissionRate,
+            commissionRate,
             commission,
           });
 
