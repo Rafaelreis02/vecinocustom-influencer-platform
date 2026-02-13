@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { MessageCircle, Users, Video, Award, Gift, FileText, X, Loader2 } from 'lucide-react';
+import { VideoPreviewList } from './VideoPreview';
 
 interface InfluencerPanelProps {
   influencer?: {
@@ -147,20 +148,12 @@ export function InfluencerPanel({ influencer, onClose }: InfluencerPanelProps) {
           <Video className="h-3 w-3" /> Vídeos
           {loading && <Loader2 className="h-3 w-3 animate-spin ml-1" />}
         </p>
-        {loading ? (
-          <p className="text-xs text-slate-500 bg-slate-50 p-2 rounded-lg">A carregar...</p>
-        ) : details?.videos && details.videos.length > 0 ? (
-          <div className="space-y-1">
-            {details.videos.slice(0, 3).map((video: any, idx: number) => (
-              <div key={idx} className="p-2 bg-slate-50 rounded-lg text-xs flex justify-between">
-                <span className="truncate text-slate-700">{video.title || 'Vídeo'}</span>
-                {video.views && <span className="text-slate-400">{video.views.toLocaleString()} views</span>}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-xs text-slate-400 bg-slate-50 p-2 rounded-lg">Sem vídeos</p>
-        )}
+        <VideoPreviewList 
+          videos={details?.videos || []} 
+          compact={true}
+          loading={loading}
+          emptyMessage="Sem vídeos"
+        />
       </div>
 
       {/* Comissões */}

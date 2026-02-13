@@ -1,6 +1,7 @@
 'use client';
 import { useGlobalToast } from '@/contexts/ToastContext';
 import { StatusDropdown } from '@/components/StatusDropdown';
+import { VideoPreviewList } from '@/components/VideoPreview';
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -781,56 +782,11 @@ export default function InfluencerDetailPage() {
           defaultOpen={false}
         >
           <div className="pt-4">
-            {influencer.videos && influencer.videos.length > 0 ? (
-              <div className="space-y-2">
-                {influencer.videos.map((video: any) => (
-                  <div key={video.id} className="p-3 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${
-                            video.platform === 'TIKTOK' ? 'bg-slate-900 text-white' : 
-                            video.platform === 'INSTAGRAM' ? 'bg-slate-700 text-white' : 
-                            'bg-gray-200 text-gray-700'
-                          }`}>
-                            {video.platform}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            {new Date(video.publishedAt).toLocaleDateString('pt-PT')}
-                          </span>
-                        </div>
-                        <a href={video.url} target="_blank" rel="noopener noreferrer" className="font-medium text-slate-900 hover:text-slate-700 text-sm truncate block mb-1">
-                          {video.title || 'Sem título'}
-                        </a>
-                        <div className="flex items-center gap-3 text-xs text-gray-500">
-                          <span className="flex items-center gap-1">
-                            <Eye className="h-3 w-3" /> {(video.views || 0).toLocaleString()}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Heart className="h-3 w-3" /> {(video.likes || 0).toLocaleString()}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="text-right shrink-0">
-                        {video.cost ? (
-                          <div>
-                            <p className="text-sm font-bold text-slate-900">€{video.cost}</p>
-                            <p className="text-[10px] text-gray-500">Custo</p>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-gray-400">-</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-6 text-gray-400">
-                <Video className="h-8 w-8 mx-auto mb-2 opacity-40" />
-                <p className="text-sm">Nenhum vídeo registado</p>
-              </div>
-            )}
+            <VideoPreviewList 
+              videos={influencer.videos || []}
+              compact={false}
+              emptyMessage="Nenhum vídeo registado"
+            />
           </div>
         </CollapsibleSection>
 
