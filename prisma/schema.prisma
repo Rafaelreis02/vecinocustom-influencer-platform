@@ -508,3 +508,39 @@ model ShopifyAuth {
   @@map("shopify_auth")
 }
 
+// ============================================
+// WEBHOOK MANAGEMENT
+// ============================================
+
+model WebhookConfig {
+  id            String   @id @default(cuid())
+  platform      String   // SHOPIFY, GMAIL, etc
+  email         String   // Email do admin para rastreamento
+  webhookUrl    String
+  isActive      Boolean  @default(true)
+  config        String?  @db.Text // JSON config (opcional)
+  registeredAt  DateTime @default(now())
+  lastUpdated   DateTime @updatedAt
+  
+  // Índices para busca rápida
+  @@unique([platform, email])
+  @@index([email])
+  @@index([platform])
+  @@map("webhook_configs")
+}
+
+model WebhookMigrationLog {
+  id             String   @id @default(cuid())
+  oldEmail       String
+  newEmail       String
+  count          Int      // Quantos webhooks foram migrados
+  status         String   // SUCCESS, FAILED, PARTIAL
+  errorMessage   String?  @db.Text
+  migratedAt     DateTime @default(now())
+  
+  @@index([oldEmail])
+  @@index([newEmail])
+  @@index([status])
+  @@map("webhook_migration_logs")
+}
+
