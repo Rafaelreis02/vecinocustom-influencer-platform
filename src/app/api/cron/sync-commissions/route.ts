@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getOrdersByDiscountCode } from '@/lib/shopify-oauth';
+import { retryWithExponentialBackoff } from '@/lib/retry';
 
 /**
  * GET /api/cron/sync-commissions
@@ -46,8 +47,13 @@ export async function GET(request: NextRequest) {
 
     for (const coupon of coupons) {
       try {
-        // Fetch orders from Shopify
-        const orders = await getOrdersByDiscountCode(coupon.code);
+        // Fetch orders from Shopify (com retry automático)
+        const orders = await retryWithExponentialBackoff(
+          () => getOrdersByDiscountCode(coupon.code),
+          3,      // máx 3 tentativas
+          1000,   // começa com 1 segundo
+          `Fetching orders for coupon ${coupon.code}`
+        );
 
         if (orders.length === 0) {
           results.push({
@@ -79,50 +85,62 @@ export async function GET(request: NextRequest) {
           }
         }
 
-        // Update coupon statistics
-        await prisma.coupon.update({
-          where: { id: coupon.id },
-          data: {
-            totalSales: totalSales,
-            totalOrders: orderCount,
-            usageCount: orderCount,
-          },
-        });
-
-        // Create or update payment record for commission
-        if (totalCommission > 0) {
-          // Check if payment already exists for this period
-          const existingPayment = await prisma.payment.findFirst({
-            where: {
-              influencerId: coupon.influencerId,
-              description: {
-                contains: `Comissão cupão ${coupon.code}`,
-              },
-              status: 'PENDING',
+        // Update coupon statistics (com retry)
+        await retryWithExponentialBackoff(
+          () => prisma.coupon.update({
+            where: { id: coupon.id },
+            data: {
+              totalSales: totalSales,
+              totalOrders: orderCount,
+              usageCount: orderCount,
             },
-          });
+          }),
+          3,
+          500,
+          `Updating coupon stats for ${coupon.code}`
+        );
 
-          if (existingPayment) {
-            // Update existing payment
-            await prisma.payment.update({
-              where: { id: existingPayment.id },
-              data: {
-                amount: totalCommission,
-                description: `Comissão cupão ${coupon.code} (${orderCount} vendas)`,
-              },
-            });
-          } else {
-            // Create new payment
-            await prisma.payment.create({
-              data: {
-                influencerId: coupon.influencerId,
-                amount: totalCommission,
-                currency: 'EUR',
-                description: `Comissão cupão ${coupon.code} (${orderCount} vendas)`,
-                status: 'PENDING',
-              },
-            });
-          }
+        // Create or update payment record for commission (com retry)
+        if (totalCommission > 0) {
+          await retryWithExponentialBackoff(
+            async () => {
+              // Check if payment already exists for this period
+              const existingPayment = await prisma.payment.findFirst({
+                where: {
+                  influencerId: coupon.influencerId,
+                  description: {
+                    contains: `Comissão cupão ${coupon.code}`,
+                  },
+                  status: 'PENDING',
+                },
+              });
+
+              if (existingPayment) {
+                // Update existing payment
+                return await prisma.payment.update({
+                  where: { id: existingPayment.id },
+                  data: {
+                    amount: totalCommission,
+                    description: `Comissão cupão ${coupon.code} (${orderCount} vendas)`,
+                  },
+                });
+              } else {
+                // Create new payment
+                return await prisma.payment.create({
+                  data: {
+                    influencerId: coupon.influencerId,
+                    amount: totalCommission,
+                    currency: 'EUR',
+                    description: `Comissão cupão ${coupon.code} (${orderCount} vendas)`,
+                    status: 'PENDING',
+                  },
+                });
+              }
+            },
+            3,
+            500,
+            `Creating/updating payment for ${coupon.code}`
+          );
         }
 
         results.push({
