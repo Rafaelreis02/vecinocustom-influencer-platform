@@ -29,7 +29,8 @@ import {
   ChevronDown,
   ChevronUp,
   BarChart3,
-  Receipt
+  Receipt,
+  Link2
 } from 'lucide-react';
 import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog';
 
@@ -143,6 +144,9 @@ export default function InfluencerDetailPage() {
   const [editingNotes, setEditingNotes] = useState(false);
   const [savingNotes, setSavingNotes] = useState(false);
 
+  // Sync videos
+  const [syncingVideos, setSyncingVideos] = useState(false);
+
   useEffect(() => {
     fetchInfluencer();
   }, []);
@@ -199,6 +203,31 @@ export default function InfluencerDetailPage() {
     } catch (error) {
       console.error('Error deleting influencer:', error);
       addToast('Erro ao apagar influencer', 'error');
+    }
+  };
+
+  const handleSyncVideos = async () => {
+    try {
+      setSyncingVideos(true);
+      const res = await fetch(`/api/influencers/${id}/sync-videos`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Erro ao sincronizar vídeos');
+      }
+
+      addToast(`${data.results.total} vídeos sincronizados`, 'success');
+      fetchInfluencer(); // Recarregar influencer para mostrar vídeos linkados
+    } catch (error) {
+      console.error('Error syncing videos:', error);
+      addToast(
+        error instanceof Error ? error.message : 'Erro ao sincronizar vídeos',
+        'error'
+      );
+    } finally {
+      setSyncingVideos(false);
     }
   };
 
@@ -538,6 +567,18 @@ export default function InfluencerDetailPage() {
             </div>
           </div>
           <div className="flex gap-2 self-end sm:self-auto">
+            <button
+              onClick={handleSyncVideos}
+              disabled={syncingVideos}
+              className="p-2 rounded bg-white/10 border border-white/20 hover:bg-white/20 transition active:scale-95 disabled:opacity-50"
+              title="Sincronizar vídeos"
+            >
+              {syncingVideos ? (
+                <Loader2 className="h-4 w-4 text-white animate-spin" />
+              ) : (
+                <Link2 className="h-4 w-4 text-white" />
+              )}
+            </button>
             <Link
               href={`/dashboard/influencers/${id}/edit`}
               className="p-2 rounded bg-white/10 border border-white/20 hover:bg-white/20 transition active:scale-95"

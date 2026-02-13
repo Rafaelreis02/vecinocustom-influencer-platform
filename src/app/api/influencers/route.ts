@@ -8,6 +8,7 @@ import { Prisma } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { downloadAndStoreImage } from '@/lib/image-storage';
+import { linkVideosToInfluencer } from '@/lib/video-linker';
 
 // GET /api/influencers - Listar influencers com pagination
 export async function GET(request: Request) {
@@ -193,13 +194,31 @@ export async function POST(request: Request) {
 
     logger.info('Influencer created', { id: influencer.id, name: influencer.name });
 
+    // Auto-link videos to this influencer (if any exist with matching handle)
+    const linkPromises = [];
+    if (validated.tiktokHandle) {
+      linkPromises.push(linkVideosToInfluencer(influencer.id, validated.tiktokHandle, 'TIKTOK'));
+    }
+    if (validated.instagramHandle) {
+      linkPromises.push(linkVideosToInfluencer(influencer.id, validated.instagramHandle, 'INSTAGRAM'));
+    }
+    const linkedCounts = await Promise.all(linkPromises);
+    const totalLinked = linkedCounts.reduce((sum, count) => sum + count, 0);
+    
+    if (totalLinked > 0) {
+      logger.info('Auto-linked videos to new influencer', { 
+        influencerId: influencer.id, 
+        count: totalLinked 
+      });
+    }
+
     // Auto-trigger import if has handle and status is IMPORT_PENDING
     if (validated.status === 'IMPORT_PENDING' && (validated.tiktokHandle || validated.instagramHandle)) {
       logger.info('Triggering auto-import for influencer', { id: influencer.id });
       // Queue for processing (worker will pick it up)
     }
 
-    return NextResponse.json(serializeBigInt(influencer), { status: 201 });
+    return NextResponse.json(serializeBigInt({ ...influencer, _linkedVideos: totalLinked }), { status: 201 });
   } catch (error) {
     logger.error('POST /api/influencers failed', error);
     return handleApiError(error);

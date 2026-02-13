@@ -13,6 +13,9 @@ import {
   Key,
   X,
   Check,
+  ShoppingBag,
+  Link,
+  Save,
 } from 'lucide-react';
 import { useGlobalToast } from '@/contexts/ToastContext';
 
@@ -32,11 +35,215 @@ export default function SettingsPage() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Definições</h1>
         <p className="text-sm text-gray-600 mt-1">
-          Gestão de utilizadores e permissões
+          Gestão de utilizadores, permissões e integrações
         </p>
       </div>
 
+      <ShopifyIntegration />
       <UsersManagement />
+    </div>
+  );
+}
+
+function ShopifyIntegration() {
+  const { addToast } = useGlobalToast();
+  const [config, setConfig] = useState({
+    storeUrl: '',
+    apiKey: '',
+    apiSecret: '',
+    accessToken: '',
+  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [isConfigured, setIsConfigured] = useState(false);
+
+  useEffect(() => {
+    loadConfig();
+  }, []);
+
+  async function loadConfig() {
+    try {
+      const res = await fetch('/api/settings/shopify');
+      if (res.ok) {
+        const data = await res.json();
+        setConfig({
+          storeUrl: data.storeUrl || '',
+          apiKey: data.apiKey || '',
+          apiSecret: '', // Não retornamos o secret por segurança
+          accessToken: '', // Não retornamos o token por segurança
+        });
+        setIsConfigured(data.isConfigured);
+      }
+    } catch (error) {
+      console.error('Error loading Shopify config:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+
+    try {
+      const res = await fetch('/api/settings/shopify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config),
+      });
+
+      if (!res.ok) throw new Error('Erro ao guardar');
+
+      addToast('Configuração Shopify guardada', 'success');
+      setIsConfigured(true);
+    } catch (error) {
+      addToast('Erro ao guardar configuração', 'error');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleTestConnection() {
+    try {
+      const res = await fetch('/api/settings/shopify/test', { method: 'POST' });
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        addToast('Conexão com Shopify OK!', 'success');
+      } else {
+        addToast(data.error || 'Erro na conexão', 'error');
+      }
+    } catch (error) {
+      addToast('Erro ao testar conexão', 'error');
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-green-100 rounded-lg">
+            <ShoppingBag className="h-5 w-5 text-green-600" />
+          </div>
+          <div>
+            <h2 className="font-semibold text-gray-900">Shopify</h2>
+            <p className="text-sm text-gray-500">
+              {isConfigured ? 'Configurado' : 'Não configurado'}
+            </p>
+          </div>
+        </div>
+        {isConfigured && (
+          <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+            Ativo
+          </span>
+        )}
+      </div>
+
+      <form onSubmit={handleSave} className="p-4 space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Store URL
+          </label>
+          <input
+            type="text"
+            value={config.storeUrl}
+            onChange={(e) => setConfig({ ...config, storeUrl: e.target.value })}
+            placeholder="minha-loja.myshopify.com"
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 focus:border-slate-900 focus:outline-none"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            URL da tua loja Shopify (sem https://)
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            API Key
+          </label>
+          <input
+            type="text"
+            value={config.apiKey}
+            onChange={(e) => setConfig({ ...config, apiKey: e.target.value })}
+            placeholder="chave da API"
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 focus:border-slate-900 focus:outline-none"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            API Secret
+          </label>
+          <input
+            type="password"
+            value={config.apiSecret}
+            onChange={(e) => setConfig({ ...config, apiSecret: e.target.value })}
+            placeholder="••••••••"
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 focus:border-slate-900 focus:outline-none"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Deixa em branco para manter o valor atual
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Access Token
+          </label>
+          <input
+            type="password"
+            value={config.accessToken}
+            onChange={(e) => setConfig({ ...config, accessToken: e.target.value })}
+            placeholder="••••••••"
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 focus:border-slate-900 focus:outline-none"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Token de acesso privado da app Shopify
+          </p>
+        </div>
+
+        <div className="flex gap-3 pt-2">
+          <button
+            type="submit"
+            disabled={saving}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 disabled:opacity-50"
+          >
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
+            Guardar
+          </button>
+          <button
+            type="button"
+            onClick={handleTestConnection}
+            className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
+          >
+            <Link className="h-4 w-4" />
+            Testar
+          </button>
+        </div>
+      </form>
+
+      <div className="px-4 pb-4">
+        <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600">
+          <p className="font-medium mb-1">Como configurar:</p>
+          <ol className="list-decimal list-inside space-y-1">
+            <li>Acede à tua loja Shopify Admin</li>
+            <li>Vai a Apps → Desenvolver apps → Criar app privada</li>
+            <li>Ativa permissões: read_orders, read_customers, read_discounts</li>
+            <li>Copia as credenciais para aqui</li>
+          </ol>
+        </div>
+      </div>
     </div>
   );
 }

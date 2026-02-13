@@ -53,7 +53,7 @@ export default function NewInfluencerPage() {
     primaryPlatform: 'TikTok',
     
     // Business
-    status: 'suggestion',
+    status: 'SUGGESTION',
     tier: 'micro',
     fitScore: '3',
     estimatedPrice: '',
