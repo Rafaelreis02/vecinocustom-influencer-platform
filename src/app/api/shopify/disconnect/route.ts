@@ -1,26 +1,72 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-
-const SHOPIFY_STORE_URL = process.env.SHOPIFY_STORE_URL || '';
-
 /**
  * POST /api/shopify/disconnect
- * Disconnect Shopify (delete access token)
+ * 
+ * Remove a conexão com a Shopify
+ * Apaga o token da base de dados
  */
-export async function POST() {
+
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
+
+export async function POST(request: NextRequest) {
   try {
-    await prisma.shopifyAuth.deleteMany({
-      where: { shop: SHOPIFY_STORE_URL },
+    // Verificar autenticação (só admin pode desconectar)
+    const session = await getServerSession(authOptions);
+    if (!session?.user || session.user.role !== 'ADMIN') {
+      return NextResponse.json(
+        { error: 'Acesso negado' },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
+    const shop = body.shop || process.env.SHOPIFY_SHOP_DOMAIN;
+
+    if (!shop) {
+      return NextResponse.json(
+        { error: 'Loja não especificada' },
+        { status: 400 }
+      );
+    }
+
+    const normalizedShop = shop.includes('.myshopify.com') 
+      ? shop 
+      : `${shop}.myshopify.com`;
+
+    // Verificar se existe conexão
+    const connection = await prisma.shopifyAuth.findUnique({
+      where: { shop: normalizedShop },
     });
+
+    if (!connection) {
+      return NextResponse.json(
+        { error: 'Loja não está conectada' },
+        { status: 404 }
+      );
+    }
+
+    // TODO: Opcional - revogar token na Shopify (se a API permitir)
+    // Por agora só removemos da nossa BD
+
+    // Apagar da base de dados
+    await prisma.shopifyAuth.delete({
+      where: { shop: normalizedShop },
+    });
+
+    console.log('[Shopify Disconnect] Connection removed:', normalizedShop);
 
     return NextResponse.json({
       success: true,
-      message: 'Shopify disconnected',
+      message: 'Conexão removida com sucesso',
+      shop: normalizedShop,
     });
+
   } catch (error) {
-    console.error('Error disconnecting Shopify:', error);
+    console.error('[Shopify Disconnect] Error:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to disconnect' },
+      { error: 'Erro ao desconectar' },
       { status: 500 }
     );
   }

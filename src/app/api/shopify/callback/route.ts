@@ -1,81 +1,153 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { verifyShopifyHmac, exchangeCodeForToken } from '@/lib/shopify-oauth';
-
-const SHOPIFY_STORE_URL = process.env.SHOPIFY_STORE_URL || '';
-const NEXT_PUBLIC_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-
 /**
  * GET /api/shopify/callback
- * Handle Shopify OAuth callback
+ * 
+ * Recebe o callback do OAuth da Shopify
+ * Troca o código por access token e guarda na BD
  */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import crypto from 'crypto';
+
+const SHOPIFY_CLIENT_ID = process.env.SHOPIFY_CLIENT_ID!;
+const SHOPIFY_CLIENT_SECRET = process.env.SHOPIFY_CLIENT_SECRET!;
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://vecinocustom-influencer-platform.vercel.app';
+
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams;
-    
+    const { searchParams } = new URL(request.url);
     const code = searchParams.get('code');
-    const hmac = searchParams.get('hmac');
-    const shop = searchParams.get('shop');
     const state = searchParams.get('state');
+    const shop = searchParams.get('shop');
+    const error = searchParams.get('error');
+    const errorDescription = searchParams.get('error_description');
 
-    // Verify required parameters
-    if (!code || !hmac || !shop || !state) {
+    // Obter cookies
+    const storedState = request.cookies.get('shopify_oauth_state')?.value;
+    const storedShop = request.cookies.get('shopify_oauth_shop')?.value;
+
+    // Criar response base (para limpar cookies)
+    const response = NextResponse.redirect(`${APP_URL}/dashboard/settings?shopify=connected`);
+
+    // Limpar cookies
+    response.cookies.delete('shopify_oauth_state');
+    response.cookies.delete('shopify_oauth_shop');
+
+    // Verificar erro
+    if (error) {
+      console.error('[Shopify Callback] OAuth error:', error, errorDescription);
       return NextResponse.redirect(
-        `${NEXT_PUBLIC_BASE_URL}/dashboard/settings?error=missing_params`
+        `${APP_URL}/dashboard/settings?shopify=error&message=${encodeURIComponent(errorDescription || error)}`
       );
     }
 
-    // Verify state (CSRF protection)
-    const savedState = request.cookies.get('shopify_oauth_state')?.value;
-    if (!savedState || savedState !== state) {
+    // Validar state (CSRF protection)
+    if (!state || state !== storedState) {
+      console.error('[Shopify Callback] Invalid state');
       return NextResponse.redirect(
-        `${NEXT_PUBLIC_BASE_URL}/dashboard/settings?error=invalid_state`
+        `${APP_URL}/dashboard/settings?shopify=error&message=Invalid+state`
       );
     }
 
-    // Build query object for HMAC verification
-    const query: Record<string, string> = {};
-    searchParams.forEach((value, key) => {
-      if (key !== 'hmac') {
-        query[key] = value;
-      }
+    // Validar shop
+    if (!shop || shop !== storedShop) {
+      console.error('[Shopify Callback] Shop mismatch');
+      return NextResponse.redirect(
+        `${APP_URL}/dashboard/settings?shopify=error&message=Shop+mismatch`
+      );
+    }
+
+    // Validar código
+    if (!code) {
+      console.error('[Shopify Callback] No code received');
+      return NextResponse.redirect(
+        `${APP_URL}/dashboard/settings?shopify=error&message=No+authorization+code`
+      );
+    }
+
+    // Trocar código por access token
+    const tokenUrl = `https://${shop}/admin/oauth/access_token`;
+    
+    const tokenResponse = await fetch(tokenUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        client_id: SHOPIFY_CLIENT_ID,
+        client_secret: SHOPIFY_CLIENT_SECRET,
+        code,
+      }),
     });
 
-    // Verify HMAC
-    if (!verifyShopifyHmac(query, hmac)) {
+    if (!tokenResponse.ok) {
+      const errorData = await tokenResponse.text();
+      console.error('[Shopify Callback] Token exchange failed:', errorData);
       return NextResponse.redirect(
-        `${NEXT_PUBLIC_BASE_URL}/dashboard/settings?error=invalid_hmac`
+        `${APP_URL}/dashboard/settings?shopify=error&message=Token+exchange+failed`
       );
     }
 
-    // Exchange code for access token
-    const tokenData = await exchangeCodeForToken(shop, code);
+    const tokenData = await tokenResponse.json();
+    const { access_token, scope } = tokenData;
 
-    // Save to database
+    console.log('[Shopify Callback] Access token received:', { shop, scope });
+
+    // Guardar na base de dados
     await prisma.shopifyAuth.upsert({
-      where: { shop: SHOPIFY_STORE_URL },
+      where: { shop },
       update: {
-        accessToken: tokenData.access_token,
-        scope: tokenData.scope,
+        accessToken: access_token,
+        scope,
+        updatedAt: new Date(),
       },
       create: {
-        shop: SHOPIFY_STORE_URL,
-        accessToken: tokenData.access_token,
-        scope: tokenData.scope,
+        shop,
+        accessToken: access_token,
+        scope,
       },
     });
 
-    // Clear state cookie and redirect to settings with success
-    const response = NextResponse.redirect(
-      `${NEXT_PUBLIC_BASE_URL}/dashboard/settings?shopify=connected`
-    );
-    response.cookies.delete('shopify_oauth_state');
+    console.log('[Shopify Callback] Connection saved to database');
+
+    // TODO: Registrar webhooks (opcional, para receber eventos em tempo real)
+    // await registerWebhooks(shop, access_token);
 
     return response;
+
   } catch (error) {
-    console.error('Error in Shopify OAuth callback:', error);
+    console.error('[Shopify Callback] Unexpected error:', error);
     return NextResponse.redirect(
-      `${NEXT_PUBLIC_BASE_URL}/dashboard/settings?error=connection_failed`
+      `${APP_URL}/dashboard/settings?shopify=error&message=Unexpected+error`
     );
+  }
+}
+
+/**
+ * Registrar webhooks (exemplo)
+ */
+async function registerWebhooks(shop: string, accessToken: string) {
+  const webhooks = [
+    {
+      topic: 'orders/create',
+      address: `${APP_URL}/api/shopify/webhooks/orders`,
+    },
+    {
+      topic: 'orders/updated',
+      address: `${APP_URL}/api/shopify/webhooks/orders`,
+    },
+  ];
+
+  for (const webhook of webhooks) {
+    try {
+      await fetch(`https://${shop}/admin/api/2024-01/webhooks.json`, {
+        method: 'POST',
+        headers: {
+          'X-Shopify-Access-Token': accessToken,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ webhook }),
+      });
+    } catch (error) {
+      console.error('[Shopify Webhooks] Failed to register:', webhook.topic, error);
+    }
   }
 }
