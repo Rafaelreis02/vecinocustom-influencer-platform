@@ -31,9 +31,9 @@ model User {
 }
 
 enum UserRole {
-  ADMIN
-  MANAGER
-  VIEWER
+  ADMIN           // Acesso total
+  ASSISTANT       // Humano Ajudante - operacional limitado
+  AI_AGENT        // Inteligência Artificial - acesso via API
 }
 
 // ============================================
