@@ -340,9 +340,11 @@ export default function MessagesPage() {
       
       if (!analyzeRes.ok) {
         const errorData = await analyzeRes.json().catch(() => ({}));
+        console.error('[ANALYZE] API Error:', errorData);
         throw new Error(errorData.error || 'Falha ao analisar perfil');
       }
       const analysisData = await analyzeRes.json();
+      console.log('[ANALYZE] Success:', analysisData);
       
       // 2. Criar influencer com email do remetente
       addToast('A criar influencer...', 'info');
