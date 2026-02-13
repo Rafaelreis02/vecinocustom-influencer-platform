@@ -15,7 +15,7 @@ async function seedCommissionsTest() {
     // Buscar influencers criados anteriormente
     const influencers = await prisma.influencer.findMany({
       take: 3,
-      select: { id: true, name: true, email: true, paymentMethod: true }
+      select: { id: true, name: true, email: true }
     });
 
     if (influencers.length < 3) {
@@ -45,7 +45,7 @@ async function seedCommissionsTest() {
           currency: 'EUR',
           description: 'Comissão Encomenda #1001 | Cupão: VECINO_JOANA_10 | Cliente: ana.silva@email.com | Valor: €125.00',
           status: 'PENDING',
-          method: 'BANK_TRANSFER',
+
           reference: JSON.stringify({
             shopifyOrderId: '1001',
             orderName: '#1001',
@@ -65,7 +65,7 @@ async function seedCommissionsTest() {
           currency: 'EUR',
           description: 'Comissão Encomenda #1005 | Cupão: VECINO_JOANA_10 | Cliente: maria.ferreira@email.com | Valor: €89.00',
           status: 'PENDING',
-          method: 'BANK_TRANSFER',
+
           reference: JSON.stringify({
             shopifyOrderId: '1005',
             orderName: '#1005',
@@ -85,7 +85,7 @@ async function seedCommissionsTest() {
           currency: 'EUR',
           description: 'Comissão Encomenda #1008 | Cupão: VECINO_JOANA_10 | Cliente: carla.santos@email.com | Valor: €150.00',
           status: 'PENDING',
-          method: 'BANK_TRANSFER',
+
           reference: JSON.stringify({
             shopifyOrderId: '1008',
             orderName: '#1008',
@@ -107,7 +107,7 @@ async function seedCommissionsTest() {
           currency: 'EUR',
           description: 'Comissão Encomenda #1002 | Cupão: VECINO_MARIA_15 | Cliente: joao.pereira@email.com | Valor: €79.80',
           status: 'PENDING',
-          method: 'MBWAY',
+
           reference: JSON.stringify({
             shopifyOrderId: '1002',
             orderName: '#1002',
@@ -127,7 +127,7 @@ async function seedCommissionsTest() {
           currency: 'EUR',
           description: 'Comissão Encomenda #1006 | Cupão: VECINO_MARIA_15 | Cliente: sofia.almeida@email.com | Valor: €120.00',
           status: 'PENDING',
-          method: 'MBWAY',
+
           reference: JSON.stringify({
             shopifyOrderId: '1006',
             orderName: '#1006',
@@ -149,7 +149,7 @@ async function seedCommissionsTest() {
           currency: 'EUR',
           description: 'Comissão Encomenda #1003 | Cupão: VECINO_ANA_10 | Cliente: pedro.costa@email.com | Valor: €237.20',
           status: 'PENDING',
-          method: 'PAYPAL',
+
           reference: JSON.stringify({
             shopifyOrderId: '1003',
             orderName: '#1003',
@@ -169,7 +169,7 @@ async function seedCommissionsTest() {
           currency: 'EUR',
           description: 'Comissão Encomenda #1009 | Cupão: VECINO_ANA_10 | Cliente: ines.martins@email.com | Valor: €270.00',
           status: 'PENDING',
-          method: 'PAYPAL',
+
           reference: JSON.stringify({
             shopifyOrderId: '1009',
             orderName: '#1009',
@@ -198,7 +198,7 @@ async function seedCommissionsTest() {
           currency: 'EUR',
           description: 'Comissão Encomenda #1010 | Cupão: VECINO_JOANA_10 | Cliente: rita.lopes@email.com | Valor: €95.00',
           status: 'PROCESSING',
-          method: 'BANK_TRANSFER',
+
           reference: JSON.stringify({
             shopifyOrderId: '1010',
             orderName: '#1010',
@@ -218,7 +218,7 @@ async function seedCommissionsTest() {
           currency: 'EUR',
           description: 'Comissão Encomenda #1011 | Cupão: VECINO_JOANA_10 | Cliente: marta.gomes@email.com | Valor: €132.00',
           status: 'PROCESSING',
-          method: 'BANK_TRANSFER',
+
           reference: JSON.stringify({
             shopifyOrderId: '1011',
             orderName: '#1011',
@@ -240,7 +240,7 @@ async function seedCommissionsTest() {
           currency: 'EUR',
           description: 'Comissão Encomenda #1012 | Cupão: VECINO_MARIA_15 | Cliente: tiago.fernandes@email.com | Valor: €95.00',
           status: 'PROCESSING',
-          method: 'MBWAY',
+
           reference: JSON.stringify({
             shopifyOrderId: '1012',
             orderName: '#1012',
@@ -262,7 +262,7 @@ async function seedCommissionsTest() {
           currency: 'EUR',
           description: 'Comissão Encomenda #1013 | Cupão: VECINO_ANA_10 | Cliente: catarina.ribeiro@email.com | Valor: €190.00',
           status: 'PROCESSING',
-          method: 'PAYPAL',
+
           reference: JSON.stringify({
             shopifyOrderId: '1013',
             orderName: '#1013',
@@ -282,7 +282,7 @@ async function seedCommissionsTest() {
           currency: 'EUR',
           description: 'Comissão Encomenda #1014 | Cupão: VECINO_ANA_10 | Cliente: daniel.carvalho@email.com | Valor: €160.00',
           status: 'PROCESSING',
-          method: 'PAYPAL',
+
           reference: JSON.stringify({
             shopifyOrderId: '1014',
             orderName: '#1014',
@@ -302,7 +302,7 @@ async function seedCommissionsTest() {
           currency: 'EUR',
           description: 'Comissão Encomenda #1015 | Cupão: VECINO_ANA_10 | Cliente: beatriz.oliveira@email.com | Valor: €220.00',
           status: 'PROCESSING',
-          method: 'PAYPAL',
+
           reference: JSON.stringify({
             shopifyOrderId: '1015',
             orderName: '#1015',
@@ -332,7 +332,7 @@ async function seedCommissionsTest() {
           description: 'Comissão Encomenda #998 | Cupão: VECINO_JOANA_10 | Cliente: luis.mendes@email.com | Valor: €100.00',
           status: 'PAID',
           paidAt: new Date('2026-02-05'),
-          method: 'BANK_TRANSFER',
+
           reference: JSON.stringify({
             shopifyOrderId: '998',
             orderName: '#998',
@@ -353,7 +353,7 @@ async function seedCommissionsTest() {
           description: 'Comissão Encomenda #999 | Cupão: VECINO_JOANA_10 | Cliente: patricia.sousa@email.com | Valor: €75.00',
           status: 'PAID',
           paidAt: new Date('2026-02-05'),
-          method: 'BANK_TRANSFER',
+
           reference: JSON.stringify({
             shopifyOrderId: '999',
             orderName: '#999',
@@ -376,7 +376,7 @@ async function seedCommissionsTest() {
           description: 'Comissão Encomenda #995 | Cupão: VECINO_MARIA_15 | Cliente: andre.silva@email.com | Valor: €80.00',
           status: 'PAID',
           paidAt: new Date('2026-02-04'),
-          method: 'MBWAY',
+
           reference: JSON.stringify({
             shopifyOrderId: '995',
             orderName: '#995',
@@ -397,7 +397,7 @@ async function seedCommissionsTest() {
           description: 'Comissão Encomenda #996 | Cupão: VECINO_MARIA_15 | Cliente: filipa.rodrigues@email.com | Valor: €60.00',
           status: 'PAID',
           paidAt: new Date('2026-02-04'),
-          method: 'MBWAY',
+
           reference: JSON.stringify({
             shopifyOrderId: '996',
             orderName: '#996',
@@ -418,7 +418,7 @@ async function seedCommissionsTest() {
           description: 'Comissão Encomenda #997 | Cupão: VECINO_MARIA_15 | Cliente: ricardo.marques@email.com | Valor: €105.00',
           status: 'PAID',
           paidAt: new Date('2026-02-04'),
-          method: 'MBWAY',
+
           reference: JSON.stringify({
             shopifyOrderId: '997',
             orderName: '#997',
@@ -441,7 +441,7 @@ async function seedCommissionsTest() {
           description: 'Comissão Encomenda #993 | Cupão: VECINO_ANA_10 | Cliente: joana.lima@email.com | Valor: €200.00',
           status: 'PAID',
           paidAt: new Date('2026-02-03'),
-          method: 'PAYPAL',
+
           reference: JSON.stringify({
             shopifyOrderId: '993',
             orderName: '#993',
@@ -462,7 +462,7 @@ async function seedCommissionsTest() {
           description: 'Comissão Encomenda #994 | Cupão: VECINO_ANA_10 | Cliente: miguel.torres@email.com | Valor: €150.00',
           status: 'PAID',
           paidAt: new Date('2026-02-03'),
-          method: 'PAYPAL',
+
           reference: JSON.stringify({
             shopifyOrderId: '994',
             orderName: '#994',

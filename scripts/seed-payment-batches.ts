@@ -14,7 +14,7 @@ async function seedPaymentBatches() {
     // Buscar influencers
     const influencers = await prisma.influencer.findMany({
       take: 3,
-      select: { id: true, name: true, paymentMethod: true }
+      select: { id: true, name: true }
     });
 
     if (influencers.length < 3) {
@@ -35,7 +35,7 @@ async function seedPaymentBatches() {
           totalAmount: 45.50,
           currency: 'EUR',
           paidAt: new Date('2026-01-15'),
-          method: 'BANK_TRANSFER',
+
           reference: 'Transferência #12345',
           commissionIds: JSON.stringify(['comm-001', 'comm-002', 'comm-003']),
         }
@@ -48,7 +48,7 @@ async function seedPaymentBatches() {
           totalAmount: 32.80,
           currency: 'EUR',
           paidAt: new Date('2026-02-01'),
-          method: 'BANK_TRANSFER',
+
           reference: 'Transferência #12346',
           commissionIds: JSON.stringify(['comm-004', 'comm-005']),
         }
@@ -61,7 +61,7 @@ async function seedPaymentBatches() {
           totalAmount: 28.50,
           currency: 'EUR',
           paidAt: new Date('2026-01-20'),
-          method: 'MBWAY',
+
           reference: 'MBWay 912345678',
           commissionIds: JSON.stringify(['comm-006', 'comm-007']),
         }
@@ -74,7 +74,7 @@ async function seedPaymentBatches() {
           totalAmount: 41.25,
           currency: 'EUR',
           paidAt: new Date('2026-02-05'),
-          method: 'MBWAY',
+
           reference: 'MBWay 912345678',
           commissionIds: JSON.stringify(['comm-008', 'comm-009', 'comm-010']),
         }
@@ -87,7 +87,7 @@ async function seedPaymentBatches() {
           totalAmount: 85.00,
           currency: 'EUR',
           paidAt: new Date('2026-01-10'),
-          method: 'PAYPAL',
+
           reference: 'PayPal ID: 8XJ2M9',
           commissionIds: JSON.stringify(['comm-011', 'comm-012']),
         }
@@ -100,7 +100,7 @@ async function seedPaymentBatches() {
           totalAmount: 112.40,
           currency: 'EUR',
           paidAt: new Date('2026-01-25'),
-          method: 'PAYPAL',
+
           reference: 'PayPal ID: 9K3N1P',
           commissionIds: JSON.stringify(['comm-013', 'comm-014', 'comm-015']),
         }

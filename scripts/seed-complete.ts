@@ -34,7 +34,7 @@ async function seedComplete() {
           tiktokHandle: '@joanasilva',
           tiktokFollowers: 120000,
           status: 'AGREED',
-          paymentMethod: 'BANK_TRANSFER',
+          
           tier: 'MICRO',
           createdById: user.id,
         }
@@ -46,7 +46,7 @@ async function seedComplete() {
           instagramHandle: '@mariacosta',
           instagramFollowers: 89000,
           status: 'PRODUCT_SELECTION',
-          paymentMethod: 'MBWAY',
+          
           tier: 'MICRO',
           createdById: user.id,
         }
@@ -58,7 +58,7 @@ async function seedComplete() {
           tiktokHandle: '@anapereira',
           tiktokFollowers: 250000,
           status: 'SHIPPED',
-          paymentMethod: 'PAYPAL',
+          
           tier: 'MACRO',
           createdById: user.id,
         }
@@ -125,7 +125,7 @@ async function seedComplete() {
           currency: 'EUR',
           description: 'Comissão cupão VECINO_JOANA_10 (15 vendas)',
           status: 'PENDING',
-          method: 'BANK_TRANSFER',
+
         }
       }),
       prisma.payment.create({
@@ -135,7 +135,7 @@ async function seedComplete() {
           currency: 'EUR',
           description: 'Comissão cupão VECINO_JOANA_10 (vendas extra)',
           status: 'PENDING',
-          method: 'BANK_TRANSFER',
+
         }
       }),
       
@@ -147,7 +147,7 @@ async function seedComplete() {
           currency: 'EUR',
           description: 'Comissão cupão VECINO_MARIA_15 (8 vendas)',
           status: 'PENDING',
-          method: 'MBWAY',
+
         }
       }),
       
@@ -159,7 +159,7 @@ async function seedComplete() {
           currency: 'EUR',
           description: 'Comissão cupão VECINO_ANA_10 (32 vendas)',
           status: 'PENDING',
-          method: 'PAYPAL',
+
         }
       }),
       prisma.payment.create({
@@ -169,7 +169,7 @@ async function seedComplete() {
           currency: 'EUR',
           description: 'Bónus de performance - Janeiro',
           status: 'PAID',
-          method: 'PAYPAL',
+
           paidAt: new Date('2026-02-01'),
         }
       })
