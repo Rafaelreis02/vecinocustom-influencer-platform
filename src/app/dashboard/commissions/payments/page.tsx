@@ -360,7 +360,7 @@ function PaymentsContent() {
                         <h3 className="font-semibold text-gray-900">{group.influencer.name}</h3>
                         <div className="flex items-center gap-2 text-sm text-gray-500">
                           <PaymentMethodIcon method={group.influencer.paymentMethod || 'BANK_TRANSFER'} />
-                          <PaymentMethodLabel method={group.influencer.paymentMethod || 'BANK_TRANSFER'} />
+                          <span>{PaymentMethodLabel(group.influencer.paymentMethod || 'BANK_TRANSFER')}</span>
                           <span>•</span>
                           <span>{group.commissions.length} comissões</span>
                         </div>
