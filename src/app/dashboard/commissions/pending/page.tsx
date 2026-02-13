@@ -9,15 +9,11 @@ import {
   X,
   Filter,
   DollarSign,
-  ArrowLeft,
   Loader2,
   CreditCard,
-  Banknote,
-  Smartphone,
 } from 'lucide-react';
 import { useGlobalToast } from '@/contexts/ToastContext';
 
-// Interfaces
 interface Influencer {
   id: string;
   name: string;
@@ -25,7 +21,6 @@ interface Influencer {
   avatarUrl: string | null;
   instagramHandle: string | null;
   tiktokHandle: string | null;
-  paymentMethod: string | null;
 }
 
 interface Commission {
@@ -56,7 +51,6 @@ interface InfluencerSummary {
   commissions: Commission[];
 }
 
-// Componente principal com Suspense
 export default function PendingCommissionsPage() {
   return (
     <Suspense fallback={
@@ -71,11 +65,9 @@ export default function PendingCommissionsPage() {
 
 function PendingCommissionsContent() {
   const { addToast } = useGlobalToast();
-
-  const [commissions, setCommissions] = useState<Commission[]>([]);
   const [influencerSummaries, setInfluencerSummaries] = useState<InfluencerSummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expandedInfluencer, setExpandedInfluencer] = useState<string | null>(null);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
 
   // Filtros de data
@@ -84,16 +76,26 @@ function PendingCommissionsContent() {
   const [customEndDate, setCustomEndDate] = useState('');
   const [showCustomFilter, setShowCustomFilter] = useState(false);
 
-  // Carregar comissões pendentes
   useEffect(() => {
     loadCommissions();
   }, [dateFilter, customStartDate, customEndDate]);
+
+  function toggleExpand(influencerId: string) {
+    setExpandedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(influencerId)) {
+        next.delete(influencerId);
+      } else {
+        next.add(influencerId);
+      }
+      return next;
+    });
+  }
 
   async function loadCommissions() {
     try {
       setLoading(true);
       
-      // Calcular datas
       let startDate: string | null = null;
       let endDate: string | null = null;
       
@@ -119,7 +121,6 @@ function PendingCommissionsContent() {
       if (!res.ok) throw new Error('Erro ao carregar comissões');
       
       const data = await res.json();
-      setCommissions(data.commissions || []);
       setInfluencerSummaries(data.influencerSummaries || []);
 
     } catch (error) {
@@ -130,7 +131,6 @@ function PendingCommissionsContent() {
     }
   }
 
-  // Aprovar comissão (vai para APPROVED para pagamento)
   async function handleApprove(commissionId: string) {
     try {
       setProcessingIds(prev => new Set(prev).add(commissionId));
@@ -138,7 +138,7 @@ function PendingCommissionsContent() {
       const res = await fetch(`/api/commissions/${commissionId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'PROCESSING' }), // PROCESSING = aprovado, aguarda pagamento
+        body: JSON.stringify({ status: 'PROCESSING' }),
       });
 
       if (!res.ok) throw new Error('Erro ao aprovar comissão');
@@ -158,7 +158,6 @@ function PendingCommissionsContent() {
     }
   }
 
-  // Rejeitar comissão
   async function handleReject(commissionId: string) {
     if (!window.confirm('Tens a certeza que queres rejeitar esta comissão?')) return;
 
@@ -188,10 +187,6 @@ function PendingCommissionsContent() {
     }
   }
 
-  function toggleExpand(influencerId: string) {
-    setExpandedInfluencer(expandedInfluencer === influencerId ? null : influencerId);
-  }
-
   function formatCurrency(amount: number) {
     return new Intl.NumberFormat('pt-PT', {
       style: 'currency',
@@ -203,30 +198,8 @@ function PendingCommissionsContent() {
     return new Date(dateString).toLocaleDateString('pt-PT');
   }
 
-  function StatusBadge({ status }: { status: string }) {
-    const configs: Record<string, { label: string; className: string }> = {
-      PENDING: { label: 'Pendente', className: 'bg-yellow-100 text-yellow-800' },
-      PROCESSING: { label: 'Aprovado', className: 'bg-blue-100 text-blue-800' },
-      PAID: { label: 'Pago', className: 'bg-green-100 text-green-800' },
-      CANCELLED: { label: 'Rejeitado', className: 'bg-red-100 text-red-800' },
-      FAILED: { label: 'Falhou', className: 'bg-gray-100 text-gray-800' },
-    };
-    const config = configs[status] || configs.PENDING;
-    return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${config.className}`}>
-        {config.label}
-      </span>
-    );
-  }
-
-  function PaymentMethodIcon({ method }: { method: string }) {
-    switch (method) {
-      case 'BANK_TRANSFER': return <Banknote className="h-4 w-4" />;
-      case 'PAYPAL': return <CreditCard className="h-4 w-4" />;
-      case 'MBWAY': return <Smartphone className="h-4 w-4" />;
-      default: return <DollarSign className="h-4 w-4" />;
-    }
-  }
+  const totalPending = influencerSummaries.reduce((sum, s) => sum + s.totalAmount, 0);
+  const totalCount = influencerSummaries.reduce((sum, s) => sum + s.count, 0);
 
   if (loading) {
     return (
@@ -236,17 +209,13 @@ function PendingCommissionsContent() {
     );
   }
 
-  // Calcular totais
-  const totalPending = influencerSummaries.reduce((sum, s) => sum + s.totalAmount, 0);
-  const totalCount = influencerSummaries.reduce((sum, s) => sum + s.count, 0);
-
   return (
     <div className="space-y-4">
       {/* Header */}
       <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
         <p className="text-sm text-blue-800">
-          <strong>Comissões Pendentes:</strong> Aprova ou rejeita comissões encomenda por encomenda. 
-          As aprovadas vão para a aba "Pagamentos" para serem pagas ao influencer.
+          <strong>Comissões Pendentes:</strong> Aprova ou rejeita comissões. 
+          As aprovadas vão para a aba "Pagamentos".
         </p>
       </div>
 
@@ -259,36 +228,19 @@ function PendingCommissionsContent() {
           </div>
           
           <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => { setDateFilter('30'); setShowCustomFilter(false); }}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-                dateFilter === '30' 
-                  ? 'bg-slate-900 text-white' 
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              Últimos 30 dias
-            </button>
-            <button
-              onClick={() => { setDateFilter('60'); setShowCustomFilter(false); }}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-                dateFilter === '60' 
-                  ? 'bg-slate-900 text-white' 
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              Últimos 60 dias
-            </button>
-            <button
-              onClick={() => { setDateFilter('90'); setShowCustomFilter(false); }}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-                dateFilter === '90' 
-                  ? 'bg-slate-900 text-white' 
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              Últimos 90 dias
-            </button>
+            {['30', '60', '90'].map(days => (
+              <button
+                key={days}
+                onClick={() => { setDateFilter(days); setShowCustomFilter(false); }}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                  dateFilter === days 
+                    ? 'bg-slate-900 text-white' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Últimos {days} dias
+              </button>
+            ))}
             <button
               onClick={() => { setDateFilter('custom'); setShowCustomFilter(true); }}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
@@ -302,7 +254,6 @@ function PendingCommissionsContent() {
           </div>
         </div>
         
-        {/* Filtro Custom */}
         {showCustomFilter && (
           <div className="mt-4 pt-4 border-t border-gray-100 flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
@@ -328,145 +279,127 @@ function PendingCommissionsContent() {
       </div>
 
       {/* Totais */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         <div className="bg-yellow-50 p-4 rounded-xl border border-yellow-100">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-yellow-100 rounded-lg">
-              <DollarSign className="h-5 w-5 text-yellow-600" />
-            </div>
-            <div>
-              <p className="text-sm text-yellow-700">Total Pendente</p>
-              <p className="text-2xl font-bold text-yellow-900">{formatCurrency(totalPending)}</p>
-            </div>
-          </div>
+          <p className="text-sm text-yellow-700">Total Pendente</p>
+          <p className="text-2xl font-bold text-yellow-900">{formatCurrency(totalPending)}</p>
         </div>
-        
         <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Filter className="h-5 w-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-sm text-blue-700">Nº de Comissões</p>
-              <p className="text-2xl font-bold text-blue-900">{totalCount}</p>
-            </div>
-          </div>
+          <p className="text-sm text-blue-700">Nº de Comissões</p>
+          <p className="text-2xl font-bold text-blue-900">{totalCount}</p>
         </div>
       </div>
 
+      {/* Lista Horizontal */}
       {influencerSummaries.length === 0 ? (
         <div className="text-center py-16 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
           <DollarSign className="h-12 w-12 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900">Nenhuma comissão pendente</h3>
-          <p className="text-sm text-gray-500 max-w-xs mx-auto mt-1">
-            Não existem comissões pendentes de aprovação.
-          </p>
         </div>
       ) : (
-        influencerSummaries.map((summary) => {
-          const isExpanded = expandedInfluencer === summary.influencer.id;
-          const influencerCommissions = summary.commissions || [];
-
-          return (
-            <div 
-              key={summary.influencer.id} 
-              className="bg-white rounded-xl border border-gray-200 overflow-hidden"
-            >
-              {/* Header */}
-              <button
-                onClick={() => toggleExpand(summary.influencer.id)}
-                className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition"
+        <div className="space-y-3">
+          {influencerSummaries.map((summary) => {
+            const isExpanded = expandedIds.has(summary.influencer.id);
+            
+            return (
+              <div 
+                key={summary.influencer.id} 
+                className="bg-white rounded-lg border border-gray-200 overflow-hidden"
               >
-                <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-bold text-lg shrink-0 overflow-hidden">
-                    {summary.influencer.avatarUrl ? (
-                      <img src={summary.influencer.avatarUrl} alt={summary.influencer.name} className="h-full w-full object-cover" />
-                    ) : (
-                      summary.influencer.name.charAt(0).toUpperCase()
-                    )}
-                  </div>
-                  <div className="text-left">
-                    <h3 className="font-semibold text-gray-900">{summary.influencer.name}</h3>
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
-                      <span>{summary.count} comissões pendentes</span>
-                      <span>•</span>
-                      <span className="flex items-center gap-1">
-                        <PaymentMethodIcon method={summary.influencer.paymentMethod || 'BANK_TRANSFER'} />
-                        {summary.influencer.paymentMethod === 'MBWAY' ? 'MBWay' : 
-                         summary.influencer.paymentMethod === 'PAYPAL' ? 'PayPal' : 'Transferência'}
-                      </span>
+                {/* Header */}
+                <div className="p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    {/* Avatar */}
+                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-bold text-sm shrink-0 overflow-hidden">
+                      {summary.influencer.avatarUrl ? (
+                        <img src={summary.influencer.avatarUrl} alt={summary.influencer.name} className="h-full w-full object-cover" />
+                      ) : (
+                        summary.influencer.name.charAt(0).toUpperCase()
+                      )}
+                    </div>
+                    
+                    {/* Info */}
+                    <div>
+                      <h3 className="font-semibold text-gray-900">{summary.influencer.name}</h3>
+                      <p className="text-sm text-gray-500">
+                        {summary.count} comissões • Total: {formatCurrency(summary.totalAmount)}
+                      </p>
                     </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-6">
-                  <div className="text-right hidden sm:block">
-                    <p className="text-xs text-yellow-600">Total Pendente</p>
-                    <p className="font-bold text-yellow-700">{formatCurrency(summary.totalAmount)}</p>
-                  </div>
-                  <ChevronDown className={`h-5 w-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-                </div>
-              </button>
 
-              {/* Detalhes */}
-              {isExpanded && (
-                <div className="border-t border-gray-200">
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Encomenda</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Comissão</th>
-                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Ação</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200">
-                        {influencerCommissions.map((commission) => (
-                          <tr key={commission.id} className="hover:bg-gray-50">
-                            <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                              {commission.orderNumber || 'N/A'}
-                              {commission.couponCode && (
-                                <span className="block text-xs text-gray-500">{commission.couponCode}</span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-600">
-                              {commission.orderDate ? formatDate(commission.orderDate) : formatDate(commission.createdAt)}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-600">
-                              {commission.customerEmail || 'N/A'}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-900 text-right font-medium">
-                              {formatCurrency(commission.amount)}
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="flex items-center justify-center gap-2">
+                  <button
+                    onClick={() => toggleExpand(summary.influencer.id)}
+                    className="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition"
+                  >
+                    {isExpanded ? (
+                      <><ChevronUp className="h-4 w-4" /> Ocultar</>
+                    ) : (
+                      <><ChevronDown className="h-4 w-4" /> Gerir</>
+                    )}
+                  </button>
+                </div>
+
+                {/* Detalhes - Collapsible */}
+                {isExpanded && (
+                  <div className="border-t border-gray-100 bg-gray-50 px-4 py-3">
+                    <p className="text-xs text-gray-500 mb-2 font-medium">Comissões para aprovar:</p>
+                    <div className="space-y-2">
+                      {summary.commissions.map((commission) => {
+                        const isProcessing = processingIds.has(commission.id);
+                        
+                        return (
+                          <div 
+                            key={commission.id}
+                            className="flex items-center justify-between py-2 px-3 bg-white rounded border border-gray-100"
+                          >
+                            <div className="flex items-center gap-3">
+                              <CreditCard className="h-4 w-4 text-gray-400" />
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">
+                                  {commission.orderNumber || 'Encomenda #' + commission.id.slice(-6)}
+                                </p>
+                                {commission.couponCode && (
+                                  <p className="text-xs text-gray-500">Cupom: {commission.couponCode}</p>
+                                )}
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-3">
+                              <span className="font-semibold text-gray-900">{formatCurrency(commission.amount)}</span>
+                              
+                              <div className="flex gap-1">
                                 <button
                                   onClick={() => handleApprove(commission.id)}
-                                  disabled={processingIds.has(commission.id)}
-                                  className="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-sm font-medium hover:bg-green-200 transition"
+                                  disabled={isProcessing}
+                                  className="p-1.5 text-green-600 hover:bg-green-50 rounded transition"
+                                  title="Aprovar"
                                 >
-                                  {processingIds.has(commission.id) ? '...' : 'Aprovar'}
+                                  {isProcessing ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Check className="h-4 w-4" />
+                                  )}
                                 </button>
                                 <button
                                   onClick={() => handleReject(commission.id)}
-                                  disabled={processingIds.has(commission.id)}
-                                  className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-sm font-medium hover:bg-red-200 transition"
+                                  disabled={isProcessing}
+                                  className="p-1.5 text-red-600 hover:bg-red-50 rounded transition"
+                                  title="Rejeitar"
                                 >
-                                  Rejeitar
+                                  <X className="h-4 w-4" />
                                 </button>
                               </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-          );
-        })
+                )}
+              </div>
+            );
+          })}
+        </div>
       )}
     </div>
   );
