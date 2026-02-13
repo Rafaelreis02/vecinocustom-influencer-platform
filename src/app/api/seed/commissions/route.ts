@@ -55,8 +55,7 @@ export async function POST() {
           amount: comm.amount,
           currency: 'EUR',
           description: comm.description,
-          status: comm.status as any,
-          method: 'BANK_TRANSFER'
+          status: comm.status as any
         }
       });
       created.push({
