@@ -14,6 +14,7 @@ import {
   X,
   Loader2
 } from 'lucide-react';
+import { PHASES, getStatusConfig, getSpecialStatuses } from '@/lib/influencer-status';
 
 export default function EditInfluencerPage() {
   const router = useRouter();
@@ -324,25 +325,27 @@ export default function EditInfluencerPage() {
                 onChange={handleChange}
                 className="w-full rounded-md border border-gray-200 px-4 py-2 text-sm focus:border-gray-900 focus:outline-none"
               >
-                <optgroup label=" Prospeção">
-                  <option value="UNKNOWN">Desconhecido</option>
-                  <option value="SUGGESTION">Sugestão</option>
-                  <option value="IMPORT_PENDING">A Importar</option>
-                </optgroup>
-                <optgroup label=" A Negociar">
-                  <option value="ANALYZING">Em Análise</option>
-                  <option value="COUNTER_PROPOSAL">Contraproposta</option>
-                </optgroup>
-                <optgroup label="Em Curso">
-                  <option value="AGREED">Acordado</option>
-                  <option value="PRODUCT_SELECTION">Seleção Produto</option>
-                  <option value="CONTRACT_PENDING">Contrato Pendente</option>
-                  <option value="SHIPPED">Enviado</option>
-                  <option value="COMPLETED">Concluído</option>
-                </optgroup>
+                {Object.values(PHASES).map((phase) => (
+                  <optgroup key={phase.id} label={phase.label}>
+                    {phase.statuses.map((status) => {
+                      const config = getStatusConfig(status);
+                      return (
+                        <option key={status} value={status}>
+                          {config.label}
+                        </option>
+                      );
+                    })}
+                  </optgroup>
+                ))}
                 <optgroup label="Especiais">
-                  <option value="CANCELLED">Cancelado</option>
-                  <option value="BLACKLISTED">Bloqueado</option>
+                  {getSpecialStatuses().map((status) => {
+                    const config = getStatusConfig(status);
+                    return (
+                      <option key={status} value={status}>
+                        {config.label}
+                      </option>
+                    );
+                  })}
                 </optgroup>
               </select>
             </div>
