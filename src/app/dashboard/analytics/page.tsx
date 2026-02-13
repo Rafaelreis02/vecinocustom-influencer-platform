@@ -122,8 +122,12 @@ function DateRangePicker({
         <span className="text-sm font-medium">{displayText}</span>
         {startDate && endDate && (
           <X 
-            className="h-4 w-4 ml-2 hover:text-gray-300" 
-            onClick={(e) => { e.stopPropagation(); onClear(); }}
+            className="h-4 w-4 ml-2 cursor-pointer hover:text-gray-300" 
+            onClick={(e) => { 
+              e.stopPropagation(); 
+              onClear();
+              setIsOpen(false);
+            }}
           />
         )}
       </button>
@@ -189,28 +193,62 @@ function DateRangePicker({
   );
 }
 
+// QuickFilter Component
+function QuickFilter({ 
+  label, 
+  active, 
+  onClick 
+}: { 
+  label: string; 
+  active: boolean; 
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+        active 
+          ? 'bg-slate-900 text-white' 
+          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
 export default function AnalyticsPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  const [startDate, setStartDate] = useState(() => {
-    const date = new Date();
-    date.setDate(date.getDate() - 30);
-    return date.toISOString().split('T')[0];
-  });
-  
-  const [endDate, setEndDate] = useState(() => {
-    return new Date().toISOString().split('T')[0];
-  });
+  const [activeFilter, setActiveFilter] = useState<string>('30');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
-  const fetchData = async (start: string, end: string) => {
+  useEffect(() => {
+    loadData();
+  }, [activeFilter, startDate, endDate]);
+
+  const loadData = async () => {
     try {
       setLoading(true);
       setError(null);
       
+      let start: Date;
+      let end: Date;
+      
+      if (activeFilter === 'custom' && startDate && endDate) {
+        start = new Date(startDate);
+        end = new Date(endDate);
+      } else {
+        end = new Date();
+        start = new Date();
+        start.setDate(start.getDate() - parseInt(activeFilter));
+      }
+      
       const response = await fetch(
-        `/api/analytics/summary?startDate=${start}&endDate=${end}`
+        `/api/analytics/summary?startDate=${start.toISOString().split('T')[0]}&endDate=${end.toISOString().split('T')[0]}`
       );
 
       if (!response.ok) {
@@ -240,20 +278,22 @@ export default function AnalyticsPage() {
     }
   };
 
-  useEffect(() => {
-    fetchData(startDate, endDate);
-  }, [startDate, endDate]);
-
   const handleDateRangeChange = (start: string, end: string) => {
     setStartDate(start);
     setEndDate(end);
+    setActiveFilter('custom');
   };
 
   const handleClearDates = () => {
-    const date = new Date();
-    date.setDate(date.getDate() - 30);
-    setStartDate(date.toISOString().split('T')[0]);
-    setEndDate(new Date().toISOString().split('T')[0]);
+    setStartDate('');
+    setEndDate('');
+    setActiveFilter('30');
+  };
+
+  const handleQuickFilter = (days: string) => {
+    setStartDate('');
+    setEndDate('');
+    setActiveFilter(days);
   };
 
   const displayData = data || {
@@ -309,6 +349,25 @@ export default function AnalyticsPage() {
       <div className="bg-white p-4 rounded-xl border border-gray-200">
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           <span className="text-sm font-medium text-gray-700">Período:</span>
+          
+          <div className="flex flex-wrap items-center gap-2">
+            <QuickFilter 
+              label="Últimos 30 dias" 
+              active={activeFilter === '30'} 
+              onClick={() => handleQuickFilter('30')} 
+            />
+            <QuickFilter 
+              label="Últimos 60 dias" 
+              active={activeFilter === '60'} 
+              onClick={() => handleQuickFilter('60')} 
+            />
+            <QuickFilter 
+              label="Últimos 90 dias" 
+              active={activeFilter === '90'} 
+              onClick={() => handleQuickFilter('90')} 
+            />
+          </div>
+
           <DateRangePicker 
             startDate={startDate}
             endDate={endDate}
