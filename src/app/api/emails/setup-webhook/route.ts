@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
 
     // Registrar webhook
     // Isto informa Gmail que queremos receber notificações em GMAIL_WEBHOOK_URL
-    const watch = await gmail.users.watch({
+    const watch = await (gmail as any).users.watch({
       userId: 'me',
       requestBody: {
         topicName: `projects/your-project/topics/gmail-notifications`, // TODO: Configurar topic
