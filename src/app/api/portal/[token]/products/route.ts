@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 
 const API_VERSION = '2024-01';
 
-// Get store URL from env, DB, or hardcoded fallback
+// Get store URL from env or DB
 async function getStoreUrl(): Promise<string> {
   const envUrl = process.env.SHOPIFY_STORE_URL;
   if (envUrl) {
@@ -12,7 +12,6 @@ async function getStoreUrl(): Promise<string> {
     return envUrl;
   }
   
-  console.log('[Portal Products API] SHOPIFY_STORE_URL not in env, fetching from DB...');
   try {
     const auth = await prisma.shopifyAuth.findFirst();
     if (auth?.shop) {
@@ -23,9 +22,7 @@ async function getStoreUrl(): Promise<string> {
     console.error('[Portal Products API] Error fetching shop from DB:', err);
   }
   
-  // Last resort fallback for production without env vars
-  console.log('[Portal Products API] Using hardcoded fallback for store URL');
-  return 'f5ed86-2.myshopify.com';
+  return '';
 }
 
 // GET /api/portal/[token]/products?q=searchterm - Search Shopify products using GraphQL
@@ -44,7 +41,7 @@ export async function GET(
       return NextResponse.json([], { status: 200 });
     }
 
-    // Get store URL (from env or fallback to DB)
+    // Get store URL (from env or DB)
     const SHOPIFY_STORE_URL = await getStoreUrl();
     
     if (!SHOPIFY_STORE_URL) {
