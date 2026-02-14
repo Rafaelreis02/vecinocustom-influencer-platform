@@ -30,7 +30,7 @@ export function ProductSearchInput({
   onSelect,
   disabled,
   isLoading = false,
-  placeholder = 'Search product... (e.g. "necklace")',
+  placeholder = 'Search product... (e.g. "bracelet", "pendant", "zodiac")',
   label,
   required = false,
 }: ProductSearchInputProps) {
@@ -117,9 +117,24 @@ export function ProductSearchInput({
               )}
               
               {!isLoading && results.length === 0 && (
-                <div className="px-4 py-6 flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4 text-amber-500 flex-shrink-0" />
-                  <span className="text-sm text-gray-600">No products found for "{searchQuery}"</span>
+                <div className="px-4 py-4">
+                  <div className="flex items-start gap-2 mb-3">
+                    <AlertCircle className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                    <span className="text-sm text-gray-600">No products found for "{searchQuery}"</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mb-2">Try searching for:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {['bracelet', 'pendant', 'charm', 'zodiac', 'birthstone', 'personalized'].map(tag => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => onSearchChange(tag)}
+                        className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition"
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
               
