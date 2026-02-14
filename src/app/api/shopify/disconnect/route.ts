@@ -12,11 +12,19 @@ import { authOptions } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
-    // Verificar autenticação (só admin pode desconectar)
+    // Verificar autenticação (qualquer user autenticado pode desconectar)
     const session = await getServerSession(authOptions);
-    if (!session?.user || session.user.role !== 'ADMIN') {
+    if (!session?.user) {
       return NextResponse.json(
-        { error: 'Acesso negado' },
+        { error: 'Não autenticado' },
+        { status: 401 }
+      );
+    }
+    
+    // Allow ADMIN e ASSISTANT (users que conseguem aceder ao settings)
+    if (!['ADMIN', 'ASSISTANT'].includes(session.user.role)) {
+      return NextResponse.json(
+        { error: 'Acesso negado - apenas ADMIN ou ASSISTANT podem desconectar' },
         { status: 403 }
       );
     }
@@ -65,8 +73,9 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('[Shopify Disconnect] Error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
     return NextResponse.json(
-      { error: 'Erro ao desconectar' },
+      { error: 'Erro ao desconectar', details: errorMessage },
       { status: 500 }
     );
   }
