@@ -11,7 +11,7 @@ import {
   ShoppingBag,
 } from 'lucide-react';
 import { SalesCommissionsChart } from './components/SalesCommissionsChart';
-import { TopInfluencersChart } from './components/TopInfluencersChart';
+import { TopInfluencersList } from './components/TopInfluencersList';
 
 // DateRangePicker Component
 function DateRangePicker({ 
@@ -414,12 +414,12 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="space-y-6">
         {data?.monthlyTrend && (
           <SalesCommissionsChart data={data.monthlyTrend} />
         )}
         {data?.topInfluencers && (
-          <TopInfluencersChart data={data.topInfluencers} />
+          <TopInfluencersList data={data.topInfluencers} />
         )}
       </div>
 
