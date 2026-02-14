@@ -11,7 +11,7 @@ interface Document {
   size: number;
   url: string;
   type: string;
-  createdAt: string;
+  uploadedAt: string;
 }
 
 interface InfluencerDocumentsProps {
@@ -174,7 +174,7 @@ export function InfluencerDocuments({
                         {doc.originalName}
                       </p>
                       <p className="text-xs text-gray-500">
-                        {formatFileSize(doc.size)} • {formatDate(doc.createdAt)}
+                        {formatFileSize(doc.size)} • {formatDate(doc.uploadedAt)}
                       </p>
                     </div>
                   </div>

@@ -412,8 +412,6 @@ model File {
   
   // Metadata
   uploadedAt      DateTime    @default(now())
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
   
   @@map("files")
 }

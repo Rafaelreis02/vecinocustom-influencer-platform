@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { MessageCircle, Users, Video, Award, Gift, FileText, X, Loader2 } from 'lucide-react';
+import { MessageCircle, Users, Video, Award, Gift, FileText, X, Loader2, File } from 'lucide-react';
 import { VideoPreviewList } from './VideoPreview';
+import { InfluencerDocuments } from './InfluencerDocuments';
 
 interface InfluencerPanelProps {
   influencer?: {
@@ -21,6 +22,7 @@ interface InfluencerDetails {
   videos?: any[];
   coupons?: any[];
   payments?: any[];
+  files?: any[];
   stats?: {
     totalViews?: number;
     totalLikes?: number;
@@ -50,6 +52,7 @@ export function InfluencerPanel({ influencer, onClose }: InfluencerPanelProps) {
           videos: data.videos || [],
           coupons: data.coupons || [],
           payments: data.payments || [],
+          files: data.files || [],
           stats: data.stats || {},
         });
       }
@@ -194,6 +197,35 @@ export function InfluencerPanel({ influencer, onClose }: InfluencerPanelProps) {
           </div>
         ) : (
           <p className="text-xs text-slate-400 bg-slate-50 p-2 rounded-lg">Sem cupom</p>
+        )}
+      </div>
+
+      {/* Documentos */}
+      <div className="space-y-2">
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+          <File className="h-3 w-3" /> Documentos
+        </p>
+        {loading ? (
+          <p className="text-xs text-slate-500 bg-slate-50 p-2 rounded-lg">A carregar...</p>
+        ) : details?.files && details.files.length > 0 ? (
+          <div className="space-y-1 max-h-32 overflow-y-auto">
+            {details.files.slice(0, 5).map((file: any, idx: number) => (
+              <div key={idx} className="flex items-center justify-between p-2 bg-slate-50 rounded-lg text-xs">
+                <span className="truncate text-slate-600">{file.originalName}</span>
+                <a
+                  href={file.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-700 font-semibold"
+                  title="Descarregar"
+                >
+                  ↓
+                </a>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-slate-400 bg-slate-50 p-2 rounded-lg">Sem documentos</p>
         )}
       </div>
 

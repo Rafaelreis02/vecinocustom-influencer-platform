@@ -15,7 +15,7 @@ export async function GET(
 
     const files = await prisma.file.findMany({
       where: { influencerId: id },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { uploadedAt: 'desc' },
     });
 
     return NextResponse.json({ files });
