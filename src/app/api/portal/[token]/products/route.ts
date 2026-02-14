@@ -61,14 +61,14 @@ export async function GET(
 
     let allProducts: any[] = [];
     let cursor: string | null = null;
-    let pageCount = 0;
-    const maxPages = 20; // Limit to prevent infinite loops
+    let pageCount: number = 0;
+    const maxPages: number = 20; // Limit to prevent infinite loops
 
     // Fetch all products with pagination
     while (pageCount < maxPages) {
       pageCount++;
-      const cursorParam = cursor ? `&after=${cursor}` : '';
-      const url = `https://${SHOPIFY_STORE_URL}/admin/api/${API_VERSION}/products.json?limit=250&fields=id,title,handle,tags,images${cursorParam}`;
+      const cursorParam: string = cursor ? `&after=${cursor}` : '';
+      const url: string = `https://${SHOPIFY_STORE_URL}/admin/api/${API_VERSION}/products.json?limit=250&fields=id,title,handle,tags,images${cursorParam}`;
 
       console.log(`[Portal Products API] Fetching page ${pageCount}...`);
 
