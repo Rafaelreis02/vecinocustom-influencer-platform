@@ -14,12 +14,14 @@ export default withAuth(
         if (
           pathname === '/' || 
           pathname === '/login' || 
-          pathname.startsWith('/api/auth')
+          pathname.startsWith('/api/auth') ||
+          pathname.startsWith('/api/portal') ||  // Portal API is public (uses token in URL)
+          pathname.startsWith('/portal')         // Portal pages are public
         ) {
           return true;
         }
 
-        // Protected routes - require token
+        // Protected routes - require authentication
         if (pathname.startsWith('/dashboard') || pathname.startsWith('/api')) {
           return !!token;
         }
