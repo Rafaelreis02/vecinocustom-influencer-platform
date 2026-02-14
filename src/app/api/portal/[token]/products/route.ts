@@ -80,9 +80,12 @@ export async function GET(
     const products = data.products || [];
 
     console.log('[Portal Products API] Found products:', products.length);
+    console.log('[Portal Products API] Shopify response:', JSON.stringify(data).substring(0, 500));
 
     // Return empty array if no products found (not demo data)
     if (products.length === 0) {
+      console.log('[Portal Products API] No products found for query:', query);
+      console.log('[Portal Products API] Full response:', JSON.stringify(data, null, 2));
       return NextResponse.json([]);
     }
 
