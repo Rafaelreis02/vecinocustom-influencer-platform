@@ -71,6 +71,8 @@ export async function GET(
       const url: string = `https://${SHOPIFY_STORE_URL}/admin/api/${API_VERSION}/products.json?limit=250&fields=id,title,handle,tags,images${cursorParam}`;
 
       console.log(`[Portal Products API] Fetching page ${pageCount}...`);
+      console.log(`[Portal Products API] URL: ${url}`);
+      console.log(`[Portal Products API] Token starts with: ${accessToken.substring(0, 10)}...`);
 
       const response = await fetch(url, {
         headers: {
@@ -81,7 +83,8 @@ export async function GET(
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('[Portal Products API] Shopify error:', response.status, errorText);
+        console.error('[Portal Products API] Shopify error:', response.status, response.statusText);
+        console.error('[Portal Products API] Response body:', errorText);
         return NextResponse.json(
           { error: `Shopify API error: ${response.status}` },
           { status: 500 }
@@ -125,10 +128,17 @@ export async function GET(
 
     // Filter products by query - search in title and tags
     const lowerQuery = query.toLowerCase();
+    console.log('[Portal Products API] Total products fetched:', allProducts.length);
+    console.log('[Portal Products API] Searching for:', lowerQuery);
+    
     const filtered = allProducts.filter((product: any) => {
       const titleMatch = product.title.toLowerCase().includes(lowerQuery);
       const tagsMatch = product.tags && product.tags.toLowerCase().includes(lowerQuery);
-      return titleMatch || tagsMatch;
+      const matches = titleMatch || tagsMatch;
+      if (matches) {
+        console.log(`[Portal Products API] MATCH: ${product.title} (tags: ${product.tags})`);
+      }
+      return matches;
     });
 
     console.log('[Portal Products API] Found products:', filtered.length, '(from', allProducts.length, 'total across all pages)');
@@ -136,6 +146,10 @@ export async function GET(
     // Return empty array if no products found
     if (filtered.length === 0) {
       console.log('[Portal Products API] No products found for query:', query);
+      console.log('[Portal Products API] Sample products available:');
+      allProducts.slice(0, 5).forEach(p => {
+        console.log(`  - ${p.title} (tags: ${p.tags})`);
+      });
       return NextResponse.json([]);
     }
 
