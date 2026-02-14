@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { MessageCircle, Users, Video, Award, Gift, FileText, X, Loader2, File } from 'lucide-react';
+import { MessageCircle, Users, Video, Award, Gift, FileText, X, Loader2, File, Download, Trash2 } from 'lucide-react';
 import { VideoPreviewList } from './VideoPreview';
 import { InfluencerDocuments } from './InfluencerDocuments';
 
@@ -98,6 +98,29 @@ export function InfluencerPanel({ influencer, onClose }: InfluencerPanelProps) {
       alert(error instanceof Error ? error.message : 'Erro ao fazer upload');
     } finally {
       setUploading(false);
+    }
+  }
+
+  async function handleDeleteDocument(fileId: string) {
+    if (!influencer?.id) return;
+    if (!window.confirm('Tens a certeza que queres eliminar este documento?')) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/influencers/${influencer.id}/documents/${fileId}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        throw new Error('Erro ao eliminar documento');
+      }
+
+      // Reload data
+      await fetchInfluencerDetails();
+    } catch (error) {
+      console.error('Error deleting document:', error);
+      alert(error instanceof Error ? error.message : 'Erro ao eliminar');
     }
   }
 
@@ -272,19 +295,27 @@ export function InfluencerPanel({ influencer, onClose }: InfluencerPanelProps) {
         {loading ? (
           <p className="text-xs text-slate-500 bg-slate-50 p-2 rounded-lg">A carregar...</p>
         ) : details?.files && details.files.length > 0 ? (
-          <div className="space-y-1 max-h-32 overflow-y-auto">
-            {details.files.slice(0, 5).map((file: any, idx: number) => (
-              <div key={idx} className="flex items-center justify-between p-2 bg-slate-50 rounded-lg text-xs">
-                <span className="truncate text-slate-600">{file.originalName}</span>
-                <a
-                  href={file.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-700 font-semibold"
-                  title="Descarregar"
-                >
-                  ↓
-                </a>
+          <div className="space-y-1 max-h-40 overflow-y-auto">
+            {details.files.slice(0, 10).map((file: any, idx: number) => (
+              <div key={idx} className="flex items-center justify-between p-2 bg-slate-50 rounded-lg text-xs hover:bg-slate-100 transition">
+                <span className="truncate text-slate-600 flex-1">{file.originalName}</span>
+                <div className="flex gap-1 ml-1">
+                  <a
+                    href={`/api/influencers/${influencer?.id}/documents/${file.id}`}
+                    download={file.originalName}
+                    className="p-1 text-blue-600 hover:text-blue-700 rounded hover:bg-blue-50"
+                    title="Descarregar"
+                  >
+                    <Download className="h-3 w-3" />
+                  </a>
+                  <button
+                    onClick={() => handleDeleteDocument(file.id)}
+                    className="p-1 text-red-600 hover:text-red-700 rounded hover:bg-red-50"
+                    title="Eliminar"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>

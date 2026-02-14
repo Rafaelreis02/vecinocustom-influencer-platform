@@ -3,7 +3,16 @@ import { prisma } from '@/lib/prisma';
 import { handleApiError } from '@/lib/api-error';
 import { logger } from '@/lib/logger';
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+// Allow up to 50MB requests for file uploads
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '50mb',
+    },
+  },
+};
+
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
 // GET /api/influencers/[id]/documents - List documents
 export async function GET(

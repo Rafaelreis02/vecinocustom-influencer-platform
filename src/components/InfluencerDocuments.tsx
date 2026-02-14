@@ -183,9 +183,8 @@ export function InfluencerDocuments({
 
                   <div className="flex items-center gap-2 ml-4">
                     <a
-                      href={doc.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      href={`/api/influencers/${influencerId}/documents/${doc.id}`}
+                      download={doc.originalName}
                       className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"
                       title="Descarregar"
                     >
