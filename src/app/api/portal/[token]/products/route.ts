@@ -4,14 +4,23 @@ import { prisma } from '@/lib/prisma';
 
 const API_VERSION = '2024-01';
 
-// Get store URL from env or DB
+// Get store URL from env (try both names) or DB
 async function getStoreUrl(): Promise<string> {
-  const envUrl = process.env.SHOPIFY_STORE_URL;
+  // Try SHOPIFY_STORE_URL first (local dev)
+  let envUrl = process.env.SHOPIFY_STORE_URL;
   if (envUrl) {
     console.log('[Portal Products API] Using SHOPIFY_STORE_URL from env');
     return envUrl;
   }
   
+  // Try SHOPIFY_SHOP_DOMAIN (Vercel production)
+  envUrl = process.env.SHOPIFY_SHOP_DOMAIN;
+  if (envUrl) {
+    console.log('[Portal Products API] Using SHOPIFY_SHOP_DOMAIN from env');
+    return envUrl;
+  }
+  
+  // Fallback to DB
   try {
     const auth = await prisma.shopifyAuth.findFirst();
     if (auth?.shop) {
