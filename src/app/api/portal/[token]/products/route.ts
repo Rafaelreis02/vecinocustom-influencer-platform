@@ -31,12 +31,18 @@ export async function GET(
     }
 
     // Get Shopify access token (from DB or static env var)
+    console.log('[Portal Products API] Getting access token from DB...');
     let accessToken = await getShopifyAccessToken();
     
-    // Fallback to static access token if OAuth not configured
-    if (!accessToken && SHOPIFY_STATIC_ACCESS_TOKEN) {
-      console.log('[Portal Products API] Using static Shopify access token');
-      accessToken = SHOPIFY_STATIC_ACCESS_TOKEN;
+    if (accessToken) {
+      console.log('[Portal Products API] Got access token from DB');
+    } else {
+      console.warn('[Portal Products API] No token in DB, trying static...');
+      // Fallback to static access token if OAuth not configured
+      if (SHOPIFY_STATIC_ACCESS_TOKEN) {
+        console.log('[Portal Products API] Using static Shopify access token');
+        accessToken = SHOPIFY_STATIC_ACCESS_TOKEN;
+      }
     }
     
     if (!accessToken) {
@@ -46,6 +52,8 @@ export async function GET(
         { status: 503 }
       );
     }
+    
+    console.log('[Portal Products API] Token obtained, proceeding with search');
 
     // Search products using Shopify REST API
     const url = `https://${SHOPIFY_STORE_URL}/admin/api/${API_VERSION}/products.json?limit=4&title=${encodeURIComponent(query)}`;

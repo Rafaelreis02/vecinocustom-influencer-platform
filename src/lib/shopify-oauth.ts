@@ -30,9 +30,16 @@ interface ShopifyOrder {
  */
 export async function getShopifyAccessToken(): Promise<string | null> {
   try {
+    console.log('[getShopifyAccessToken] Looking for shop:', SHOPIFY_STORE_URL);
     const auth = await prisma.shopifyAuth.findUnique({
       where: { shop: SHOPIFY_STORE_URL },
     });
+    console.log('[getShopifyAccessToken] Found auth record:', auth ? 'YES' : 'NO');
+    if (!auth) {
+      console.log('[getShopifyAccessToken] Token not found. Available shops:');
+      const allAuths = await prisma.shopifyAuth.findMany();
+      allAuths.forEach(a => console.log(`  - ${a.shop}`));
+    }
     return auth?.accessToken || null;
   } catch (error) {
     console.error('Error fetching Shopify access token:', error);
