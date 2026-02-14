@@ -639,6 +639,9 @@ function Step2({ data, token, onUpdate, onBack, onNext }: StepProps) {
   const [searchResults1, setSearchResults1] = useState<ProductSearchResult[]>([]);
   const [searchResults2, setSearchResults2] = useState<ProductSearchResult[]>([]);
   const [searchResults3, setSearchResults3] = useState<ProductSearchResult[]>([]);
+  const [isLoading1, setIsLoading1] = useState(false);
+  const [isLoading2, setIsLoading2] = useState(false);
+  const [isLoading3, setIsLoading3] = useState(false);
   const [loading, setLoading] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -653,26 +656,37 @@ function Step2({ data, token, onUpdate, onBack, onNext }: StepProps) {
   };
 
   // Search products with debounce
-  const searchProducts = async (query: string, setResults: (results: ProductSearchResult[]) => void) => {
+  const searchProducts = async (
+    query: string,
+    setResults: (results: ProductSearchResult[]) => void,
+    setIsLoading: (loading: boolean) => void
+  ) => {
     if (query.length < 3) {
       setResults([]);
+      setIsLoading(false);
       return;
     }
 
+    setIsLoading(true);
     try {
       const res = await fetch(`/api/portal/${token}/products?q=${encodeURIComponent(query)}`);
       if (res.ok) {
         const products = await res.json();
         setResults(products);
+      } else {
+        setResults([]);
       }
     } catch (err) {
       console.error('Error searching products:', err);
+      setResults([]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      searchProducts(searchQuery1, setSearchResults1);
+      searchProducts(searchQuery1, setSearchResults1, setIsLoading1);
     }, 300);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -680,7 +694,7 @@ function Step2({ data, token, onUpdate, onBack, onNext }: StepProps) {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      searchProducts(searchQuery2, setSearchResults2);
+      searchProducts(searchQuery2, setSearchResults2, setIsLoading2);
     }, 300);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -688,7 +702,7 @@ function Step2({ data, token, onUpdate, onBack, onNext }: StepProps) {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      searchProducts(searchQuery3, setSearchResults3);
+      searchProducts(searchQuery3, setSearchResults3, setIsLoading3);
     }, 300);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -813,6 +827,7 @@ function Step2({ data, token, onUpdate, onBack, onNext }: StepProps) {
           searchQuery={searchQuery1}
           onSearchChange={setSearchQuery1}
           results={searchResults1}
+          isLoading={isLoading1}
           onSelect={(product) => {
             handleChange('productSuggestion1', product.url);
             setSearchQuery1(product.title);
@@ -829,6 +844,7 @@ function Step2({ data, token, onUpdate, onBack, onNext }: StepProps) {
           searchQuery={searchQuery2}
           onSearchChange={setSearchQuery2}
           results={searchResults2}
+          isLoading={isLoading2}
           onSelect={(product) => {
             handleChange('productSuggestion2', product.url);
             setSearchQuery2(product.title);
@@ -845,6 +861,7 @@ function Step2({ data, token, onUpdate, onBack, onNext }: StepProps) {
           searchQuery={searchQuery3}
           onSearchChange={setSearchQuery3}
           results={searchResults3}
+          isLoading={isLoading3}
           onSelect={(product) => {
             handleChange('productSuggestion3', product.url);
             setSearchQuery3(product.title);

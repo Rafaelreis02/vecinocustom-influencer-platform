@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useEffect, useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
 
 interface ProductSearchResult {
   title: string;
@@ -16,6 +16,7 @@ interface ProductSearchInputProps {
   results: ProductSearchResult[];
   onSelect: (product: ProductSearchResult) => void;
   disabled: boolean;
+  isLoading?: boolean;
   placeholder?: string;
   label?: string;
   required?: boolean;
@@ -28,6 +29,7 @@ export function ProductSearchInput({
   results,
   onSelect,
   disabled,
+  isLoading = false,
   placeholder = 'Search product... (e.g. "necklace")',
   label,
   required = false,
@@ -47,15 +49,17 @@ export function ProductSearchInput({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Show results when searching
+  // Show results when searching (with proper states)
   useEffect(() => {
     if (searchQuery.length >= 3) {
-      // Show dropdown if we have results OR while we're still loading
-      setShowResults(results.length > 0);
+      // Show dropdown if:
+      // - We have results, OR
+      // - We're currently loading
+      setShowResults(results.length > 0 || isLoading);
     } else {
       setShowResults(false);
     }
-  }, [searchQuery, results]);
+  }, [searchQuery, results, isLoading]);
 
   const handleSelectProduct = (product: ProductSearchResult) => {
     onSelect(product);
@@ -103,9 +107,23 @@ export function ProductSearchInput({
           />
 
           {/* Dropdown Results */}
-          {searchQuery.length >= 3 && results.length > 0 && (
+          {searchQuery.length >= 3 && (results.length > 0 || isLoading) && (
             <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
-              {results.map((product, index) => (
+              {isLoading && (
+                <div className="px-4 py-6 flex items-center justify-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                  <span className="text-sm text-gray-500">Searching...</span>
+                </div>
+              )}
+              
+              {!isLoading && results.length === 0 && (
+                <div className="px-4 py-6 flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                  <span className="text-sm text-gray-600">No products found for "{searchQuery}"</span>
+                </div>
+              )}
+              
+              {results.length > 0 && results.map((product, index) => (
                 <button
                   key={index}
                   type="button"
