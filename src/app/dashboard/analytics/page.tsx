@@ -10,6 +10,8 @@ import {
   TrendingUp,
   ShoppingBag,
 } from 'lucide-react';
+import { SalesCommissionsChart } from './components/SalesCommissionsChart';
+import { TopInfluencersChart } from './components/TopInfluencersChart';
 
 // DateRangePicker Component
 function DateRangePicker({ 
@@ -409,6 +411,16 @@ export default function AnalyticsPage() {
             </div>
           );
         })}
+      </div>
+
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {data?.monthlyTrend && (
+          <SalesCommissionsChart data={data.monthlyTrend} />
+        )}
+        {data?.topInfluencers && (
+          <TopInfluencersChart data={data.topInfluencers} />
+        )}
       </div>
 
       {/* Commission Status */}

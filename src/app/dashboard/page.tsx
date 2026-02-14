@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { StatCard } from '@/components/ui/Card';
 import { DashboardSkeleton } from '@/components/ui/LoadingStates';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { AnalyticsPreview } from './components/AnalyticsPreview';
 import {
   Users,
   Target,
@@ -154,6 +155,11 @@ export default function DashboardPage() {
           Adicionar Influencer
           <ArrowRight className="h-4 w-4" />
         </Link>
+      </div>
+
+      {/* Analytics Preview */}
+      <div>
+        <AnalyticsPreview />
       </div>
 
       {/* Stats */}

@@ -29,7 +29,6 @@ const navigation: NavigationItem[] = [
   { name: 'Campanhas', href: '/dashboard/campaigns', icon: Target },
   { name: 'Mensagens', href: '/dashboard/messages', icon: Mail },
   { name: 'Comissões', href: '/dashboard/commissions', icon: DollarSign },
-  { name: 'Analytics', href: '/dashboard/analytics', icon: TrendingUp },
   { name: 'Integrações', href: '/dashboard/integrations', icon: Instagram },
   { name: 'Ficheiros', href: '/dashboard/files', icon: FileText },
 ];

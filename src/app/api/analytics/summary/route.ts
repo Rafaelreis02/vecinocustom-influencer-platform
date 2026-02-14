@@ -107,6 +107,15 @@ export async function GET(request: NextRequest) {
         { code: 'CATARINA10', influencerName: 'Catarina Dias', usageCount: 6, totalSales: 2458.75, commissionTotal: 368.81 },
         { code: 'MARIANA30', influencerName: 'Mariana Oliveira', usageCount: 4, totalSales: 1536.25, commissionTotal: 230.43 },
       ],
+      monthlyTrend: [
+        { month: 'Jan', sales: 8500.00, commissions: 1275.00 },
+        { month: 'Fev', sales: 9200.00, commissions: 1380.00 },
+        { month: 'Mar', sales: 10500.00, commissions: 1575.00 },
+        { month: 'Abr', sales: 12300.00, commissions: 1845.00 },
+        { month: 'Mai', sales: 11800.00, commissions: 1770.00 },
+        { month: 'Jun', sales: 13500.00, commissions: 2025.00 },
+        { month: 'Jul', sales: 15240.50, commissions: 2286.08 },
+      ],
     };
 
     logger.info('[Analytics] Summary calculated', { hasRealData });
