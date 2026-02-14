@@ -427,13 +427,13 @@ export default function AnalyticsPage() {
 
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <div className="flex items-center justify-between mb-4">
-            <span className="text-sm font-medium text-gray-700">Comissões Aprovadas</span>
+            <span className="text-sm font-medium text-gray-700">Comissões Processando</span>
             <div className="bg-blue-100 text-blue-600 p-2 rounded-lg">
               <ShoppingBag className="h-4 w-4" />
             </div>
           </div>
           <div className="text-2xl font-bold text-gray-900">
-            €{displayData.commissionsByStatus?.approved?.toFixed(2) || '0.00'}
+            €{displayData.commissionsByStatus?.processing?.toFixed(2) || '0.00'}
           </div>
         </div>
 

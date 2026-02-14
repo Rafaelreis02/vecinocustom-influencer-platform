@@ -55,23 +55,23 @@ export async function GET(request: NextRequest) {
 
     const hasRealData = totalSalesNum > 0 || totalPaymentsNum > 0;
 
-    // Get commission breakdowns
+    // Get commission breakdowns (PENDING and PROCESSING)
     const pendingData = await prisma.payment.aggregate({
       _sum: { amount: true },
       where: { status: 'PENDING', createdAt: { gte: start, lte: end } },
     });
 
-    const approvedData = await prisma.payment.aggregate({
+    const processingData = await prisma.payment.aggregate({
       _sum: { amount: true },
-      where: { status: 'APPROVED', createdAt: { gte: start, lte: end } },
+      where: { status: 'PROCESSING', createdAt: { gte: start, lte: end } },
     });
 
     const pendingNum = pendingData._sum.amount 
       ? parseFloat(pendingData._sum.amount.toString()) 
       : 0;
 
-    const approvedNum = approvedData._sum.amount 
-      ? parseFloat(approvedData._sum.amount.toString()) 
+    const processingNum = processingData._sum.amount 
+      ? parseFloat(processingData._sum.amount.toString()) 
       : 0;
 
     // Use demo data if no real data
@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
 
     const commissionsByStatus = {
       pending: hasRealData ? pendingNum : 456.15,
-      approved: hasRealData ? approvedNum : 912.30,
+      processing: hasRealData ? processingNum : 912.30,
       paid: hasRealData ? totalPaymentsNum : 1524.05,
     };
 
