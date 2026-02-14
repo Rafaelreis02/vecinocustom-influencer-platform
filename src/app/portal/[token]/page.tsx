@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Loader2, XCircle, CheckCircle, FileText } from 'lucide-react';
+import { ProductSearchInput } from './components/ProductSearchInput';
 
 // Constants
 const VALIDATION_ERROR_DISPLAY_DURATION = 4000; // 4 seconds
@@ -50,6 +51,64 @@ const DDI_OPTIONS = [
   { code: '+1', country: 'US' },
   { code: '+55', country: 'BR' },
 ];
+
+// Helper functions for address parsing/formatting
+function parseAddress(fullAddress: string | null) {
+  if (!fullAddress) return { street: '', postalCode: '', country: '' };
+  
+  // Try to split by common separators (|, ,)
+  const parts = fullAddress.split('|').map(p => p.trim());
+  
+  if (parts.length >= 3) {
+    return {
+      street: parts[0],
+      postalCode: parts[1],
+      country: parts[2],
+    };
+  }
+  
+  // Fallback: return full address as street
+  return {
+    street: fullAddress,
+    postalCode: '',
+    country: '',
+  };
+}
+
+function formatAddress(street: string, postalCode: string, country: string): string {
+  return [street, postalCode, country].filter(p => p.trim()).join(' | ');
+}
+
+// Check if field has data
+function hasFieldData(value: any): boolean {
+  return value !== null && value !== undefined && value !== '';
+}
+
+// Determine if field is locked
+function isFieldLocked(fieldName: string, data: InfluencerData, status: string): boolean {
+  const statusOrder = ['UNKNOWN', 'COUNTER_PROPOSAL', 'ANALYZING', 'AGREED', 'PRODUCT_SELECTION', 'CONTRACT_PENDING', 'SHIPPED', 'COMPLETED'];
+  const currentStatusIndex = statusOrder.indexOf(status);
+  
+  // Step 1 fields
+  const step1Fields = ['name', 'email', 'instagramHandle', 'tiktokHandle', 'phone', 'agreedPrice'];
+  if (step1Fields.includes(fieldName)) {
+    // Locked if field has data (any status)
+    return hasFieldData(data[fieldName as keyof InfluencerData]);
+  }
+  
+  // Step 2 fields
+  const step2Fields = ['shippingAddress', 'productSuggestion1', 'productSuggestion2', 'productSuggestion3'];
+  if (step2Fields.includes(fieldName)) {
+    // Locked if status has moved past AGREED AND field has data
+    if (currentStatusIndex >= statusOrder.indexOf('PRODUCT_SELECTION')) {
+      return hasFieldData(data[fieldName as keyof InfluencerData]);
+    }
+    // Or if field has data and we're in step 2
+    return hasFieldData(data[fieldName as keyof InfluencerData]);
+  }
+  
+  return false;
+}
 
 export default function PortalPage() {
   const params = useParams();
@@ -260,14 +319,15 @@ function Step1({ data, token, onUpdate, onNext }: StepProps) {
   const isAnalyzing = data.status === 'ANALYZING';
   const hasPrice = data.agreedPrice && data.agreedPrice > 0;
   const priceChanged = formData.agreedPrice !== originalPrice;
-  
-  // Only editable in these initial statuses. Once agreed or beyond, fields are locked
-  const isEditableStatus = ['UNKNOWN', 'COUNTER_PROPOSAL', 'ANALYZING'].includes(data.status);
-  const allFieldsDisabled = !isEditableStatus;
 
   const handleChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (validationError) setValidationError(null);
+  };
+
+  // Per-field lock logic
+  const getFieldDisabled = (fieldName: string): boolean => {
+    return isFieldLocked(fieldName, data, data.status);
   };
 
   const validateForm = () => {
@@ -414,7 +474,7 @@ function Step1({ data, token, onUpdate, onNext }: StepProps) {
             type="text"
             value={formData.name}
             onChange={(e) => handleChange('name', e.target.value)}
-            disabled={allFieldsDisabled}
+            disabled={getFieldDisabled('name')}
             className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E1E37] disabled:bg-gray-50 disabled:cursor-not-allowed"
           />
         </div>
@@ -426,7 +486,7 @@ function Step1({ data, token, onUpdate, onNext }: StepProps) {
             type="email"
             value={formData.email}
             onChange={(e) => handleChange('email', e.target.value)}
-            disabled={allFieldsDisabled}
+            disabled={getFieldDisabled('email')}
             className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E1E37] disabled:bg-gray-50 disabled:cursor-not-allowed"
           />
         </div>
@@ -438,7 +498,7 @@ function Step1({ data, token, onUpdate, onNext }: StepProps) {
             type="text"
             value={formData.instagramHandle}
             onChange={(e) => handleChange('instagramHandle', e.target.value)}
-            disabled={allFieldsDisabled}
+            disabled={getFieldDisabled('instagramHandle')}
             className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E1E37] disabled:bg-gray-50 disabled:cursor-not-allowed"
           />
         </div>
@@ -450,7 +510,7 @@ function Step1({ data, token, onUpdate, onNext }: StepProps) {
             type="text"
             value={formData.tiktokHandle}
             onChange={(e) => handleChange('tiktokHandle', e.target.value)}
-            disabled={allFieldsDisabled}
+            disabled={getFieldDisabled('tiktokHandle')}
             className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E1E37] disabled:bg-gray-50 disabled:cursor-not-allowed"
           />
         </div>
@@ -462,7 +522,7 @@ function Step1({ data, token, onUpdate, onNext }: StepProps) {
             <select
               value={formData.ddiCode}
               onChange={(e) => handleChange('ddiCode', e.target.value)}
-              disabled={allFieldsDisabled}
+              disabled={getFieldDisabled('phone')}
               className="px-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E1E37] disabled:bg-gray-50 disabled:cursor-not-allowed"
             >
               {DDI_OPTIONS.map(opt => (
@@ -473,7 +533,7 @@ function Step1({ data, token, onUpdate, onNext }: StepProps) {
               type="tel"
               value={formData.phone}
               onChange={(e) => handleChange('phone', e.target.value)}
-              disabled={allFieldsDisabled}
+              disabled={getFieldDisabled('phone')}
               placeholder="912345678"
               className="flex-1 px-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E1E37] disabled:bg-gray-50 disabled:cursor-not-allowed"
             />
@@ -490,7 +550,7 @@ function Step1({ data, token, onUpdate, onNext }: StepProps) {
                 type="number"
                 value={formData.agreedPrice}
                 onChange={(e) => handleChange('agreedPrice', parseFloat(e.target.value) || 0)}
-                disabled={allFieldsDisabled}
+                disabled={getFieldDisabled('agreedPrice')}
                 className="w-full pl-12 pr-4 py-4 text-3xl font-bold text-right border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E1E37] disabled:bg-gray-50 disabled:cursor-not-allowed"
               />
             </div>
@@ -562,8 +622,12 @@ function Step1({ data, token, onUpdate, onNext }: StepProps) {
 }
 
 function Step2({ data, token, onUpdate, onBack, onNext }: StepProps) {
+  const parsedAddress = parseAddress(data.shippingAddress);
+  
   const [formData, setFormData] = useState({
-    shippingAddress: data.shippingAddress || '',
+    shippingStreet: parsedAddress.street,
+    shippingPostalCode: parsedAddress.postalCode,
+    shippingCountry: parsedAddress.country,
     productSuggestion1: data.productSuggestion1 || '',
     productSuggestion2: data.productSuggestion2 || '',
     productSuggestion3: data.productSuggestion3 || '',
@@ -578,16 +642,17 @@ function Step2({ data, token, onUpdate, onBack, onNext }: StepProps) {
   const [loading, setLoading] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  // Block all fields if status has moved beyond AGREED
-  const statusOrder = ['UNKNOWN', 'COUNTER_PROPOSAL', 'ANALYZING', 'AGREED', 'PRODUCT_SELECTION', 'CONTRACT_PENDING', 'SHIPPED'];
-  const isEditableStatus = ['AGREED'].includes(data.status);
-  const fieldsDisabled = !isEditableStatus;
-
   const handleChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (validationError) setValidationError(null);
   };
 
+  // Per-field lock logic
+  const getFieldDisabled = (fieldName: string): boolean => {
+    return isFieldLocked(fieldName, data, data.status);
+  };
+
+  // Search products with debounce
   const searchProducts = async (query: string, setResults: (results: ProductSearchResult[]) => void) => {
     if (query.length < 3) {
       setResults([]);
@@ -629,19 +694,10 @@ function Step2({ data, token, onUpdate, onBack, onNext }: StepProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery3]);
 
-  const selectProduct = (
-    field: string,
-    product: ProductSearchResult,
-    setSearch: (query: string) => void,
-    setResults: (results: ProductSearchResult[]) => void
-  ) => {
-    handleChange(field, product.url);
-    setSearch(product.title);
-    setResults([]);
-  };
-
   const validateForm = () => {
-    if (!formData.shippingAddress.trim()) return 'Full address is required';
+    if (!formData.shippingStreet.trim()) return 'Street address is required';
+    if (!formData.shippingPostalCode.trim()) return 'Postal code is required';
+    if (!formData.shippingCountry.trim()) return 'Country is required';
     if (!formData.productSuggestion1.trim()) return 'At least one product suggestion is required';
     return null;
   };
@@ -657,11 +713,21 @@ function Step2({ data, token, onUpdate, onBack, onNext }: StepProps) {
     setLoading(true);
 
     try {
+      // Format address back to single field
+      const shippingAddress = formatAddress(
+        formData.shippingStreet,
+        formData.shippingPostalCode,
+        formData.shippingCountry
+      );
+
       const res = await fetch(`/api/portal/${token}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...formData,
+          shippingAddress,
+          productSuggestion1: formData.productSuggestion1,
+          productSuggestion2: formData.productSuggestion2,
+          productSuggestion3: formData.productSuggestion3,
           status: 'PRODUCT_SELECTION',
         }),
       });
@@ -697,141 +763,116 @@ function Step2({ data, token, onUpdate, onBack, onNext }: StepProps) {
       )}
 
       <div className="space-y-4">
-        {/* Full Address */}
+        {/* Shipping Address - Separated Fields */}
         <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">Full address *</label>
-          <textarea
-            value={formData.shippingAddress}
-            onChange={(e) => handleChange('shippingAddress', e.target.value)}
-            disabled={fieldsDisabled}
-            rows={3}
-            placeholder="Street, Number, City, Zip Code"
-            className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E1E37] disabled:bg-gray-50 disabled:cursor-not-allowed"
-          />
+          <label className="block text-xs font-semibold text-gray-600 mb-3 uppercase">Shipping Address</label>
+          
+          {/* Street */}
+          <div className="mb-3">
+            <label className="block text-xs font-semibold text-gray-500 mb-1">Street Address *</label>
+            <input
+              type="text"
+              value={formData.shippingStreet}
+              onChange={(e) => handleChange('shippingStreet', e.target.value)}
+              disabled={getFieldDisabled('shippingAddress')}
+              placeholder="e.g., Rua da Paz, 123"
+              className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E1E37] disabled:bg-gray-50 disabled:cursor-not-allowed"
+            />
+          </div>
+
+          {/* Postal Code */}
+          <div className="mb-3">
+            <label className="block text-xs font-semibold text-gray-500 mb-1">Postal Code *</label>
+            <input
+              type="text"
+              value={formData.shippingPostalCode}
+              onChange={(e) => handleChange('shippingPostalCode', e.target.value)}
+              disabled={getFieldDisabled('shippingAddress')}
+              placeholder="e.g., 4000-123"
+              className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E1E37] disabled:bg-gray-50 disabled:cursor-not-allowed"
+            />
+          </div>
+
+          {/* Country */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 mb-1">Country *</label>
+            <input
+              type="text"
+              value={formData.shippingCountry}
+              onChange={(e) => handleChange('shippingCountry', e.target.value)}
+              disabled={getFieldDisabled('shippingAddress')}
+              placeholder="e.g., Portugal"
+              className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E1E37] disabled:bg-gray-50 disabled:cursor-not-allowed"
+            />
+          </div>
         </div>
 
         {/* Product Suggestion 1 */}
-        <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">Suggestion 1 *</label>
-          <div className="relative">
-            <input
-              type="text"
-              value={searchQuery1}
-              onChange={(e) => setSearchQuery1(e.target.value)}
-              disabled={fieldsDisabled}
-              placeholder="Search for a product..."
-              className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E1E37] disabled:bg-gray-50 disabled:cursor-not-allowed"
-            />
-            {searchResults1.length > 0 && (
-              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                {searchResults1.map((product, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => selectProduct('productSuggestion1', product, setSearchQuery1, setSearchResults1)}
-                    className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 text-left"
-                  >
-                    {product.image && (
-                      <img src={product.image} alt={product.title} className="w-12 h-12 object-cover rounded" />
-                    )}
-                    <span className="text-sm text-gray-900">{product.title}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          {formData.productSuggestion1 && (
-            <p className="mt-1 text-xs text-gray-600 truncate">{formData.productSuggestion1}</p>
-          )}
-        </div>
+        <ProductSearchInput
+          value={formData.productSuggestion1}
+          searchQuery={searchQuery1}
+          onSearchChange={setSearchQuery1}
+          results={searchResults1}
+          onSelect={(product) => {
+            handleChange('productSuggestion1', product.url);
+            setSearchQuery1(product.title);
+            setSearchResults1([]);
+          }}
+          disabled={getFieldDisabled('productSuggestion1')}
+          label="Suggestion 1"
+          required={true}
+        />
 
         {/* Product Suggestion 2 */}
-        <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">Suggestion 2</label>
-          <div className="relative">
-            <input
-              type="text"
-              value={searchQuery2}
-              onChange={(e) => setSearchQuery2(e.target.value)}
-              disabled={fieldsDisabled}
-              placeholder="Search for a product..."
-              className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E1E37] disabled:bg-gray-50 disabled:cursor-not-allowed"
-            />
-            {searchResults2.length > 0 && (
-              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                {searchResults2.map((product, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => selectProduct('productSuggestion2', product, setSearchQuery2, setSearchResults2)}
-                    className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 text-left"
-                  >
-                    {product.image && (
-                      <img src={product.image} alt={product.title} className="w-12 h-12 object-cover rounded" />
-                    )}
-                    <span className="text-sm text-gray-900">{product.title}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          {formData.productSuggestion2 && (
-            <p className="mt-1 text-xs text-gray-600 truncate">{formData.productSuggestion2}</p>
-          )}
-        </div>
+        <ProductSearchInput
+          value={formData.productSuggestion2}
+          searchQuery={searchQuery2}
+          onSearchChange={setSearchQuery2}
+          results={searchResults2}
+          onSelect={(product) => {
+            handleChange('productSuggestion2', product.url);
+            setSearchQuery2(product.title);
+            setSearchResults2([]);
+          }}
+          disabled={getFieldDisabled('productSuggestion2')}
+          label="Suggestion 2"
+          required={false}
+        />
 
         {/* Product Suggestion 3 */}
-        <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">Suggestion 3</label>
-          <div className="relative">
-            <input
-              type="text"
-              value={searchQuery3}
-              onChange={(e) => setSearchQuery3(e.target.value)}
-              disabled={fieldsDisabled}
-              placeholder="Search for a product..."
-              className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E1E37] disabled:bg-gray-50 disabled:cursor-not-allowed"
-            />
-            {searchResults3.length > 0 && (
-              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                {searchResults3.map((product, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => selectProduct('productSuggestion3', product, setSearchQuery3, setSearchResults3)}
-                    className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 text-left"
-                  >
-                    {product.image && (
-                      <img src={product.image} alt={product.title} className="w-12 h-12 object-cover rounded" />
-                    )}
-                    <span className="text-sm text-gray-900">{product.title}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          {formData.productSuggestion3 && (
-            <p className="mt-1 text-xs text-gray-600 truncate">{formData.productSuggestion3}</p>
-          )}
-        </div>
+        <ProductSearchInput
+          value={formData.productSuggestion3}
+          searchQuery={searchQuery3}
+          onSearchChange={setSearchQuery3}
+          results={searchResults3}
+          onSelect={(product) => {
+            handleChange('productSuggestion3', product.url);
+            setSearchQuery3(product.title);
+            setSearchResults3([]);
+          }}
+          disabled={getFieldDisabled('productSuggestion3')}
+          label="Suggestion 3"
+          required={false}
+        />
       </div>
 
       {/* Action Buttons */}
-      {!fieldsDisabled && (
-        <div className="mt-6 space-y-3">
-          <button
-            onClick={onBack}
-            disabled={loading}
-            className="w-full py-3 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Review details
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={loading}
-            className="w-full py-3 bg-[#0E1E37] text-white font-semibold rounded-lg hover:bg-[#1a2f4f] transition disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Processing...' : 'Send details'}
-          </button>
-        </div>
-      )}
+      <div className="mt-6 space-y-3">
+        <button
+          onClick={onBack}
+          disabled={loading}
+          className="w-full py-3 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Review details
+        </button>
+        <button
+          onClick={handleSubmit}
+          disabled={loading}
+          className="w-full py-3 bg-[#0E1E37] text-white font-semibold rounded-lg hover:bg-[#1a2f4f] transition disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {loading ? 'Processing...' : 'Send details'}
+        </button>
+      </div>
     </div>
   );
 }
