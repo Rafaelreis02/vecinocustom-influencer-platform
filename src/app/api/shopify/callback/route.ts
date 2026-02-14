@@ -89,7 +89,16 @@ export async function GET(request: NextRequest) {
     const tokenData = await tokenResponse.json();
     const { access_token, scope } = tokenData;
 
-    console.log('[Shopify Callback] Access token received:', { shop, scope });
+    console.log('[Shopify Callback] Access token received:', { 
+      shop, 
+      scope,
+      hasReadProducts: scope?.includes('read_products'),
+      token_preview: access_token?.substring(0, 20) + '...'
+    });
+
+    if (!scope?.includes('read_products')) {
+      console.warn('[Shopify Callback] WARNING: Token does not have read_products scope!');
+    }
 
     // Guardar na base de dados
     await prisma.shopifyAuth.upsert({
@@ -106,7 +115,7 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    console.log('[Shopify Callback] Connection saved to database');
+    console.log('[Shopify Callback] Connection saved to database', { shop, scope });
 
     // TODO: Registrar webhooks (opcional, para receber eventos em tempo real)
     // await registerWebhooks(shop, access_token);
