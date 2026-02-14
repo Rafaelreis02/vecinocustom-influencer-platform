@@ -1,8 +1,30 @@
 import { NextResponse } from 'next/server';
 import { getShopifyAccessToken } from '@/lib/shopify-oauth';
+import { prisma } from '@/lib/prisma';
 
-const SHOPIFY_STORE_URL = process.env.SHOPIFY_STORE_URL || '';
 const API_VERSION = '2024-01';
+
+// Get store URL from env or fallback to database
+async function getStoreUrl(): Promise<string> {
+  const envUrl = process.env.SHOPIFY_STORE_URL;
+  if (envUrl) {
+    console.log('[Portal Products API] Using SHOPIFY_STORE_URL from env');
+    return envUrl;
+  }
+  
+  console.log('[Portal Products API] SHOPIFY_STORE_URL not in env, fetching from DB...');
+  try {
+    const auth = await prisma.shopifyAuth.findFirst();
+    if (auth?.shop) {
+      console.log('[Portal Products API] Found shop in DB:', auth.shop);
+      return auth.shop;
+    }
+  } catch (err) {
+    console.error('[Portal Products API] Error fetching shop from DB:', err);
+  }
+  
+  return '';
+}
 
 // GET /api/portal/[token]/products?q=searchterm - Search Shopify products using GraphQL
 export async function GET(
@@ -20,7 +42,9 @@ export async function GET(
       return NextResponse.json([], { status: 200 });
     }
 
-    // Check if Shopify is configured
+    // Get store URL (from env or fallback to DB)
+    const SHOPIFY_STORE_URL = await getStoreUrl();
+    
     if (!SHOPIFY_STORE_URL) {
       console.error('[Portal Products API] SHOPIFY_STORE_URL not configured');
       return NextResponse.json(
@@ -28,6 +52,8 @@ export async function GET(
         { status: 503 }
       );
     }
+    
+    console.log('[Portal Products API] Using store URL:', SHOPIFY_STORE_URL);
 
     // Get Shopify access token
     console.log('[Portal Products API] Getting access token from DB...');
