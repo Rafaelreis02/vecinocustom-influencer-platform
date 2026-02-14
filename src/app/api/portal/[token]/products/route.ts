@@ -56,9 +56,11 @@ export async function GET(
     console.log('[Portal Products API] Token obtained, proceeding with search');
 
     // Search products using Shopify REST API
-    const url = `https://${SHOPIFY_STORE_URL}/admin/api/${API_VERSION}/products.json?limit=4&title=${encodeURIComponent(query)}`;
+    // First, get all products (limit to reasonable number) to search client-side
+    // This allows us to search by title, tags, and other fields
+    const url = `https://${SHOPIFY_STORE_URL}/admin/api/${API_VERSION}/products.json?limit=250&fields=id,title,handle,tags,images`;
 
-    console.log('[Portal Products API] Fetching from Shopify:', url);
+    console.log('[Portal Products API] Fetching from Shopify with query:', query);
 
     const response = await fetch(url, {
       headers: {
@@ -77,27 +79,37 @@ export async function GET(
     }
 
     const data = await response.json();
-    const products = data.products || [];
+    let products = data.products || [];
 
-    console.log('[Portal Products API] Found products:', products.length);
-    console.log('[Portal Products API] Shopify response:', JSON.stringify(data).substring(0, 500));
+    // Filter products by query - search in title and tags
+    const lowerQuery = query.toLowerCase();
+    const filtered = products.filter((product: any) => {
+      const titleMatch = product.title.toLowerCase().includes(lowerQuery);
+      const tagsMatch = product.tags && product.tags.toLowerCase().includes(lowerQuery);
+      return titleMatch || tagsMatch;
+    });
 
-    // Return empty array if no products found (not demo data)
-    if (products.length === 0) {
+    console.log('[Portal Products API] Found products:', filtered.length, '(from', products.length, 'total)');
+
+    // Return empty array if no products found
+    if (filtered.length === 0) {
       console.log('[Portal Products API] No products found for query:', query);
-      console.log('[Portal Products API] Full response:', JSON.stringify(data, null, 2));
       return NextResponse.json([]);
     }
 
-    // Format products for portal
+    products = filtered;
+
+    // Format products for portal - limit to 4 results
     // Extract shop name from SHOPIFY_STORE_URL (e.g., "mystore.myshopify.com" -> "mystore")
     const shopName = SHOPIFY_STORE_URL.replace('.myshopify.com', '');
     
-    const formattedProducts = products.map((product: any) => ({
-      title: product.title,
-      url: `https://${shopName}.myshopify.com/products/${product.handle}`,
-      image: product.images?.[0]?.src || product.image?.src || null,
-    }));
+    const formattedProducts = products
+      .slice(0, 4)  // Limit to 4 results
+      .map((product: any) => ({
+        title: product.title,
+        url: `https://${shopName}.myshopify.com/products/${product.handle}`,
+        image: product.images?.[0]?.src || product.image?.src || null,
+      }));
 
     return NextResponse.json(formattedProducts);
   } catch (err: any) {
