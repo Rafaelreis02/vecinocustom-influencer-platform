@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 
 const API_VERSION = '2024-01';
 
-// Get store URL from env or fallback to database
+// Get store URL from env, DB, or hardcoded fallback
 async function getStoreUrl(): Promise<string> {
   const envUrl = process.env.SHOPIFY_STORE_URL;
   if (envUrl) {
@@ -23,7 +23,9 @@ async function getStoreUrl(): Promise<string> {
     console.error('[Portal Products API] Error fetching shop from DB:', err);
   }
   
-  return '';
+  // Last resort fallback for production without env vars
+  console.log('[Portal Products API] Using hardcoded fallback for store URL');
+  return 'f5ed86-2.myshopify.com';
 }
 
 // GET /api/portal/[token]/products?q=searchterm - Search Shopify products using GraphQL
@@ -55,17 +57,22 @@ export async function GET(
     
     console.log('[Portal Products API] Using store URL:', SHOPIFY_STORE_URL);
 
-    // Get Shopify access token
-    console.log('[Portal Products API] Getting access token from DB...');
-    let accessToken = await getShopifyAccessToken();
+    // Get Shopify access token - try multiple approaches
+    console.log('[Portal Products API] Getting access token...');
+    let accessToken = null;
     
+    // Try 1: via getShopifyAccessToken (uses SHOPIFY_STORE_URL env var)
+    console.log('[Portal Products API] Attempt 1: via getShopifyAccessToken()');
+    accessToken = await getShopifyAccessToken();
+    
+    // Try 2: Direct DB query without using SHOPIFY_STORE_URL
     if (!accessToken) {
-      console.log('[Portal Products API] Token not found via getShopifyAccessToken, trying direct DB query...');
+      console.log('[Portal Products API] Attempt 2: direct DB query...');
       try {
         const auth = await prisma.shopifyAuth.findFirst();
         if (auth?.accessToken) {
           accessToken = auth.accessToken;
-          console.log('[Portal Products API] Token found in DB directly');
+          console.log('[Portal Products API] Token found in DB');
         }
       } catch (err) {
         console.error('[Portal Products API] Error querying DB:', err);
@@ -79,6 +86,8 @@ export async function GET(
         { status: 503 }
       );
     }
+    
+    console.log('[Portal Products API] Token obtained');
     
     console.log('[Portal Products API] Token obtained, using GraphQL search');
 
