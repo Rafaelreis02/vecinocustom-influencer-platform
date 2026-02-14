@@ -67,7 +67,7 @@ export async function GET(
     // Fetch all products with pagination
     while (pageCount < maxPages) {
       pageCount++;
-      const cursorParam: string = cursor ? `&after=${cursor}` : '';
+      const cursorParam: string = cursor ? `&page_info=${cursor}` : '';
       const url: string = `https://${SHOPIFY_STORE_URL}/admin/api/${API_VERSION}/products.json?limit=250&fields=id,title,handle,tags,images${cursorParam}`;
 
       console.log(`[Portal Products API] Fetching page ${pageCount}...`);
@@ -102,9 +102,10 @@ export async function GET(
       }
 
       // Extract cursor for next page
-      const nextMatch = linkHeader.match(/after=([^&;>]+)/);
+      // Shopify uses page_info parameter for cursor pagination
+      const nextMatch = linkHeader.match(/page_info=([^&;>]+)/);
       if (nextMatch) {
-        cursor = nextMatch[1];
+        cursor = decodeURIComponent(nextMatch[1]);
       } else {
         break;
       }
