@@ -91,24 +91,32 @@ export async function GET(
 
     const data = await response.json();
     
+    console.log('[Portal Products API] GraphQL response received');
+    console.log('[Portal Products API] Response has errors?', !!data.errors);
+    console.log('[Portal Products API] Response data?', !!data.data);
+    
     if (data.errors) {
-      console.error('[Portal Products API] GraphQL errors:', data.errors);
+      console.error('[Portal Products API] GraphQL errors:', JSON.stringify(data.errors, null, 2));
       return NextResponse.json(
         { error: 'Failed to search products' },
         { status: 500 }
       );
     }
 
-    const products = data.data?.products?.edges?.map((edge: any) => {
+    const edges = data.data?.products?.edges || [];
+    console.log('[Portal Products API] GraphQL edges returned:', edges.length);
+    
+    const products = edges.map((edge: any) => {
       const node = edge.node;
       return {
         title: node.title,
         url: `https://${SHOPIFY_STORE_URL.replace('.myshopify.com', '')}.myshopify.com/products/${node.handle}`,
         image: node.featuredImage?.url || null,
       };
-    }) || [];
+    });
 
-    console.log('[Portal Products API] GraphQL search returned:', products.length, 'products');
+    console.log('[Portal Products API] GraphQL search returned:', products.length, 'formatted products');
+    console.log('[Portal Products API] First product:', products[0]);
 
     // Return top 4 results
     return NextResponse.json(products.slice(0, 4));
