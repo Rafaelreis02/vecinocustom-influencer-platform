@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getShopifyAccessToken } from '@/lib/shopify-oauth';
 
 const SHOPIFY_STORE_URL = process.env.SHOPIFY_STORE_URL || '';
+const SHOPIFY_STATIC_ACCESS_TOKEN = process.env.SHOPIFY_STATIC_ACCESS_TOKEN || '';
 const API_VERSION = '2024-01';
 
 // GET /api/portal/[token]/products?q=searchterm - Search Shopify products
@@ -22,16 +23,28 @@ export async function GET(
 
     // Check if Shopify is configured
     if (!SHOPIFY_STORE_URL) {
-      console.warn('[Portal Products API] SHOPIFY_STORE_URL not configured');
-      return NextResponse.json(getDemoProducts(query), { status: 200 });
+      console.error('[Portal Products API] SHOPIFY_STORE_URL not configured');
+      return NextResponse.json(
+        { error: 'Shopify store not configured' },
+        { status: 503 }
+      );
     }
 
-    // Get Shopify access token
-    const accessToken = await getShopifyAccessToken();
+    // Get Shopify access token (from DB or static env var)
+    let accessToken = await getShopifyAccessToken();
+    
+    // Fallback to static access token if OAuth not configured
+    if (!accessToken && SHOPIFY_STATIC_ACCESS_TOKEN) {
+      console.log('[Portal Products API] Using static Shopify access token');
+      accessToken = SHOPIFY_STATIC_ACCESS_TOKEN;
+    }
     
     if (!accessToken) {
-      console.warn('[Portal Products API] No Shopify access token available');
-      return NextResponse.json(getDemoProducts(query), { status: 200 });
+      console.error('[Portal Products API] No Shopify access token available (OAuth or static)');
+      return NextResponse.json(
+        { error: 'Shopify not configured' },
+        { status: 503 }
+      );
     }
 
     // Search products using Shopify REST API
@@ -49,8 +62,10 @@ export async function GET(
     if (!response.ok) {
       const errorText = await response.text();
       console.error('[Portal Products API] Shopify error:', response.status, errorText);
-      // Fallback to demo data if Shopify fails
-      return NextResponse.json(getDemoProducts(query), { status: 200 });
+      return NextResponse.json(
+        { error: `Shopify API error: ${response.status}` },
+        { status: 500 }
+      );
     }
 
     const data = await response.json();
@@ -58,9 +73,9 @@ export async function GET(
 
     console.log('[Portal Products API] Found products:', products.length);
 
+    // Return empty array if no products found (not demo data)
     if (products.length === 0) {
-      // Return demo data if no products found
-      return NextResponse.json(getDemoProducts(query), { status: 200 });
+      return NextResponse.json([]);
     }
 
     // Format products for portal
@@ -76,37 +91,9 @@ export async function GET(
     return NextResponse.json(formattedProducts);
   } catch (err: any) {
     console.error('[API ERROR] Searching products:', err?.message || String(err));
-    // Return demo data on error
-    const url = new URL(request.url);
-    const query = url.searchParams.get('q') || '';
-    return NextResponse.json(getDemoProducts(query), { status: 200 });
+    return NextResponse.json(
+      { error: err?.message || 'Failed to search products' },
+      { status: 500 }
+    );
   }
-}
-
-// Demo products for fallback
-function getDemoProducts(searchQuery: string) {
-  const allProducts = [
-    { title: 'Gold Necklace', handle: 'gold-necklace', image: null },
-    { title: 'Silver Necklace', handle: 'silver-necklace', image: null },
-    { title: 'Pearl Necklace', handle: 'pearl-necklace', image: null },
-    { title: 'Gold Bracelet', handle: 'gold-bracelet', image: null },
-    { title: 'Silver Bracelet', handle: 'silver-bracelet', image: null },
-    { title: 'Diamond Ring', handle: 'diamond-ring', image: null },
-    { title: 'Gold Ring', handle: 'gold-ring', image: null },
-    { title: 'Pearl Earrings', handle: 'pearl-earrings', image: null },
-    { title: 'Gold Earrings', handle: 'gold-earrings', image: null },
-    { title: 'Gemstone Pendant', handle: 'gemstone-pendant', image: null },
-  ];
-
-  const filtered = allProducts.filter(p =>
-    p.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const shopName = SHOPIFY_STORE_URL.replace('.myshopify.com', '') || 'vecinocustom';
-
-  return filtered.map(product => ({
-    title: product.title,
-    url: `https://${shopName}.myshopify.com/products/${product.handle}`,
-    image: null,
-  }));
 }
