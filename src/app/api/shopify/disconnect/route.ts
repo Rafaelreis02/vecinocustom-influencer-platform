@@ -29,8 +29,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
-    const shop = body.shop || process.env.SHOPIFY_SHOP_DOMAIN;
+    // Parse body safely (might be empty)
+    let shop = process.env.SHOPIFY_STORE_URL || process.env.SHOPIFY_SHOP_DOMAIN;
+    
+    try {
+      const body = await request.json();
+      shop = body.shop || shop;
+    } catch (e) {
+      // Body is empty or not JSON - that's ok, we'll use env var
+      console.log('[Shopify Disconnect] No body provided, using env var');
+    }
 
     if (!shop) {
       return NextResponse.json(
