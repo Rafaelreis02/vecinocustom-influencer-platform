@@ -90,7 +90,9 @@ export function InfluencerPanel({ influencer, onClose }: InfluencerPanelProps) {
       // Reload data
       await fetchInfluencerDetails();
       // Reset input
-      e.currentTarget.value = '';
+      if (e.currentTarget) {
+        e.currentTarget.value = '';
+      }
     } catch (error) {
       console.error('Error uploading documents:', error);
       alert(error instanceof Error ? error.message : 'Erro ao fazer upload');

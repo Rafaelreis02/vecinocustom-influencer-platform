@@ -55,7 +55,9 @@ export function InfluencerDocuments({
       }
 
       // Reset input
-      e.currentTarget.value = '';
+      if (e.currentTarget) {
+        e.currentTarget.value = '';
+      }
       onDocumentsChange?.();
     } catch (error) {
       console.error('Error uploading file:', error);
