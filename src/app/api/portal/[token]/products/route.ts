@@ -60,6 +60,19 @@ export async function GET(
     let accessToken = await getShopifyAccessToken();
     
     if (!accessToken) {
+      console.log('[Portal Products API] Token not found via getShopifyAccessToken, trying direct DB query...');
+      try {
+        const auth = await prisma.shopifyAuth.findFirst();
+        if (auth?.accessToken) {
+          accessToken = auth.accessToken;
+          console.log('[Portal Products API] Token found in DB directly');
+        }
+      } catch (err) {
+        console.error('[Portal Products API] Error querying DB:', err);
+      }
+    }
+    
+    if (!accessToken) {
       console.error('[Portal Products API] No Shopify access token available');
       return NextResponse.json(
         { error: 'Shopify not configured' },
