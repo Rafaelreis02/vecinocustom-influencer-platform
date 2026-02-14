@@ -64,23 +64,14 @@ export async function POST(
       );
     }
 
-    // Validate file type
-    const allowedTypes = [
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/vnd.ms-excel',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'image/jpeg',
-      'image/png',
-      'image/gif',
-      'application/zip',
-      'application/x-rar-compressed',
-    ];
+    // Validate file type by extension as fallback
+    const allowedExtensions = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.jpg', '.jpeg', '.png', '.gif', '.zip', '.rar'];
+    const fileName = file.name.toLowerCase();
+    const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
 
-    if (!allowedTypes.includes(file.type)) {
+    if (!hasValidExtension && !file.type) {
       return NextResponse.json(
-        { error: 'Tipo de ficheiro não permitido' },
+        { error: 'Tipo de ficheiro não permitido (use PDF, Word, Excel, imagens ou ZIP)' },
         { status: 400 }
       );
     }
@@ -115,7 +106,10 @@ export async function POST(
       file: fileRecord,
     });
   } catch (error) {
-    logger.error('[API] Error uploading document', { error });
+    logger.error('[API] Error uploading document', { 
+      error,
+      errorMessage: error instanceof Error ? error.message : String(error)
+    });
     return handleApiError(error);
   }
 }

@@ -47,8 +47,9 @@ export function InfluencerDocuments({
         });
 
         if (!res.ok) {
-          const error = await res.json();
-          throw new Error(error.error || 'Erro ao fazer upload');
+          const errorData = await res.json().catch(() => ({}));
+          const errorMsg = errorData.error || `HTTP ${res.status}`;
+          throw new Error(`${file.name}: ${errorMsg}`);
         }
 
         addToast(`"${file.name}" carregado com sucesso`, 'success');

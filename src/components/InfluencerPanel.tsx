@@ -82,7 +82,9 @@ export function InfluencerPanel({ influencer, onClose }: InfluencerPanelProps) {
         });
 
         if (!res.ok) {
-          throw new Error(`Erro ao fazer upload: ${file.name}`);
+          const errorData = await res.json().catch(() => ({}));
+          const errorMsg = errorData.error || `HTTP ${res.status}`;
+          throw new Error(`${file.name}: ${errorMsg}`);
         }
       }
 
