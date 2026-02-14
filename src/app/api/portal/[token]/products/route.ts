@@ -55,41 +55,81 @@ export async function GET(
     
     console.log('[Portal Products API] Token obtained, proceeding with search');
 
-    // Search products using Shopify REST API
-    // First, get all products (limit to reasonable number) to search client-side
-    // This allows us to search by title, tags, and other fields
-    const url = `https://${SHOPIFY_STORE_URL}/admin/api/${API_VERSION}/products.json?limit=250&fields=id,title,handle,tags,images`;
+    // Search products using Shopify REST API with pagination
+    // We need to paginate because there can be 1000+ products
+    console.log('[Portal Products API] Searching for query:', query);
 
-    console.log('[Portal Products API] Fetching from Shopify with query:', query);
+    let allProducts: any[] = [];
+    let cursor: string | null = null;
+    let pageCount = 0;
+    const maxPages = 20; // Limit to prevent infinite loops
 
-    const response = await fetch(url, {
-      headers: {
-        'X-Shopify-Access-Token': accessToken,
-        'Content-Type': 'application/json',
-      },
-    });
+    // Fetch all products with pagination
+    while (pageCount < maxPages) {
+      pageCount++;
+      const url = `https://${SHOPIFY_STORE_URL}/admin/api/${API_VERSION}/products.json?limit=250&fields=id,title,handle,tags,images${cursor ? `&after=${cursor}` : ''}`;
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[Portal Products API] Shopify error:', response.status, errorText);
-      return NextResponse.json(
-        { error: `Shopify API error: ${response.status}` },
-        { status: 500 }
-      );
+      console.log(`[Portal Products API] Fetching page ${pageCount}...`);
+
+      const response = await fetch(url, {
+        headers: {
+          'X-Shopify-Access-Token': accessToken,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[Portal Products API] Shopify error:', response.status, errorText);
+        return NextResponse.json(
+          { error: `Shopify API error: ${response.status}` },
+          { status: 500 }
+        );
+      }
+
+      const data = await response.json();
+      const products = data.products || [];
+      allProducts = allProducts.concat(products);
+
+      console.log(`[Portal Products API] Page ${pageCount}: ${products.length} products (total: ${allProducts.length})`);
+
+      // Check if there are more pages
+      const linkHeader = response.headers.get('link');
+      if (!linkHeader || !linkHeader.includes('rel="next"')) {
+        console.log('[Portal Products API] No more pages');
+        break;
+      }
+
+      // Extract cursor for next page
+      const nextMatch = linkHeader.match(/after=([^&;>]+)/);
+      if (nextMatch) {
+        cursor = nextMatch[1];
+      } else {
+        break;
+      }
+
+      // If we've found enough matching products, stop fetching
+      const lowerQuery = query.toLowerCase();
+      const matching = allProducts.filter((product: any) => {
+        const titleMatch = product.title.toLowerCase().includes(lowerQuery);
+        const tagsMatch = product.tags && product.tags.toLowerCase().includes(lowerQuery);
+        return titleMatch || tagsMatch;
+      });
+      if (matching.length >= 4) {
+        console.log(`[Portal Products API] Found enough matches (${matching.length}), stopping pagination`);
+        break;
+      }
     }
-
-    const data = await response.json();
-    let products = data.products || [];
 
     // Filter products by query - search in title and tags
     const lowerQuery = query.toLowerCase();
-    const filtered = products.filter((product: any) => {
+    const filtered = allProducts.filter((product: any) => {
       const titleMatch = product.title.toLowerCase().includes(lowerQuery);
       const tagsMatch = product.tags && product.tags.toLowerCase().includes(lowerQuery);
       return titleMatch || tagsMatch;
     });
 
-    console.log('[Portal Products API] Found products:', filtered.length, '(from', products.length, 'total)');
+    console.log('[Portal Products API] Found products:', filtered.length, '(from', allProducts.length, 'total across all pages)');
 
     // Return empty array if no products found
     if (filtered.length === 0) {
@@ -97,7 +137,7 @@ export async function GET(
       return NextResponse.json([]);
     }
 
-    products = filtered;
+    let products = filtered;
 
     // Format products for portal - limit to 4 results
     // Extract shop name from SHOPIFY_STORE_URL (e.g., "mystore.myshopify.com" -> "mystore")
