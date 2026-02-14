@@ -74,7 +74,6 @@ export function InfluencerPanel({ influencer, onClose }: InfluencerPanelProps) {
       for (const file of Array.from(files)) {
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('influencerId', influencer.id);
 
         const res = await fetch(`/api/influencers/${influencer.id}/documents`, {
           method: 'POST',

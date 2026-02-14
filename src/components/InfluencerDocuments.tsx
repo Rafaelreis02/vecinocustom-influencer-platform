@@ -39,7 +39,6 @@ export function InfluencerDocuments({
       for (const file of Array.from(files)) {
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('influencerId', influencerId);
 
         const res = await fetch(`/api/influencers/${influencerId}/documents`, {
           method: 'POST',
