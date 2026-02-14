@@ -33,6 +33,7 @@ interface InfluencerDetails {
 export function InfluencerPanel({ influencer, onClose }: InfluencerPanelProps) {
   const [details, setDetails] = useState<InfluencerDetails | null>(null);
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (influencer?.id) {
@@ -60,6 +61,40 @@ export function InfluencerPanel({ influencer, onClose }: InfluencerPanelProps) {
       console.error('Error fetching influencer details:', error);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleDocumentUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.currentTarget.files;
+    if (!files || !influencer?.id) return;
+
+    try {
+      setUploading(true);
+
+      for (const file of Array.from(files)) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('influencerId', influencer.id);
+
+        const res = await fetch(`/api/influencers/${influencer.id}/documents`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!res.ok) {
+          throw new Error(`Erro ao fazer upload: ${file.name}`);
+        }
+      }
+
+      // Reload data
+      await fetchInfluencerDetails();
+      // Reset input
+      e.currentTarget.value = '';
+    } catch (error) {
+      console.error('Error uploading documents:', error);
+      alert(error instanceof Error ? error.message : 'Erro ao fazer upload');
+    } finally {
+      setUploading(false);
     }
   }
 
@@ -202,9 +237,35 @@ export function InfluencerPanel({ influencer, onClose }: InfluencerPanelProps) {
 
       {/* Documentos */}
       <div className="space-y-2">
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
-          <File className="h-3 w-3" /> Documentos
-        </p>
+        <div className="flex items-center justify-between">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+            <File className="h-3 w-3" /> Documentos
+          </p>
+          {!loading && influencer?.id && (
+            <input
+              type="file"
+              id={`doc-upload-${influencer.id}`}
+              multiple
+              onChange={(e) => handleDocumentUpload(e)}
+              className="hidden"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.zip,.rar"
+            />
+          )}
+          {!loading && !uploading && influencer?.id && (
+            <label
+              htmlFor={`doc-upload-${influencer.id}`}
+              className="text-xs text-blue-600 hover:text-blue-700 font-semibold cursor-pointer"
+              title="Adicionar documento"
+            >
+              + Adicionar
+            </label>
+          )}
+          {uploading && (
+            <span className="text-xs text-gray-400 flex items-center gap-1">
+              <Loader2 className="h-3 w-3 animate-spin" /> A enviar...
+            </span>
+          )}
+        </div>
         {loading ? (
           <p className="text-xs text-slate-500 bg-slate-50 p-2 rounded-lg">A carregar...</p>
         ) : details?.files && details.files.length > 0 ? (
