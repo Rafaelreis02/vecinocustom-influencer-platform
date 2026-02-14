@@ -49,6 +49,14 @@ export async function POST(
     const formData = await request.formData();
     const file = formData.get('file') as File;
 
+    logger.info('[API] Upload request received', {
+      influencerId: id,
+      hasFile: !!file,
+      fileSize: file?.size,
+      fileName: file?.name,
+      fileType: file?.type,
+    });
+
     if (!file) {
       return NextResponse.json(
         { error: 'Nenhum ficheiro fornecido' },
@@ -81,6 +89,15 @@ export async function POST(
     const buffer = await file.arrayBuffer();
     const base64 = Buffer.from(buffer).toString('base64');
     const dataUrl = `data:${file.type};base64,${base64}`;
+
+    // Validate encoded size (PostgreSQL text field can handle ~1GB, but be safe)
+    const encodedSize = Buffer.byteLength(dataUrl, 'utf8');
+    if (encodedSize > 50 * 1024 * 1024) { // 50MB limit for base64
+      return NextResponse.json(
+        { error: 'Ficheiro demasiado grande quando codificado (máx. ~7.5MB)' },
+        { status: 400 }
+      );
+    }
 
     // Create file record
     const fileRecord = await prisma.file.create({
