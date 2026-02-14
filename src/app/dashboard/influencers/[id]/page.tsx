@@ -2,6 +2,7 @@
 import { useGlobalToast } from '@/contexts/ToastContext';
 import { StatusDropdown } from '@/components/StatusDropdown';
 import { VideoPreviewList } from '@/components/VideoPreview';
+import { InfluencerDocuments } from '@/components/InfluencerDocuments';
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -31,7 +32,8 @@ import {
   ChevronUp,
   BarChart3,
   Receipt,
-  Link2
+  Link2,
+  FileText,
 } from 'lucide-react';
 import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog';
 
@@ -1167,6 +1169,20 @@ export default function InfluencerDetailPage() {
                  Encomenda enviada — Status final
               </p>
             )}
+          </div>
+        </CollapsibleSection>
+
+        {/* Documentos */}
+        <CollapsibleSection title="Documentos" icon={FileText} defaultOpen={true}>
+          <div className="pt-4">
+            <InfluencerDocuments
+              influencerId={influencer.id}
+              documents={influencer.files || []}
+              onDocumentsChange={() => {
+                // Reload influencer data
+                fetchInfluencer();
+              }}
+            />
           </div>
         </CollapsibleSection>
 

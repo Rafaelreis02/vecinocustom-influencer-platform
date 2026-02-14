@@ -33,7 +33,7 @@ export async function GET(
           orderBy: { createdAt: 'desc' },
         },
         files: {
-          orderBy: { uploadedAt: 'desc' },
+          orderBy: { createdAt: 'desc' },
         },
       },
     });

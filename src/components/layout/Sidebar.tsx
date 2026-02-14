@@ -27,10 +27,8 @@ const navigation: NavigationItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Influencers', href: '/dashboard/influencers', icon: Users },
   { name: 'Campanhas', href: '/dashboard/campaigns', icon: Target },
-  { name: 'Mensagens', href: '/dashboard/messages', icon: Mail },
+  { name: 'Emails', href: '/dashboard/messages', icon: Mail },
   { name: 'Comissões', href: '/dashboard/commissions', icon: DollarSign },
-  { name: 'Integrações', href: '/dashboard/integrations', icon: Instagram },
-  { name: 'Ficheiros', href: '/dashboard/files', icon: FileText },
 ];
 
 interface SidebarProps {
