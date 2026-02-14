@@ -67,7 +67,8 @@ export async function GET(
     // Fetch all products with pagination
     while (pageCount < maxPages) {
       pageCount++;
-      const url = `https://${SHOPIFY_STORE_URL}/admin/api/${API_VERSION}/products.json?limit=250&fields=id,title,handle,tags,images${cursor ? `&after=${cursor}` : ''}`;
+      const cursorParam = cursor ? `&after=${cursor}` : '';
+      const url = `https://${SHOPIFY_STORE_URL}/admin/api/${API_VERSION}/products.json?limit=250&fields=id,title,handle,tags,images${cursorParam}`;
 
       console.log(`[Portal Products API] Fetching page ${pageCount}...`);
 
