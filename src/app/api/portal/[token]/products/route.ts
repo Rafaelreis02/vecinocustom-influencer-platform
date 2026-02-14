@@ -2,10 +2,9 @@ import { NextResponse } from 'next/server';
 import { getShopifyAccessToken } from '@/lib/shopify-oauth';
 
 const SHOPIFY_STORE_URL = process.env.SHOPIFY_STORE_URL || '';
-const SHOPIFY_STATIC_ACCESS_TOKEN = process.env.SHOPIFY_STATIC_ACCESS_TOKEN || '';
 const API_VERSION = '2024-01';
 
-// GET /api/portal/[token]/products?q=searchterm - Search Shopify products
+// GET /api/portal/[token]/products?q=searchterm - Search Shopify products using GraphQL
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ token: string }> }
@@ -30,144 +29,90 @@ export async function GET(
       );
     }
 
-    // Get Shopify access token (from DB or static env var)
+    // Get Shopify access token
     console.log('[Portal Products API] Getting access token from DB...');
     let accessToken = await getShopifyAccessToken();
     
-    if (accessToken) {
-      console.log('[Portal Products API] Got access token from DB');
-    } else {
-      console.warn('[Portal Products API] No token in DB, trying static...');
-      // Fallback to static access token if OAuth not configured
-      if (SHOPIFY_STATIC_ACCESS_TOKEN) {
-        console.log('[Portal Products API] Using static Shopify access token');
-        accessToken = SHOPIFY_STATIC_ACCESS_TOKEN;
-      }
-    }
-    
     if (!accessToken) {
-      console.error('[Portal Products API] No Shopify access token available (OAuth or static)');
+      console.error('[Portal Products API] No Shopify access token available');
       return NextResponse.json(
         { error: 'Shopify not configured' },
         { status: 503 }
       );
     }
     
-    console.log('[Portal Products API] Token obtained, proceeding with search');
+    console.log('[Portal Products API] Token obtained, using GraphQL search');
 
-    // Search products using Shopify REST API with pagination
-    // We need to paginate because there can be 1000+ products
-    console.log('[Portal Products API] Searching for query:', query);
-
-    let allProducts: any[] = [];
-    let cursor: string | null = null;
-    let pageCount: number = 0;
-    const maxPages: number = 20; // Limit to prevent infinite loops
-
-    // Fetch all products with pagination
-    while (pageCount < maxPages) {
-      pageCount++;
-      const cursorParam: string = cursor ? `&page_info=${encodeURIComponent(cursor)}` : '';
-      const url: string = `https://${SHOPIFY_STORE_URL}/admin/api/${API_VERSION}/products.json?limit=250&fields=id,title,handle,tags,images${cursorParam}`;
-
-      console.log(`[Portal Products API] Fetching page ${pageCount}...`);
-      console.log(`[Portal Products API] URL: ${url}`);
-      console.log(`[Portal Products API] Token starts with: ${accessToken.substring(0, 10)}...`);
-
-      const response = await fetch(url, {
-        headers: {
-          'X-Shopify-Access-Token': accessToken,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[Portal Products API] Shopify error:', response.status, response.statusText);
-        console.error('[Portal Products API] Response body:', errorText);
-        return NextResponse.json(
-          { error: `Shopify API error: ${response.status}` },
-          { status: 500 }
-        );
+    // Use GraphQL API for full-text search - much more efficient!
+    const graphqlQuery = `
+      query SearchProducts($query: String!) {
+        products(first: 100, query: $query) {
+          edges {
+            node {
+              id
+              title
+              handle
+              tags
+              featuredImage {
+                url
+              }
+            }
+          }
+        }
       }
+    `;
 
-      const data = await response.json();
-      const products = data.products || [];
-      allProducts = allProducts.concat(products);
-
-      console.log(`[Portal Products API] Page ${pageCount}: ${products.length} products (total: ${allProducts.length})`);
-
-      // Check if there are more pages
-      const linkHeader = response.headers.get('link');
-      if (!linkHeader || !linkHeader.includes('rel="next"')) {
-        console.log('[Portal Products API] No more pages');
-        break;
-      }
-
-      // Extract cursor for next page
-      // Shopify uses page_info parameter for cursor pagination
-      const nextMatch = linkHeader.match(/page_info=([^&;>]+)/);
-      if (nextMatch) {
-        cursor = decodeURIComponent(nextMatch[1]);
-      } else {
-        break;
-      }
-
-      // If we've found enough matching products, stop fetching
-      const lowerQuery = query.toLowerCase();
-      const matching = allProducts.filter((product: any) => {
-        const titleMatch = product.title.toLowerCase().includes(lowerQuery);
-        const tagsMatch = product.tags && product.tags.toLowerCase().includes(lowerQuery);
-        return titleMatch || tagsMatch;
-      });
-      if (matching.length >= 4) {
-        console.log(`[Portal Products API] Found enough matches (${matching.length}), stopping pagination`);
-        break;
-      }
-    }
-
-    // Filter products by query - search in title and tags
-    const lowerQuery = query.toLowerCase();
-    console.log('[Portal Products API] Total products fetched:', allProducts.length);
-    console.log('[Portal Products API] Searching for:', lowerQuery);
+    const url = `https://${SHOPIFY_STORE_URL}/admin/api/${API_VERSION}/graphql.json`;
     
-    const filtered = allProducts.filter((product: any) => {
-      const titleMatch = product.title.toLowerCase().includes(lowerQuery);
-      const tagsMatch = product.tags && product.tags.toLowerCase().includes(lowerQuery);
-      const matches = titleMatch || tagsMatch;
-      if (matches) {
-        console.log(`[Portal Products API] MATCH: ${product.title} (tags: ${product.tags})`);
-      }
-      return matches;
+    console.log('[Portal Products API] Calling GraphQL API with query:', query);
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'X-Shopify-Access-Token': accessToken,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query: graphqlQuery,
+        variables: {
+          query: query,
+        },
+      }),
     });
 
-    console.log('[Portal Products API] Found products:', filtered.length, '(from', allProducts.length, 'total across all pages)');
-
-    // Return empty array if no products found
-    if (filtered.length === 0) {
-      console.log('[Portal Products API] No products found for query:', query);
-      console.log('[Portal Products API] Sample products available:');
-      allProducts.slice(0, 5).forEach(p => {
-        console.log(`  - ${p.title} (tags: ${p.tags})`);
-      });
-      return NextResponse.json([]);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[Portal Products API] GraphQL error:', response.status, errorText);
+      return NextResponse.json(
+        { error: `Shopify API error: ${response.status}` },
+        { status: 500 }
+      );
     }
 
-    let products = filtered;
-
-    // Format products for portal - limit to 4 results
-    // Extract shop name from SHOPIFY_STORE_URL (e.g., "mystore.myshopify.com" -> "mystore")
-    const shopName = SHOPIFY_STORE_URL.replace('.myshopify.com', '');
+    const data = await response.json();
     
-    const formattedProducts = products
-      .slice(0, 4)  // Limit to 4 results
-      .map((product: any) => ({
-        title: product.title,
-        url: `https://${shopName}.myshopify.com/products/${product.handle}`,
-        image: product.images?.[0]?.src || product.image?.src || null,
-      }));
+    if (data.errors) {
+      console.error('[Portal Products API] GraphQL errors:', data.errors);
+      return NextResponse.json(
+        { error: 'Failed to search products' },
+        { status: 500 }
+      );
+    }
 
-    return NextResponse.json(formattedProducts);
+    const products = data.data?.products?.edges?.map((edge: any) => {
+      const node = edge.node;
+      return {
+        title: node.title,
+        url: `https://${SHOPIFY_STORE_URL.replace('.myshopify.com', '')}.myshopify.com/products/${node.handle}`,
+        image: node.featuredImage?.url || null,
+      };
+    }) || [];
+
+    console.log('[Portal Products API] GraphQL search returned:', products.length, 'products');
+
+    // Return top 4 results
+    return NextResponse.json(products.slice(0, 4));
+
   } catch (err: any) {
     console.error('[API ERROR] Searching products:', err?.message || String(err));
     return NextResponse.json(
