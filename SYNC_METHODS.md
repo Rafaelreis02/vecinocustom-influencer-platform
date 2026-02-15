@@ -25,7 +25,7 @@
 **Configuração:**
 ```bash
 GOOGLE_REFRESH_TOKEN="[SEE .env.local]"
-FROM_EMAIL="noreply@vecinocustom.com"
+FROM_EMAIL="brand@vecinocustom.com"
 GOOGLE_CLIENT_ID="[SEE .env.local]"
 GOOGLE_CLIENT_SECRET="[SEE .env.local]"
 ```
@@ -185,6 +185,6 @@ const res = await fetch('/api/emails/compose', {
 
 Usa:
 - `GOOGLE_REFRESH_TOKEN` - Gera access token automaticamente
-- `FROM_EMAIL` - Email remetente (noreply@vecinocustom.com)
+- `FROM_EMAIL` - Email remetente (brand@vecinocustom.com)
 
 ✅ Agora deve funcionar!
