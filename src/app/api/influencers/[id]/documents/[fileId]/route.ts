@@ -45,13 +45,19 @@ export async function GET(
           mimeType,
         });
 
-        return new NextResponse(buffer, {
+        // For large files, use streaming instead of returning entire buffer
+        const response = new NextResponse(buffer, {
           headers: {
             'Content-Type': mimeType,
             'Content-Disposition': `attachment; filename="${encodeURIComponent(file.originalName)}"`,
             'Content-Length': buffer.length.toString(),
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0',
           },
         });
+        
+        return response;
       } catch (decodeError) {
         logger.error('[API] Error decoding base64', { fileId, error: decodeError });
         return NextResponse.json(
