@@ -174,11 +174,22 @@ export default function MessagesPage() {
           to: newEmailTo
         }),
       });
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${res.status}`);
+      }
+      
       const data = await res.json();
+      if (!data.suggestion) {
+        throw new Error('Resposta vazia da IA');
+      }
+      
       setNewEmailBody(data.suggestion);
       addToast('Email refatorado pela IA!', 'success');
     } catch (error: any) {
-      addToast('IA indisponível no momento', 'error');
+      console.error('Error generating AI suggestion:', error);
+      addToast(error.message || 'Erro ao gerar sugestão', 'error');
     } finally {
       setGeneratingAI(false);
     }
@@ -200,7 +211,11 @@ export default function MessagesPage() {
           body: newEmailBody + '\n\n' + signature,
         }),
       });
-      if (!res.ok) throw new Error();
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${res.status}`);
+      }
       
       addToast('Email enviado com sucesso!', 'success');
       setComposingNewEmail(false);
@@ -209,7 +224,8 @@ export default function MessagesPage() {
       setNewEmailBody('');
       fetchEmails();
     } catch (error: any) {
-      addToast('Erro ao enviar email', 'error');
+      console.error('Error sending email:', error);
+      addToast(error.message || 'Erro ao enviar email', 'error');
     } finally {
       setSendingNewEmail(false);
     }
