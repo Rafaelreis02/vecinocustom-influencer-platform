@@ -147,7 +147,7 @@ export function InfluencerDocuments({
                   Clica ou arrasta ficheiros aqui
                 </p>
                 <p className="text-xs text-gray-500">
-                  PDF, Word, Excel, Imagens, ZIP (máx. 10MB cada)
+                  PDF, Word, Excel, Imagens, ZIP (máx. 4MB cada)
                 </p>
               </div>
             </>

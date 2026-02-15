@@ -23,6 +23,12 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
+  // Increase request body size limit for file uploads (default is 1MB)
+  serverRuntimeConfig: {
+    bodyParser: {
+      sizeLimit: '50mb',
+    },
+  },
 };
 
 export default nextConfig;

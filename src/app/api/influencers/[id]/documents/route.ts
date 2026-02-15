@@ -3,16 +3,13 @@ import { prisma } from '@/lib/prisma';
 import { handleApiError } from '@/lib/api-error';
 import { logger } from '@/lib/logger';
 
-// Allow up to 50MB requests for file uploads
+// Increase timeout and body size for file uploads
+export const maxDuration = 60; // 60 seconds
 export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: '50mb',
-    },
-  },
+  maxDuration: 60,
 };
 
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB (Vercel limit)
 
 // GET /api/influencers/[id]/documents - List documents
 export async function GET(
@@ -76,7 +73,7 @@ export async function POST(
     // Validate file size
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
-        { error: `Ficheiro demasiado grande (máx. 10MB)` },
+        { error: `Ficheiro demasiado grande (máx. 4MB)` },
         { status: 400 }
       );
     }
@@ -99,11 +96,11 @@ export async function POST(
     const base64 = Buffer.from(buffer).toString('base64');
     const dataUrl = `data:${file.type};base64,${base64}`;
 
-    // Validate encoded size (PostgreSQL text field can handle ~1GB, but be safe)
+    // Validate encoded size (base64 ~33% larger, so ~5.3MB max)
     const encodedSize = Buffer.byteLength(dataUrl, 'utf8');
-    if (encodedSize > 50 * 1024 * 1024) { // 50MB limit for base64
+    if (encodedSize > 6 * 1024 * 1024) { // 6MB limit for base64
       return NextResponse.json(
-        { error: 'Ficheiro demasiado grande quando codificado (máx. ~7.5MB)' },
+        { error: 'Ficheiro demasiado grande quando codificado' },
         { status: 400 }
       );
     }
