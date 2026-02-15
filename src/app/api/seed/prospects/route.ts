@@ -3,6 +3,18 @@ import { prisma } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   try {
+    // Buscar um admin para atribuir a criação
+    const admin = await prisma.user.findFirst({
+      where: { role: 'ADMIN' },
+    });
+
+    if (!admin) {
+      return NextResponse.json(
+        { error: 'Nenhum admin encontrado para atribuir a criação' },
+        { status: 400 }
+      );
+    }
+
     // Adicionar 5 influencers de prospecting
     const newInfluencers = await prisma.influencer.createMany({
       data: [
@@ -20,6 +32,7 @@ export async function POST(request: NextRequest) {
           verified: true,
           fitScore: 85,
           notes: 'Scout Prospecting 2026-02-15. UGC creator com foco em joias. Close-ups profissionais. Luz natural excelente. Comunidade pergunta sobre produtos (HIGH INTENT). Score 85/100. CONTACTA PRIMEIRO.',
+          createdById: admin.id,
         },
         {
           name: 'Sofia Rossi',
@@ -35,6 +48,7 @@ export async function POST(request: NextRequest) {
           verified: true,
           fitScore: 83,
           notes: 'Scout Prospecting 2026-02-15. Lifestyle + UGC creator. Close-ups excelentes. Comunidade muito ativa (responde comentários). Crescimento linear. Score 83/100. Preço estimado 65€.',
+          createdById: admin.id,
         },
         {
           name: 'Elena Moretti',
@@ -50,6 +64,7 @@ export async function POST(request: NextRequest) {
           verified: true,
           fitScore: 81,
           notes: 'Scout Prospecting 2026-02-15. Fashion/style. Videos mostram acessórios com detalhe. Responde DMs rapidamente (verified). Crescimento normal. Score 81/100. Preço estimado 70€.',
+          createdById: admin.id,
         },
         {
           name: 'Laura Martínez',
@@ -65,6 +80,7 @@ export async function POST(request: NextRequest) {
           verified: true,
           fitScore: 79,
           notes: 'Scout Prospecting 2026-02-15. Fashion/lifestyle. Posts mostram produtos com detalhe. Background simples. Responde stories (ativo). Sem bots visíveis. Score 79/100. Preço estimado 75€.',
+          createdById: admin.id,
         },
         {
           name: 'Carolina Pérez',
@@ -80,6 +96,7 @@ export async function POST(request: NextRequest) {
           verified: false,
           fitScore: 76,
           notes: 'Scout Prospecting 2026-02-15. Lifestyle/travel. Conteúdo mostra produtos pequenos. Algum foco em fashion. Comunidade presente mas sem muita criatividade. Score 76/100. Preço estimado 80€. VALIDA MAIS antes de contactar.',
+          createdById: admin.id,
         },
       ],
       skipDuplicates: true,
