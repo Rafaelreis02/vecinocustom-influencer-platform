@@ -65,7 +65,14 @@ export default function MessagesPage() {
   const [replySubject, setReplySubject] = useState('');
   const [sendingReply, setSendingReply] = useState(false);
   const [generatingAI, setGeneratingAI] = useState(false);
-  const [signature, setSignature] = useState(''); 
+  const [signature, setSignature] = useState('');
+  
+  // Novo Email
+  const [composingNewEmail, setComposingNewEmail] = useState(false);
+  const [newEmailTo, setNewEmailTo] = useState('');
+  const [newEmailSubject, setNewEmailSubject] = useState('');
+  const [newEmailBody, setNewEmailBody] = useState('');
+  const [sendingNewEmail, setSendingNewEmail] = useState(false); 
 
   const replyRef = useRef<HTMLDivElement>(null);
 
@@ -143,11 +150,68 @@ export default function MessagesPage() {
       setReplyText(data.suggestion);
       setShowReplyPanel(true);
       setTimeout(() => replyRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
-      addToast('Sugestão de elite gerada!', 'success');
+      addToast('Sugestão gerada!', 'success');
     } catch (error: any) {
       addToast('IA indisponível no momento', 'error');
     } finally {
       setGeneratingAI(false);
+    }
+  }
+
+  async function generateAIEmailCompose() {
+    if (!newEmailBody.trim()) {
+      addToast('Escreve um rascunho primeiro', 'error');
+      return;
+    }
+    try {
+      setGeneratingAI(true);
+      const res = await fetch('/api/emails/compose/suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          draft: newEmailBody,
+          subject: newEmailSubject,
+          to: newEmailTo
+        }),
+      });
+      const data = await res.json();
+      setNewEmailBody(data.suggestion);
+      addToast('Email refatorado pela IA!', 'success');
+    } catch (error: any) {
+      addToast('IA indisponível no momento', 'error');
+    } finally {
+      setGeneratingAI(false);
+    }
+  }
+
+  async function handleSendNewEmail() {
+    if (!newEmailTo.trim() || !newEmailSubject.trim() || !newEmailBody.trim()) {
+      addToast('Preenche todos os campos', 'error');
+      return;
+    }
+    try {
+      setSendingNewEmail(true);
+      const res = await fetch('/api/emails/compose', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: newEmailTo,
+          subject: newEmailSubject,
+          body: newEmailBody + '\n\n' + signature,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      
+      addToast('Email enviado com sucesso!', 'success');
+      setComposingNewEmail(false);
+      setNewEmailTo('');
+      setNewEmailSubject('');
+      setNewEmailBody('');
+      fetchEmails();
+    } catch (error: any) {
+      addToast('Erro ao enviar email', 'error');
+    } finally {
+      setSendingNewEmail(false);
     }
   }
 
@@ -580,7 +644,7 @@ export default function MessagesPage() {
             <div className="flex gap-2">
               {/* Botão Novo Email */}
               <button 
-                onClick={() => setShowReplyPanel(true)}
+                onClick={() => setComposingNewEmail(true)}
                 className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-white hover:opacity-90 transition active:scale-95"
                 style={{ backgroundColor: 'rgb(18,24,39)' }}
                 title="Novo email"
@@ -1142,6 +1206,98 @@ export default function MessagesPage() {
                   </p>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Painel Novo Email */}
+      {composingNewEmail && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-gray-900">Novo Email</h2>
+              <button
+                onClick={() => setComposingNewEmail(false)}
+                className="p-1 hover:bg-gray-100 rounded-lg text-gray-400"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Para */}
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Para</label>
+                <input
+                  type="email"
+                  placeholder="email@example.com"
+                  value={newEmailTo}
+                  onChange={(e) => setNewEmailTo(e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+              </div>
+
+              {/* Assunto */}
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Assunto</label>
+                <input
+                  type="text"
+                  placeholder="Assunto do email"
+                  value={newEmailSubject}
+                  onChange={(e) => setNewEmailSubject(e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+              </div>
+
+              {/* Corpo */}
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Mensagem</label>
+                <textarea
+                  placeholder="Escreve o teu email aqui (ou um rascunho para a IA melhorar)..."
+                  value={newEmailBody}
+                  onChange={(e) => setNewEmailBody(e.target.value)}
+                  className="w-full h-48 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                />
+              </div>
+
+              {/* Botões de Ação */}
+              <div className="flex gap-2 pt-4">
+                <button
+                  onClick={generateAIEmailCompose}
+                  disabled={generatingAI || !newEmailBody.trim()}
+                  className="flex-1 flex items-center justify-center gap-2 py-2 bg-blue-100 text-blue-600 rounded-lg font-bold text-sm hover:bg-blue-200 transition disabled:opacity-50"
+                >
+                  {generatingAI ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Refatorando...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4" />
+                      Sugestão IA
+                    </>
+                  )}
+                </button>
+
+                <button
+                  onClick={handleSendNewEmail}
+                  disabled={sendingNewEmail || !newEmailTo.trim() || !newEmailSubject.trim() || !newEmailBody.trim()}
+                  className="flex-1 py-2 rounded-lg font-bold text-sm text-white hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                  style={{ backgroundColor: 'rgb(18,24,39)' }}
+                >
+                  <Send className="h-4 w-4" />
+                  {sendingNewEmail ? 'A enviar...' : 'Enviar'}
+                </button>
+
+                <button
+                  onClick={() => setComposingNewEmail(false)}
+                  className="flex-1 py-2 rounded-lg font-bold text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 transition"
+                >
+                  Cancelar
+                </button>
+              </div>
             </div>
           </div>
         </div>
