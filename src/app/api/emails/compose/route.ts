@@ -19,12 +19,17 @@ export async function POST(request: NextRequest) {
 
     // Get Gmail credentials from environment
     const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
-    const senderEmail = process.env.FROM_EMAIL;
+    let senderEmail = process.env.FROM_EMAIL;
+
+    // Fallback email if FROM_EMAIL not set
+    if (!senderEmail) {
+      senderEmail = 'brand@vecinocustom.com';
+      logger.warn('[API] FROM_EMAIL not configured, using fallback', { senderEmail });
+    }
 
     logger.info('[API] Compose - Env check', {
       hasRefreshToken: !!refreshToken,
       refreshTokenLength: refreshToken?.length || 0,
-      hasSenderEmail: !!senderEmail,
       senderEmail,
     });
 
@@ -37,17 +42,6 @@ export async function POST(request: NextRequest) {
           error: 'Gmail não configurado',
           message: 'Por favor, conecta o Gmail nas Definições (Settings) primeiro',
           action: 'redirect_to_settings'
-        },
-        { status: 400 }
-      );
-    }
-
-    if (!senderEmail) {
-      logger.error('[API] Gmail not configured - missing sender email');
-      return NextResponse.json(
-        { 
-          error: 'Email remetente não configurado',
-          message: 'FROM_EMAIL não está configurado'
         },
         { status: 400 }
       );

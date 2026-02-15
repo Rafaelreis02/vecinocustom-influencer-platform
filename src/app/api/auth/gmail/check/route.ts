@@ -5,12 +5,16 @@ import { logger } from '@/lib/logger';
 export async function GET() {
   try {
     const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
-    const fromEmail = process.env.FROM_EMAIL;
+    let fromEmail = process.env.FROM_EMAIL;
+    
+    // Fallback email if FROM_EMAIL not set
+    if (!fromEmail) {
+      fromEmail = 'brand@vecinocustom.com';
+    }
     
     logger.info('[API] Gmail check - Env vars', {
       hasRefreshToken: !!refreshToken,
       refreshTokenLength: refreshToken?.length || 0,
-      hasFromEmail: !!fromEmail,
       fromEmail: fromEmail,
     });
 
