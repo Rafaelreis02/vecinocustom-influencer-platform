@@ -202,7 +202,7 @@ export default function MessagesPage() {
     }
     try {
       setSendingNewEmail(true);
-      const senderName = getSenderNameFromSettings();
+      const senderName = sanitizeSenderName(getSenderNameFromSettings());
       const res = await fetch('/api/emails/compose', {
         method: 'POST',
         headers: { 
@@ -258,6 +258,11 @@ export default function MessagesPage() {
     // Get from localStorage first
     const saved = localStorage.getItem('emailSenderName');
     return saved || 'Vecino Custom';
+  }
+
+  function sanitizeSenderName(name: string): string {
+    // Remove emojis and non-ASCII characters for HTTP headers
+    return name.replace(/[^\x00-\x7F]/g, '').trim() || 'Vecino Custom';
   }
 
   async function handleSendReply() {

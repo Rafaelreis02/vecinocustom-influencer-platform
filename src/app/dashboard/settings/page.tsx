@@ -421,6 +421,7 @@ function GmailIntegration() {
                   onChange={(e) => setSenderName(e.target.value)}
                   placeholder="Vecino Custom"
                   className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  title="Sem emojis (serão removidos automaticamente)"
                 />
                 <button
                   onClick={handleSaveSenderName}
@@ -440,7 +441,7 @@ function GmailIntegration() {
                   )}
                 </button>
               </div>
-              <p className="text-xs text-gray-400 mt-1">Como aparecerá nos emails enviados</p>
+              <p className="text-xs text-gray-400 mt-1">Como aparecerá nos emails enviados (emojis serão removidos)</p>
             </div>
 
             {gmailInfo.scopes && (
