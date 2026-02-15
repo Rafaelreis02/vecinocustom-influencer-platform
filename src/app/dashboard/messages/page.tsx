@@ -99,9 +99,9 @@ export default function MessagesPage() {
       const res = await fetch('/api/user/settings');
       const data = await res.json();
       if (data.emailSignature) setSignature(data.emailSignature);
-      else setSignature('Com os melhores cumprimentos,\nEquipa VecinoCustom');
+      else setSignature('');
     } catch (e) {
-      setSignature('Com os melhores cumprimentos,\nEquipa VecinoCustom');
+      setSignature('');
     }
   }
 
@@ -202,16 +202,17 @@ export default function MessagesPage() {
     }
     try {
       setSendingNewEmail(true);
+      const senderName = getSenderNameFromSettings();
       const res = await fetch('/api/emails/compose', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'x-sender-name': 'Vecino Custom',
+          'x-sender-name': senderName,
         },
         body: JSON.stringify({
           to: newEmailTo,
           subject: newEmailSubject,
-          body: newEmailBody + '\n\n' + signature,
+          body: newEmailBody + (signature ? '\n\n' + signature : ''),
         }),
       });
       
@@ -251,6 +252,12 @@ export default function MessagesPage() {
     } catch (error) {
       addToast('Erro ao verificar Gmail', 'error');
     }
+  }
+
+  function getSenderNameFromSettings(): string {
+    // Get from localStorage first
+    const saved = localStorage.getItem('emailSenderName');
+    return saved || 'Vecino Custom';
   }
 
   async function handleSendReply() {

@@ -281,6 +281,12 @@ function GmailIntegration() {
 
   useEffect(() => {
     checkGmailConnection();
+    
+    // Load sender name from localStorage
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('emailSenderName');
+      if (saved) setSenderName(saved);
+    }
   }, []);
 
   // Verificar query params (retorno do OAuth)
@@ -345,18 +351,24 @@ function GmailIntegration() {
 
     try {
       setSavingSenderName(true);
-      const res = await fetch('/api/settings/email-sender', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ senderName: senderName.trim() }),
-      });
-
-      if (res.ok) {
-        addToast('Nome do sender guardado com sucesso!', 'success');
-      } else {
-        const error = await res.json();
-        addToast(error.error || 'Erro ao guardar', 'error');
+      
+      // Save to localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('emailSenderName', senderName.trim());
       }
+      
+      // Also try to save to API (optional)
+      try {
+        await fetch('/api/settings/email-sender', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ senderName: senderName.trim() }),
+        });
+      } catch (e) {
+        // Ignore API errors, localStorage is enough
+      }
+      
+      addToast('Nome do sender guardado com sucesso!', 'success');
     } catch (error) {
       addToast('Erro ao guardar nome do sender', 'error');
     } finally {
