@@ -18,11 +18,14 @@ export async function POST(request: NextRequest) {
     logger.info('[API] Send new email', { to, subject });
 
     // Get Gmail credentials from environment
-    const accessToken = process.env.GMAIL_ACCESS_TOKEN;
-    const refreshToken = process.env.GMAIL_REFRESH_TOKEN;
-    const senderEmail = process.env.GMAIL_SENDER_EMAIL;
+    const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
+    const senderEmail = process.env.FROM_EMAIL;
 
-    if (!accessToken || !senderEmail) {
+    if (!refreshToken || !senderEmail) {
+      logger.error('[API] Gmail not configured', { 
+        hasRefreshToken: !!refreshToken,
+        hasSenderEmail: !!senderEmail 
+      });
       return NextResponse.json(
         { error: 'Gmail não configurado no servidor' },
         { status: 400 }
@@ -33,12 +36,11 @@ export async function POST(request: NextRequest) {
     const oauth2Client = new google.auth.OAuth2(
       process.env.GOOGLE_CLIENT_ID,
       process.env.GOOGLE_CLIENT_SECRET,
-      process.env.GOOGLE_CALLBACK_URL
+      `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/auth/gmail/callback`
     );
 
     oauth2Client.setCredentials({
-      access_token: accessToken,
-      refresh_token: refreshToken || undefined,
+      refresh_token: refreshToken,
     });
 
     const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
