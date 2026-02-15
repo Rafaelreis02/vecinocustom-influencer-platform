@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-error';
 import { logger } from '@/lib/logger';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // POST /api/emails/compose/suggest - Get AI suggestion for email composition
 export async function POST(request: NextRequest) {
@@ -27,6 +28,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+    const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
+
     const prompt = `Tu és um assistente de escrita profissional especializado em emails de negócios. 
 Refatorar o seguinte rascunho de email para ficar bem estruturado, profissional e convincente.
 Mantém o significado e a intenção original, mas melhora a apresentação, gramática e tom.
@@ -39,43 +43,11 @@ ASSUNTO: ${subject || 'Sem assunto'}
 
 Retorna APENAS o email refatorado, sem explicações adicionais.`;
 
-    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': process.env.GOOGLE_API_KEY || '',
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              {
-                text: prompt,
-              },
-            ],
-          },
-        ],
-        generationConfig: {
-          maxOutputTokens: 1024,
-          temperature: 0.7,
-        },
-      }),
-    });
+    const result = await model.generateContent(prompt);
+    const suggestion = result.response.text();
 
-    if (!res.ok) {
-      const error = await res.text();
-      logger.error('[API] Gemini API error', { status: res.status, error });
-      return NextResponse.json(
-        { error: 'IA indisponível' },
-        { status: 500 }
-      );
-    }
-
-    const data: any = await res.json();
-    const suggestion = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
-    if (!suggestion) {
-      logger.error('[API] Empty suggestion from Gemini', { data });
+    if (!suggestion || !suggestion.trim()) {
+      logger.error('[API] Empty suggestion from Gemini', { suggestion });
       return NextResponse.json(
         { error: 'Gemini retornou resposta vazia' },
         { status: 500 }
