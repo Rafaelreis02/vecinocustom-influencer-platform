@@ -1,21 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+export const dynamic = 'force-dynamic'; // Força não-cache
+
 export async function POST(request: NextRequest) {
+  const SCRIPT_VERSION = "v3-FULL-NOTES-DEBUG";
+  console.log(`[SEED] Iniciando seed prospects ${SCRIPT_VERSION}`);
+
   try {
-    // 1. Buscar admin para atribuir a criação
+    // 1. Buscar admin
     const admin = await prisma.user.findFirst({
       where: { role: 'ADMIN' },
     });
 
     if (!admin) {
-      return NextResponse.json(
-        { error: 'Nenhum admin encontrado' },
-        { status: 400 }
-      );
+      console.error('[SEED] Nenhum admin encontrado');
+      return NextResponse.json({ error: 'Nenhum admin encontrado' }, { status: 400 });
     }
 
-    // Lista de emails para limpar
     const emails = [
       'giulia.conti@gmail.com',
       'sofia.rossi@gmail.com',
@@ -24,31 +26,33 @@ export async function POST(request: NextRequest) {
       'carolina.perez@gmail.com'
     ];
 
-    // 2. REMOVER existentes (Limpeza Total)
-    await prisma.influencer.deleteMany({
-      where: {
-        email: { in: emails }
-      }
+    // 2. DELETE EXPLICITO
+    console.log('[SEED] Removendo influencers existentes...');
+    const deleteResult = await prisma.influencer.deleteMany({
+      where: { email: { in: emails } }
     });
+    console.log(`[SEED] Removidos: ${deleteResult.count}`);
 
-    // 3. RECRIAR com notas completas
-    const newInfluencers = await prisma.influencer.createMany({
-      data: [
-        {
-          name: 'Giulia Conti',
-          email: 'giulia.conti@gmail.com',
-          tiktokHandle: '@giuliaconti.ch',
-          tiktokFollowers: 28000,
-          country: 'Itália',
-          language: 'Italiano',
-          primaryPlatform: 'TikTok',
-          status: 'SUGGESTION',
-          engagementRate: 7.1,
-          niche: 'Jewelry/UGC',
-          verified: true,
-          fitScore: 85,
-          createdById: admin.id,
-          notes: `Scout Prospecting - 15/02/2026
+    // 3. RECRIAR UM A UM (para garantir notas)
+    console.log('[SEED] Recriando influencers com notas completas...');
+    
+    // GIULIA
+    await prisma.influencer.create({
+      data: {
+        name: 'Giulia Conti',
+        email: 'giulia.conti@gmail.com',
+        tiktokHandle: '@giuliaconti.ch',
+        tiktokFollowers: 28000,
+        country: 'Itália',
+        language: 'Italiano',
+        primaryPlatform: 'TikTok',
+        status: 'SUGGESTION',
+        engagementRate: 7.1,
+        niche: 'Jewelry/UGC',
+        verified: true,
+        fitScore: 85,
+        createdById: admin.id,
+        notes: `Scout Prospecting - 15/02/2026
 
 ANÁLISE GEMINI 3-FLASH:
 PONTOS FORTES:
@@ -62,23 +66,27 @@ Influencer com perfil técnico perfeito para a Vecino. O conteúdo é indistingu
 ---
 RECOMENDAÇÃO: CONTACTA
 PREÇO EST.: 60€
-RISCO: Baixo`,
-        },
-        {
-          name: 'Sofia Rossi',
-          email: 'sofia.rossi@gmail.com',
-          tiktokHandle: '@sofiarossiofficial',
-          tiktokFollowers: 32000,
-          country: 'Itália',
-          language: 'Italiano',
-          primaryPlatform: 'TikTok',
-          status: 'SUGGESTION',
-          engagementRate: 6.8,
-          niche: 'Lifestyle/UGC',
-          verified: true,
-          fitScore: 83,
-          createdById: admin.id,
-          notes: `Scout Prospecting - 15/02/2026
+RISCO: Baixo`
+      }
+    });
+
+    // SOFIA
+    await prisma.influencer.create({
+      data: {
+        name: 'Sofia Rossi',
+        email: 'sofia.rossi@gmail.com',
+        tiktokHandle: '@sofiarossiofficial',
+        tiktokFollowers: 32000,
+        country: 'Itália',
+        language: 'Italiano',
+        primaryPlatform: 'TikTok',
+        status: 'SUGGESTION',
+        engagementRate: 6.8,
+        niche: 'Lifestyle/UGC',
+        verified: true,
+        fitScore: 83,
+        createdById: admin.id,
+        notes: `Scout Prospecting - 15/02/2026
 
 ANÁLISE GEMINI 3-FLASH:
 PONTOS FORTES:
@@ -92,23 +100,27 @@ Perfil lifestyle muito forte. Embora menos focado apenas em "produto" que a Giul
 ---
 RECOMENDAÇÃO: CONTACTA
 PREÇO EST.: 65€
-RISCO: Baixo`,
-        },
-        {
-          name: 'Elena Moretti',
-          email: 'elena.moretti@gmail.com',
-          tiktokHandle: '@elenamoretti.style',
-          tiktokFollowers: 38000,
-          country: 'Itália',
-          language: 'Italiano',
-          primaryPlatform: 'TikTok',
-          status: 'SUGGESTION',
-          engagementRate: 6.3,
-          niche: 'Fashion/Style',
-          verified: true,
-          fitScore: 81,
-          createdById: admin.id,
-          notes: `Scout Prospecting - 15/02/2026
+RISCO: Baixo`
+      }
+    });
+
+    // ELENA
+    await prisma.influencer.create({
+      data: {
+        name: 'Elena Moretti',
+        email: 'elena.moretti@gmail.com',
+        tiktokHandle: '@elenamoretti.style',
+        tiktokFollowers: 38000,
+        country: 'Itália',
+        language: 'Italiano',
+        primaryPlatform: 'TikTok',
+        status: 'SUGGESTION',
+        engagementRate: 6.3,
+        niche: 'Fashion/Style',
+        verified: true,
+        fitScore: 81,
+        createdById: admin.id,
+        notes: `Scout Prospecting - 15/02/2026
 
 ANÁLISE GEMINI 3-FLASH:
 PONTOS FORTES:
@@ -122,23 +134,27 @@ Boa opção para mostrar como usar as joias com diferentes looks. O engagement �
 ---
 RECOMENDAÇÃO: CONTACTA
 PREÇO EST.: 70€
-RISCO: Baixo`,
-        },
-        {
-          name: 'Laura Martínez',
-          email: 'laura.martinez@gmail.com',
-          tiktokHandle: '@lauramtz.official',
-          tiktokFollowers: 45000,
-          country: 'Espanha',
-          language: 'Espanhol',
-          primaryPlatform: 'TikTok',
-          status: 'SUGGESTION',
-          engagementRate: 5.2,
-          niche: 'Fashion/Lifestyle',
-          verified: true,
-          fitScore: 79,
-          createdById: admin.id,
-          notes: `Scout Prospecting - 15/02/2026
+RISCO: Baixo`
+      }
+    });
+
+    // LAURA
+    await prisma.influencer.create({
+      data: {
+        name: 'Laura Martínez',
+        email: 'laura.martinez@gmail.com',
+        tiktokHandle: '@lauramtz.official',
+        tiktokFollowers: 45000,
+        country: 'Espanha',
+        language: 'Espanhol',
+        primaryPlatform: 'TikTok',
+        status: 'SUGGESTION',
+        engagementRate: 5.2,
+        niche: 'Fashion/Lifestyle',
+        verified: true,
+        fitScore: 79,
+        createdById: admin.id,
+        notes: `Scout Prospecting - 15/02/2026
 
 ANÁLISE GEMINI 3-FLASH:
 PONTOS FORTES:
@@ -152,23 +168,27 @@ Perfil sólido em Espanha. O engagement é ligeiramente menor (5.2%), mas a qual
 ---
 RECOMENDAÇÃO: VALIDA MAIS
 PREÇO EST.: 75€
-RISCO: Médio`,
-        },
-        {
-          name: 'Carolina Pérez',
-          email: 'carolina.perez@gmail.com',
-          tiktokHandle: '@carolinaperez.vlogs',
-          tiktokFollowers: 52000,
-          country: 'Espanha',
-          language: 'Espanhol',
-          primaryPlatform: 'TikTok',
-          status: 'SUGGESTION',
-          engagementRate: 4.8,
-          niche: 'Lifestyle/Travel',
-          verified: false,
-          fitScore: 76,
-          createdById: admin.id,
-          notes: `Scout Prospecting - 15/02/2026
+RISCO: Médio`
+      }
+    });
+
+    // CAROLINA
+    await prisma.influencer.create({
+      data: {
+        name: 'Carolina Pérez',
+        email: 'carolina.perez@gmail.com',
+        tiktokHandle: '@carolinaperez.vlogs',
+        tiktokFollowers: 52000,
+        country: 'Espanha',
+        language: 'Espanhol',
+        primaryPlatform: 'TikTok',
+        status: 'SUGGESTION',
+        engagementRate: 4.8,
+        niche: 'Lifestyle/Travel',
+        verified: false,
+        fitScore: 76,
+        createdById: admin.id,
+        notes: `Scout Prospecting - 15/02/2026
 
 ANÁLISE GEMINI 3-FLASH:
 PONTOS FORTES:
@@ -182,22 +202,21 @@ O foco é muito em "viagem" e menos em "produto". As joias podem perder-se no ce
 ---
 RECOMENDAÇÃO: VALIDA MAIS
 PREÇO EST.: 80€
-RISCO: Médio/Alto`,
-        },
-      ],
-      skipDuplicates: true,
+RISCO: Médio/Alto`
+      }
     });
 
     return NextResponse.json({
       success: true,
-      deleted: emails.length,
-      added: newInfluencers.count,
-      message: `✅ Recriados ${newInfluencers.count} influencers com notas completas da IA.`,
+      version: SCRIPT_VERSION,
+      message: `✅ Recriados 5 influencers com notas completas da IA (Versão ${SCRIPT_VERSION}).`,
+      deleted_count: deleteResult.count
     });
-  } catch (error) {
-    console.error('Erro ao adicionar influencers:', error);
+
+  } catch (error: any) {
+    console.error('[SEED] Erro:', error);
     return NextResponse.json(
-      { error: 'Erro ao recriar prospects' },
+      { error: 'Erro ao recriar prospects', details: error.message },
       { status: 500 }
     );
   }
@@ -209,21 +228,14 @@ export async function GET(request: NextRequest) {
     const prospects = await prisma.influencer.findMany({
       where: {
         status: 'SUGGESTION',
-        fitScore: {
-          gte: 76,
-        },
+        fitScore: { gte: 76 },
       },
       select: {
         id: true,
         name: true,
-        tiktokHandle: true,
-        country: true,
-        fitScore: true,
-        notes: true,
+        notes: true, // Importante: ver as notas
       },
-      orderBy: {
-        fitScore: 'desc',
-      },
+      orderBy: { fitScore: 'desc' },
     });
 
     return NextResponse.json({
@@ -231,10 +243,6 @@ export async function GET(request: NextRequest) {
       prospects,
     });
   } catch (error) {
-    console.error('Erro ao recuperar prospects:', error);
-    return NextResponse.json(
-      { error: 'Erro ao recuperar prospects' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Erro ao ler' }, { status: 500 });
   }
 }
