@@ -5,7 +5,7 @@ import {
   Mail, Search, AlertCircle, CheckCircle, Clock, X, RefreshCw,
   Reply, Trash2, Eye, EyeOff, Send, Paperclip, Inbox, Flag,
   Download, Sparkles, ChevronLeft, ChevronRight, UserPlus, AtSign,
-  Loader2, ChevronDown, ChevronUp
+  Loader2, ChevronDown, ChevronUp, Plus
 } from 'lucide-react';
 import { useGlobalToast } from '@/contexts/ToastContext';
 import { StatusDropdown } from '@/components/StatusDropdown';
@@ -576,8 +576,19 @@ export default function MessagesPage() {
               <input type="text" placeholder="Pesquisar emails..." value={searchQuery} onChange={(e) => {setSearchQuery(e.target.value); setCurrentPage(1);}} className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
             </div>
             
-            {/* Dropdowns + Sync */}
+            {/* Dropdowns + Sync + Novo Email */}
             <div className="flex gap-2">
+              {/* Botão Novo Email */}
+              <button 
+                onClick={() => setShowReplyPanel(true)}
+                className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-white hover:opacity-90 transition active:scale-95"
+                style={{ backgroundColor: 'rgb(18,24,39)' }}
+                title="Novo email"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Novo Email</span>
+              </button>
+              
               {/* Botão Sincronizar */}
               <button 
                 onClick={handleSyncNow} 
