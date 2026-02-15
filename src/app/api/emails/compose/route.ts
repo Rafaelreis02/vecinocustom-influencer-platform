@@ -21,8 +21,17 @@ export async function POST(request: NextRequest) {
     const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
     const senderEmail = process.env.FROM_EMAIL;
 
+    logger.info('[API] Compose - Env check', {
+      hasRefreshToken: !!refreshToken,
+      refreshTokenLength: refreshToken?.length || 0,
+      hasSenderEmail: !!senderEmail,
+      senderEmail,
+    });
+
     if (!refreshToken) {
-      logger.error('[API] Gmail not configured - missing refresh token');
+      logger.error('[API] Gmail not configured - missing refresh token', {
+        envKeys: Object.keys(process.env).filter(k => k.includes('GOOGLE') || k.includes('GMAIL')),
+      });
       return NextResponse.json(
         { 
           error: 'Gmail não configurado',
