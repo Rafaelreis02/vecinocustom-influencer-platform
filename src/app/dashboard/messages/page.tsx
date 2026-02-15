@@ -689,7 +689,14 @@ export default function MessagesPage() {
             <div className="flex gap-2">
               {/* Botão Novo Email */}
               <button 
-                onClick={() => setComposingNewEmail(true)}
+                onClick={() => {
+                  setComposingNewEmail(true);
+                  // Load saved signature from localStorage
+                  if (typeof window !== 'undefined') {
+                    const saved = localStorage.getItem('emailSignature');
+                    if (saved) setSignature(saved);
+                  }
+                }}
                 className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-white hover:opacity-90 transition active:scale-95"
                 style={{ backgroundColor: 'rgb(18,24,39)' }}
                 title="Novo email"
@@ -1303,6 +1310,35 @@ export default function MessagesPage() {
                   value={newEmailBody}
                   onChange={(e) => setNewEmailBody(e.target.value)}
                   className="w-full h-48 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                />
+              </div>
+
+              {/* Assinatura */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Assinatura</label>
+                  <button
+                    onClick={() => {
+                      const newSig = signature || 'Com os melhores cumprimentos,\nEquipa Vecino Custom';
+                      setSignature(newSig === signature ? '' : newSig);
+                    }}
+                    className="text-xs text-blue-600 hover:text-blue-700 font-semibold"
+                    title="Toggle default signature"
+                  >
+                    {signature ? 'Limpar' : 'Predefinida'}
+                  </button>
+                </div>
+                <textarea
+                  placeholder="Assinatura (opcional)..."
+                  value={signature}
+                  onChange={(e) => {
+                    setSignature(e.target.value);
+                    // Save to localStorage
+                    if (typeof window !== 'undefined') {
+                      localStorage.setItem('emailSignature', e.target.value);
+                    }
+                  }}
+                  className="w-full h-20 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
                 />
               </div>
 
