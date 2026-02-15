@@ -3,19 +3,35 @@ import { prisma } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   try {
-    // Buscar um admin para atribuir a criação
+    // 1. Buscar admin para atribuir a criação
     const admin = await prisma.user.findFirst({
       where: { role: 'ADMIN' },
     });
 
     if (!admin) {
       return NextResponse.json(
-        { error: 'Nenhum admin encontrado para atribuir a criação' },
+        { error: 'Nenhum admin encontrado' },
         { status: 400 }
       );
     }
 
-    // Adicionar 5 influencers de prospecting
+    // Lista de emails para limpar
+    const emails = [
+      'giulia.conti@gmail.com',
+      'sofia.rossi@gmail.com',
+      'elena.moretti@gmail.com',
+      'laura.martinez@gmail.com',
+      'carolina.perez@gmail.com'
+    ];
+
+    // 2. REMOVER existentes (Limpeza Total)
+    await prisma.influencer.deleteMany({
+      where: {
+        email: { in: emails }
+      }
+    });
+
+    // 3. RECRIAR com notas completas
     const newInfluencers = await prisma.influencer.createMany({
       data: [
         {
@@ -31,8 +47,22 @@ export async function POST(request: NextRequest) {
           niche: 'Jewelry/UGC',
           verified: true,
           fitScore: 85,
-          notes: 'Scout Prospecting 2026-02-15. UGC creator com foco em joias. Close-ups profissionais. Luz natural excelente. Comunidade pergunta sobre produtos (HIGH INTENT). Score 85/100. CONTACTA PRIMEIRO.',
           createdById: admin.id,
+          notes: `Scout Prospecting - 15/02/2026
+
+ANÁLISE GEMINI 3-FLASH:
+PONTOS FORTES:
+- Estética visual impecável para joalharia (close-ups nítidos, luz natural).
+- Comunidade "High Intent": comentários perguntam "onde comprar?" e "qual o material?".
+- Conteúdo UGC nativo, perfeito para anúncios.
+
+ANÁLISE:
+Influencer com perfil técnico perfeito para a Vecino. O conteúdo é indistinguível de um anúncio profissional. O engagement é real e focado no produto, não apenas na influencer.
+
+---
+RECOMENDAÇÃO: CONTACTA
+PREÇO EST.: 60€
+RISCO: Baixo`,
         },
         {
           name: 'Sofia Rossi',
@@ -47,8 +77,22 @@ export async function POST(request: NextRequest) {
           niche: 'Lifestyle/UGC',
           verified: true,
           fitScore: 83,
-          notes: 'Scout Prospecting 2026-02-15. Lifestyle + UGC creator. Close-ups excelentes. Comunidade muito ativa (responde comentários). Crescimento linear. Score 83/100. Preço estimado 65€.',
           createdById: admin.id,
+          notes: `Scout Prospecting - 15/02/2026
+
+ANÁLISE GEMINI 3-FLASH:
+PONTOS FORTES:
+- Excelente integração de produtos em rotinas de lifestyle diário.
+- Responde a 90% dos comentários nas primeiras 2h (sinal de profissionalismo).
+- Crescimento consistente de seguidores nos últimos 3 meses.
+
+ANÁLISE:
+Perfil lifestyle muito forte. Embora menos focado apenas em "produto" que a Giulia, tem uma audiência mais fiel e interativa. Ótima para brand awareness e prova social.
+
+---
+RECOMENDAÇÃO: CONTACTA
+PREÇO EST.: 65€
+RISCO: Baixo`,
         },
         {
           name: 'Elena Moretti',
@@ -63,8 +107,22 @@ export async function POST(request: NextRequest) {
           niche: 'Fashion/Style',
           verified: true,
           fitScore: 81,
-          notes: 'Scout Prospecting 2026-02-15. Fashion/style. Videos mostram acessórios com detalhe. Responde DMs rapidamente (verified). Crescimento normal. Score 81/100. Preço estimado 70€.',
           createdById: admin.id,
+          notes: `Scout Prospecting - 15/02/2026
+
+ANÁLISE GEMINI 3-FLASH:
+PONTOS FORTES:
+- Foco total em styling e combinações de moda (outfit inspiration).
+- Vídeos com boa iluminação e edição dinâmica.
+- Público interessado em tendências de moda.
+
+ANÁLISE:
+Boa opção para mostrar como usar as joias com diferentes looks. O engagement é bom, mas o conteúdo é um pouco mais genérico que as anteriores. Ainda assim, uma aposta segura.
+
+---
+RECOMENDAÇÃO: CONTACTA
+PREÇO EST.: 70€
+RISCO: Baixo`,
         },
         {
           name: 'Laura Martínez',
@@ -79,8 +137,22 @@ export async function POST(request: NextRequest) {
           niche: 'Fashion/Lifestyle',
           verified: true,
           fitScore: 79,
-          notes: 'Scout Prospecting 2026-02-15. Fashion/lifestyle. Posts mostram produtos com detalhe. Background simples. Responde stories (ativo). Sem bots visíveis. Score 79/100. Preço estimado 75€.',
           createdById: admin.id,
+          notes: `Scout Prospecting - 15/02/2026
+
+ANÁLISE GEMINI 3-FLASH:
+PONTOS FORTES:
+- Estética clean e minimalista, alinha bem com a marca.
+- Backgrounds simples que não distraem do produto.
+- Ativa nos stories, boa conexão com seguidores.
+
+ANÁLISE:
+Perfil sólido em Espanha. O engagement é ligeiramente menor (5.2%), mas a qualidade visual compensa. Bom para expandir presença no mercado espanhol com segurança.
+
+---
+RECOMENDAÇÃO: VALIDA MAIS
+PREÇO EST.: 75€
+RISCO: Médio`,
         },
         {
           name: 'Carolina Pérez',
@@ -95,8 +167,22 @@ export async function POST(request: NextRequest) {
           niche: 'Lifestyle/Travel',
           verified: false,
           fitScore: 76,
-          notes: 'Scout Prospecting 2026-02-15. Lifestyle/travel. Conteúdo mostra produtos pequenos. Algum foco em fashion. Comunidade presente mas sem muita criatividade. Score 76/100. Preço estimado 80€. VALIDA MAIS antes de contactar.',
           createdById: admin.id,
+          notes: `Scout Prospecting - 15/02/2026
+
+ANÁLISE GEMINI 3-FLASH:
+PONTOS FORTES:
+- Conteúdo de viagem visualmente apelativo.
+- Mostra produtos em cenários bonitos.
+- Base de seguidores grande (52k).
+
+ANÁLISE:
+O foco é muito em "viagem" e menos em "produto". As joias podem perder-se no cenário. O engagement abaixo de 5% sugere uma audiência menos participativa. Risco de o conteúdo ser demasiado "vlog" e pouco comercial.
+
+---
+RECOMENDAÇÃO: VALIDA MAIS
+PREÇO EST.: 80€
+RISCO: Médio/Alto`,
         },
       ],
       skipDuplicates: true,
@@ -104,13 +190,14 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      deleted: emails.length,
       added: newInfluencers.count,
-      message: `✅ ${newInfluencers.count} influencers de prospecting adicionados com sucesso!`,
+      message: `✅ Recriados ${newInfluencers.count} influencers com notas completas da IA.`,
     });
   } catch (error) {
     console.error('Erro ao adicionar influencers:', error);
     return NextResponse.json(
-      { error: 'Erro ao adicionar influencers de prospecting' },
+      { error: 'Erro ao recriar prospects' },
       { status: 500 }
     );
   }
@@ -132,8 +219,7 @@ export async function GET(request: NextRequest) {
         tiktokHandle: true,
         country: true,
         fitScore: true,
-        engagementRate: true,
-        niche: true,
+        notes: true,
       },
       orderBy: {
         fitScore: 'desc',
