@@ -96,11 +96,16 @@ export default function MessagesPage() {
 
   async function fetchUserSettings() {
     try {
-      const res = await fetch('/api/user/settings');
+      // Load email signature from database
+      const res = await fetch('/api/user/email-signature');
       const data = await res.json();
-      if (data.emailSignature) setSignature(data.emailSignature);
-      else setSignature('');
+      if (data.signature) {
+        setSignature(data.signature);
+      } else {
+        setSignature('');
+      }
     } catch (e) {
+      console.error('Error fetching signature:', e);
       setSignature('');
     }
   }
@@ -283,12 +288,12 @@ export default function MessagesPage() {
       });
       if (!res.ok) throw new Error();
       
-      // Persistir assinatura se alterada
-      await fetch('/api/user/settings', {
-        method: 'PUT',
+      // Persistir assinatura na BD
+      await fetch('/api/user/email-signature', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ emailSignature: signature }),
-      });
+        body: JSON.stringify({ signature }),
+      }).catch(e => console.error('Error saving signature:', e));
 
       addToast('Email enviado com sucesso!', 'success');
       setShowReplyPanel(false);
@@ -696,11 +701,8 @@ export default function MessagesPage() {
               <button 
                 onClick={() => {
                   setComposingNewEmail(true);
-                  // Load saved signature from localStorage
-                  if (typeof window !== 'undefined') {
-                    const saved = localStorage.getItem('emailSignature');
-                    if (saved) setSignature(saved);
-                  }
+                  // Signature carrega automaticamente no useEffect
+                  fetchUserSettings();
                 }}
                 className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-white hover:opacity-90 transition active:scale-95"
                 style={{ backgroundColor: 'rgb(18,24,39)' }}
@@ -1337,11 +1339,14 @@ export default function MessagesPage() {
                   placeholder="Assinatura (opcional)..."
                   value={signature}
                   onChange={(e) => {
-                    setSignature(e.target.value);
-                    // Save to localStorage
-                    if (typeof window !== 'undefined') {
-                      localStorage.setItem('emailSignature', e.target.value);
-                    }
+                    const newSignature = e.target.value;
+                    setSignature(newSignature);
+                    // Auto-save to database (with debounce)
+                    fetch('/api/user/email-signature', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ signature: newSignature }),
+                    }).catch(e => console.error('Error saving signature:', e));
                   }}
                   className="w-full h-20 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
                 />
