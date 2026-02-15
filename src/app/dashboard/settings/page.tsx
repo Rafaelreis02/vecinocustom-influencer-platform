@@ -15,6 +15,7 @@ import {
   Check,
   ShoppingBag,
   Link,
+  Mail,
 } from 'lucide-react';
 import { useGlobalToast } from '@/contexts/ToastContext';
 
@@ -39,6 +40,7 @@ export default function SettingsPage() {
       </div>
 
       <ShopifyIntegration />
+      <GmailIntegration />
       <UsersManagement />
     </div>
   );
@@ -264,6 +266,157 @@ function ShopifyIntegration() {
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+function GmailIntegration() {
+  const { addToast } = useGlobalToast();
+  const [connected, setConnected] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [connecting, setConnecting] = useState(false);
+  const [gmailInfo, setGmailInfo] = useState<{ email?: string; scopes?: string[] } | null>(null);
+
+  useEffect(() => {
+    checkGmailConnection();
+  }, []);
+
+  // Verificar query params (retorno do OAuth)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const gmailStatus = params.get('gmail');
+
+    if (gmailStatus === 'authorized') {
+      addToast('Gmail conectado com sucesso!', 'success');
+      window.history.replaceState({}, '', window.location.pathname);
+      checkGmailConnection();
+    }
+  }, []);
+
+  async function checkGmailConnection() {
+    try {
+      const res = await fetch('/api/auth/gmail/check');
+      if (res.ok) {
+        const data = await res.json();
+        setConnected(data.connected);
+        setGmailInfo(data);
+      }
+    } catch (error) {
+      console.error('Error checking Gmail connection:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleConnect() {
+    try {
+      setConnecting(true);
+      window.location.href = '/api/auth/gmail/authorize';
+    } catch (error) {
+      addToast('Erro ao conectar Gmail', 'error');
+      setConnecting(false);
+    }
+  }
+
+  async function handleDisconnect() {
+    if (!window.confirm('Tens a certeza que queres desconectar Gmail?')) return;
+    try {
+      setConnecting(true);
+      const res = await fetch('/api/auth/gmail/disconnect', { method: 'POST' });
+      if (res.ok) {
+        setConnected(false);
+        setGmailInfo(null);
+        addToast('Gmail desconectado', 'success');
+      }
+    } catch (error) {
+      addToast('Erro ao desconectar Gmail', 'error');
+    } finally {
+      setConnecting(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-6">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <Mail className="h-5 w-5 text-blue-600" />
+          <h2 className="text-lg font-semibold text-gray-900">Gmail</h2>
+        </div>
+        <span
+          className={`px-3 py-1 rounded-full text-xs font-semibold ${
+            connected
+              ? 'bg-green-100 text-green-700'
+              : 'bg-gray-100 text-gray-600'
+          }`}
+        >
+          {connected ? 'Conectado' : 'Desconectado'}
+        </span>
+      </div>
+
+      {connected && gmailInfo ? (
+        <>
+          <div className="space-y-3 mb-4">
+            {gmailInfo.email && (
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Email</p>
+                <p className="text-sm text-gray-900">{gmailInfo.email}</p>
+              </div>
+            )}
+            {gmailInfo.scopes && (
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Permissões</p>
+                <div className="space-y-1">
+                  {gmailInfo.scopes.map((scope, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <Check className="h-3 w-3 text-green-600" />
+                      <span className="text-xs text-gray-600">{scope}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={handleDisconnect}
+            disabled={connecting}
+            className="w-full px-4 py-2 rounded-lg font-semibold text-sm text-red-600 bg-red-50 hover:bg-red-100 transition disabled:opacity-50"
+          >
+            {connecting ? 'A desconectar...' : 'Desconectar Gmail'}
+          </button>
+        </>
+      ) : (
+        <div className="space-y-3">
+          <p className="text-sm text-gray-600">
+            Conecta o teu email Gmail para enviar emails e sincronizar automaticamente.
+          </p>
+          <button
+            onClick={handleConnect}
+            disabled={connecting}
+            className="w-full px-4 py-2 rounded-lg font-semibold text-sm text-white bg-blue-600 hover:bg-blue-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {connecting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                A conectar...
+              </>
+            ) : (
+              <>
+                <Link className="h-4 w-4" />
+                Conectar com Google
+              </>
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
