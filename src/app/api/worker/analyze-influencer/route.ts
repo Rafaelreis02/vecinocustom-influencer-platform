@@ -28,36 +28,44 @@ interface AIAnalysis {
   strengths: string[];
   opportunities: string[];
   summary: string;        // 2-3 paragraph assessment in Portuguese
+  estimatedPrice: number | null;
 }
 
 async function analyzeWithGemini(
   handle: string,
+  platform: 'TIKTOK' | 'INSTAGRAM',
   profile: ParsedProfile
 ): Promise<AIAnalysis> {
   const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || '');
-  // Usando o modelo exato confirmado: gemini-3-flash-preview
   const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
 
-  // Build video descriptions with URLs from posts (max 5)
-  const videoInfo = profile.rawData?.posts && profile.rawData.posts.length > 0
-    ? profile.rawData.posts.slice(0, 5).map((post: any, i: number) => {
-        return `${i + 1}. URL: ${post.webVideoUrl}\n   Caption: "${post.text || 'sem descrição'}"\n   ${post.playCount?.toLocaleString() || '?'} views, ${post.diggCount?.toLocaleString() || '?'} likes`;
+  // Build content descriptions (posts/videos)
+  const posts = profile.rawData?.posts || profile.rawData?.latestPosts || [];
+  const contentInfo = posts.length > 0
+    ? posts.slice(0, 5).map((post: any, i: number) => {
+        const url = post.webVideoUrl || post.url || post.shortCode || '';
+        const caption = post.text || post.caption || 'sem descrição';
+        const views = post.playCount || post.videoViewCount || 0;
+        const likes = post.diggCount || post.likesCount || 0;
+        return `${i + 1}. URL: ${url}\n   Caption: "${caption.substring(0, 100)}..."\n   ${views ? views.toLocaleString() + ' views, ' : ''}${likes.toLocaleString()} likes`;
       }).join('\n\n')
-    : 'Sem vídeos disponíveis';
+    : 'Sem conteúdo recente disponível';
 
-  const prompt = `Analisa este influencer TikTok para a marca VecinoCustom (joias personalizadas portuguesas).
+  const platformName = platform === 'TIKTOK' ? 'TikTok' : 'Instagram';
+  const profileUrl = platform === 'TIKTOK' ? `https://www.tiktok.com/@${handle}` : `https://www.instagram.com/${handle}/`;
 
-**Perfil TikTok:**
+  const prompt = `Analisa este influencer ${platformName} para a marca VecinoCustom (joias personalizadas portuguesas).
+
+**Perfil ${platformName}:**
 - Handle: @${handle}
-- URL: https://www.tiktok.com/@${handle}
+- URL: ${profileUrl}
 - Seguidores: ${profile.followers?.toLocaleString() || 'desconhecido'}
 - Engagement Rate: ${profile.engagementRate?.toFixed(2) || 'desconhecido'}%
-- Média Views: ${profile.averageViews || 'desconhecido'}
 - Bio: ${profile.biography || 'sem bio'}
 - Verificado: ${profile.verified ? 'Sim ✓' : 'Não'}
 
-**Últimos 5 vídeos:**
-${videoInfo}
+**Últimos posts/vídeos:**
+${contentInfo}
 
 **Sobre a VecinoCustom:**
 - Produto: Joias personalizadas (colares, pulseiras, anéis com nomes/iniciais/datas)
@@ -69,10 +77,16 @@ ${videoInfo}
 **Tarefa:**
 Avalia o FIT deste influencer com a VecinoCustom. Considera:
 1. Estilo de conteúdo (fashion, lifestyle, unboxing, jewelry?)
-2. Audiência (demografia, interesses)
-3. Estética dos vídeos (qualidade, vibe)
+2. Audiência provável (demografia, interesses)
+3. Estética visual (qualidade, vibe, luz natural vs artificial)
 4. Autenticidade e engagement
 5. Potencial para promover joias personalizadas
+
+**Estimativa de Preço (Importante):**
+Baseado no país provável (PT/ES/IT) e seguidores, estima um valor justo por post/vídeo.
+- PT: ~40-50€ (Micro)
+- ES/IT: ~60-80€ (Micro)
+- Use engagement rate como multiplicador (alto engagement = preço maior)
 
 **Responde APENAS com JSON válido (sem markdown):**
 {
@@ -81,13 +95,14 @@ Avalia o FIT deste influencer com a VecinoCustom. Considera:
   "tier": "<nano|micro|macro|mega baseado em followers>",
   "strengths": ["<ponto forte 1>", "<ponto forte 2>", "<ponto forte 3>"],
   "opportunities": ["<consideração/risco 1>", "<consideração/risco 2>"],
-  "summary": "<2-3 parágrafos em português: descrição do influencer, análise de fit com VecinoCustom, recomendação>"
+  "summary": "<2-3 parágrafos em português: descrição do influencer, análise de fit com VecinoCustom, recomendação>",
+  "estimatedPrice": <número inteiro em euros, ex: 60>
 }`;
 
   const result = await model.generateContent(prompt);
   const text = result.response.text();
   
-  // Extract JSON from response
+  // Extract JSON
   const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/```\n([\s\S]*?)\n```/) || text.match(/\{[\s\S]*\}/);
   const jsonText = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : text;
 
@@ -100,6 +115,7 @@ Avalia o FIT deste influencer com a VecinoCustom. Considera:
       strengths: Array.isArray(parsed.strengths) ? parsed.strengths : [],
       opportunities: Array.isArray(parsed.opportunities) ? parsed.opportunities : [],
       summary: parsed.summary || 'Análise não disponível',
+      estimatedPrice: typeof parsed.estimatedPrice === 'number' ? parsed.estimatedPrice : null,
     };
   } catch (e) {
     logger.warn('Failed to parse Gemini JSON, using defaults', { handle, text, error: e });
@@ -110,6 +126,7 @@ Avalia o FIT deste influencer com a VecinoCustom. Considera:
       strengths: ['Dados insuficientes para análise completa'],
       opportunities: ['Requer análise manual'],
       summary: text || 'Análise automática falhou. Requer revisão manual.',
+      estimatedPrice: null,
     };
   }
 }
@@ -121,7 +138,13 @@ Avalia o FIT deste influencer com a VecinoCustom. Considera:
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { handle, platform } = AnalyzeSchema.parse(body);
+    const result = AnalyzeSchema.safeParse(body);
+    
+    if (!result.success) {
+      return NextResponse.json({ error: result.error.message }, { status: 400 });
+    }
+    
+    const { handle, platform } = result.data;
 
     if (!process.env.APIFY_TOKEN) {
       return NextResponse.json(
@@ -130,12 +153,8 @@ export async function POST(request: Request) {
       );
     }
     
-    if (!process.env.GOOGLE_API_KEY) {
-      logger.warn('GOOGLE_API_KEY not configured, will skip AI analysis');
-    }
-
     // Step 1: Fetch profile data from Apify
-    logger.info('Fetching profile from Apify...', { handle });
+    logger.info(`Fetching ${platform} profile from Apify...`, { handle });
     let profile: ParsedProfile;
     try {
       profile = await parseProfile(handle, platform);
@@ -147,21 +166,34 @@ export async function POST(request: Request) {
     } catch (apifyError: any) {
       logger.error('Apify fetch failed', { handle, error: apifyError.message });
       return NextResponse.json(
-        { error: `Erro ao buscar perfil TikTok: ${apifyError.message}` },
+        { error: `Erro ao buscar perfil ${platform}: ${apifyError.message}` },
         { status: 502 }
       );
     }
 
     // Step 2: Analyze with Gemini 3 Flash
     logger.info('Starting Gemini analysis...', { handle });
-    let analysis: AIAnalysis;
+    let analysis: any; // Using explicit type locally
     try {
-      analysis = await analyzeWithGemini(handle, profile);
-      logger.info('Gemini analysis complete', { 
-        handle, 
-        fitScore: analysis.fitScore,
-        tier: analysis.tier,
-      });
+      if (process.env.GOOGLE_API_KEY) {
+        analysis = await analyzeWithGemini(handle, platform, profile);
+        logger.info('Gemini analysis complete', { 
+          handle, 
+          fitScore: analysis.fitScore,
+          tier: analysis.tier,
+        });
+      } else {
+        logger.warn('GOOGLE_API_KEY missing, skipping AI analysis');
+        analysis = {
+          fitScore: 3,
+          niche: 'Desconhecido',
+          tier: 'micro',
+          strengths: ['Dados básicos importados'],
+          opportunities: ['Sem chave de API para análise avançada'],
+          summary: 'Análise AI indisponível (chave API em falta).',
+          estimatedPrice: null,
+        };
+      }
     } catch (geminiError: any) {
       logger.error('Gemini analysis failed, continuing with Apify data only', { handle, error: geminiError });
       const errorMsg = geminiError?.message || 'Erro desconhecido';
@@ -171,12 +203,13 @@ export async function POST(request: Request) {
         tier: 'micro',
         strengths: ['Dados do Apify disponíveis'],
         opportunities: [`Análise AI falhou: ${errorMsg}`, 'Requer revisão manual'],
-        summary: `Análise AI indisponível (erro: ${errorMsg}). Dados básicos importados do TikTok via Apify.`,
+        summary: `Análise AI indisponível (erro: ${errorMsg}). Dados básicos importados do ${platform} via Apify.`,
+        estimatedPrice: null,
       };
     }
 
     // Step 3: Return combined data
-    const result = {
+    const finalResult = {
       // From Apify
       handle: profile.handle,
       platform: profile.platform,
@@ -187,8 +220,9 @@ export async function POST(request: Request) {
       biography: profile.biography,
       verified: profile.verified,
       videoCount: profile.videoCount,
-      estimatedPrice: profile.estimatedPrice,
+      estimatedPrice: analysis.estimatedPrice || profile.estimatedPrice, // Prefer AI estimate
       avatar: profile.avatar,
+      email: profile.email, // Added email field
       
       // From AI
       fitScore: analysis.fitScore,
@@ -202,11 +236,10 @@ export async function POST(request: Request) {
       country: null, // TODO: infer from content/bio
     };
 
-    logger.info('Analysis complete', { handle, fitScore: result.fitScore, avatarUrl: result.avatar });
-    console.log('[ANALYZE] Avatar URL:', result.avatar);
+    logger.info('Analysis complete', { handle, fitScore: finalResult.fitScore });
 
-    return NextResponse.json(result);
-  } catch (error) {
+    return NextResponse.json(finalResult);
+  } catch (error: any) {
     logger.error('POST /api/worker/analyze-influencer failed', error);
     return handleApiError(error);
   }
