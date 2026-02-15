@@ -225,9 +225,28 @@ export default function MessagesPage() {
       fetchEmails();
     } catch (error: any) {
       console.error('Error sending email:', error);
-      addToast(error.message || 'Erro ao enviar email', 'error');
+      const errorMsg = error.message || 'Erro ao enviar email';
+      addToast(errorMsg, 'error');
     } finally {
       setSendingNewEmail(false);
+    }
+  }
+
+  async function handleCheckGmailAndSend() {
+    // First check if Gmail is configured
+    try {
+      const res = await fetch('/api/auth/gmail/check');
+      const data = await res.json();
+      
+      if (!data.connected) {
+        addToast('Gmail não está conectado. Vai a Definições e conecta primeiro!', 'error');
+        return;
+      }
+      
+      // If connected, proceed with sending
+      await handleSendNewEmail();
+    } catch (error) {
+      addToast('Erro ao verificar Gmail', 'error');
     }
   }
 
@@ -1298,7 +1317,7 @@ export default function MessagesPage() {
                 </button>
 
                 <button
-                  onClick={handleSendNewEmail}
+                  onClick={handleCheckGmailAndSend}
                   disabled={sendingNewEmail || !newEmailTo.trim() || !newEmailSubject.trim() || !newEmailBody.trim()}
                   className="flex-1 py-2 rounded-lg font-bold text-sm text-white hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-2"
                   style={{ backgroundColor: 'rgb(18,24,39)' }}

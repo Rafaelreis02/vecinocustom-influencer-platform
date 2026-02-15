@@ -21,13 +21,25 @@ export async function POST(request: NextRequest) {
     const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
     const senderEmail = process.env.FROM_EMAIL;
 
-    if (!refreshToken || !senderEmail) {
-      logger.error('[API] Gmail not configured', { 
-        hasRefreshToken: !!refreshToken,
-        hasSenderEmail: !!senderEmail 
-      });
+    if (!refreshToken) {
+      logger.error('[API] Gmail not configured - missing refresh token');
       return NextResponse.json(
-        { error: 'Gmail não configurado no servidor' },
+        { 
+          error: 'Gmail não configurado',
+          message: 'Por favor, conecta o Gmail nas Definições (Settings) primeiro',
+          action: 'redirect_to_settings'
+        },
+        { status: 400 }
+      );
+    }
+
+    if (!senderEmail) {
+      logger.error('[API] Gmail not configured - missing sender email');
+      return NextResponse.json(
+        { 
+          error: 'Email remetente não configurado',
+          message: 'FROM_EMAIL não está configurado'
+        },
         { status: 400 }
       );
     }
