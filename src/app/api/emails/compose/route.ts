@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
 import { handleApiError } from '@/lib/api-error';
 import { logger } from '@/lib/logger';
 import { google } from 'googleapis';
@@ -18,11 +17,14 @@ export async function POST(request: NextRequest) {
 
     logger.info('[API] Send new email', { to, subject });
 
-    // Get Gmail credentials
-    const gmailAuth = await prisma.gmailAuth.findFirst();
-    if (!gmailAuth || !gmailAuth.accessToken) {
+    // Get Gmail credentials from environment
+    const accessToken = process.env.GMAIL_ACCESS_TOKEN;
+    const refreshToken = process.env.GMAIL_REFRESH_TOKEN;
+    const senderEmail = process.env.GMAIL_SENDER_EMAIL;
+
+    if (!accessToken || !senderEmail) {
       return NextResponse.json(
-        { error: 'Gmail não configurado' },
+        { error: 'Gmail não configurado no servidor' },
         { status: 400 }
       );
     }
@@ -35,15 +37,15 @@ export async function POST(request: NextRequest) {
     );
 
     oauth2Client.setCredentials({
-      access_token: gmailAuth.accessToken,
-      refresh_token: gmailAuth.refreshToken || undefined,
+      access_token: accessToken,
+      refresh_token: refreshToken || undefined,
     });
 
     const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
 
     // Create email message
     const email = [
-      `From: ${gmailAuth.email}`,
+      `From: ${senderEmail}`,
       `To: ${to}`,
       `Subject: ${subject}`,
       'Content-Type: text/plain; charset="UTF-8"',

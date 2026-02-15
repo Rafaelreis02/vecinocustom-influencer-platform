@@ -31,28 +31,32 @@ ASSUNTO: ${subject || 'Sem assunto'}
 
 Retorna APENAS o email refatorado, sem explicações adicionais.`;
 
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.0-flash:generateContent', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY || '',
-        'anthropic-version': '2023-06-01',
+        'x-goog-api-key': process.env.GOOGLE_API_KEY || '',
       },
       body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 1024,
-        messages: [
+        contents: [
           {
-            role: 'user',
-            content: prompt,
+            parts: [
+              {
+                text: prompt,
+              },
+            ],
           },
         ],
+        generationConfig: {
+          maxOutputTokens: 1024,
+          temperature: 0.7,
+        },
       }),
     });
 
     if (!res.ok) {
       const error = await res.text();
-      logger.error('[API] Claude API error', { status: res.status, error });
+      logger.error('[API] Gemini API error', { status: res.status, error });
       return NextResponse.json(
         { error: 'IA indisponível' },
         { status: 500 }
@@ -60,7 +64,7 @@ Retorna APENAS o email refatorado, sem explicações adicionais.`;
     }
 
     const data: any = await res.json();
-    const suggestion = data.content[0]?.text || '';
+    const suggestion = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
     logger.info('[API] Email suggestion generated', {
       originalLength: draft.length,
