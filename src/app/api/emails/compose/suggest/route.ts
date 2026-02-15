@@ -19,6 +19,14 @@ export async function POST(request: NextRequest) {
       hasSubject: !!subject,
     });
 
+    if (!process.env.GOOGLE_API_KEY) {
+      logger.error('[API] GOOGLE_API_KEY not configured');
+      return NextResponse.json(
+        { error: 'Serviço de IA não configurado' },
+        { status: 500 }
+      );
+    }
+
     const prompt = `Tu és um assistente de escrita profissional especializado em emails de negócios. 
 Refatorar o seguinte rascunho de email para ficar bem estruturado, profissional e convincente.
 Mantém o significado e a intenção original, mas melhora a apresentação, gramática e tom.
@@ -65,6 +73,14 @@ Retorna APENAS o email refatorado, sem explicações adicionais.`;
 
     const data: any = await res.json();
     const suggestion = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+    if (!suggestion) {
+      logger.error('[API] Empty suggestion from Gemini', { data });
+      return NextResponse.json(
+        { error: 'Gemini retornou resposta vazia' },
+        { status: 500 }
+      );
+    }
 
     logger.info('[API] Email suggestion generated', {
       originalLength: draft.length,
