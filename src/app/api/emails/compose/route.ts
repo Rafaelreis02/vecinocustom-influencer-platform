@@ -60,9 +60,12 @@ export async function POST(request: NextRequest) {
 
     const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
 
-    // Create email message
+    // Get sender name from request or use default
+    const senderName = request.headers.get('x-sender-name') || 'Vecino Custom';
+
+    // Create email message with sender name
     const email = [
-      `From: ${senderEmail}`,
+      `From: ${senderName} <${senderEmail}>`,
       `To: ${to}`,
       `Subject: ${subject}`,
       'Content-Type: text/plain; charset="UTF-8"',

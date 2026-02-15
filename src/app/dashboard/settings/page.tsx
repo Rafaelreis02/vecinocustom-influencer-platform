@@ -276,6 +276,8 @@ function GmailIntegration() {
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
   const [gmailInfo, setGmailInfo] = useState<{ email?: string; scopes?: string[] } | null>(null);
+  const [senderName, setSenderName] = useState('Vecino Custom');
+  const [savingSenderName, setSavingSenderName] = useState(false);
 
   useEffect(() => {
     checkGmailConnection();
@@ -335,6 +337,33 @@ function GmailIntegration() {
     }
   }
 
+  async function handleSaveSenderName() {
+    if (!senderName.trim()) {
+      addToast('Nome do sender não pode estar vazio', 'error');
+      return;
+    }
+
+    try {
+      setSavingSenderName(true);
+      const res = await fetch('/api/settings/email-sender', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ senderName: senderName.trim() }),
+      });
+
+      if (res.ok) {
+        addToast('Nome do sender guardado com sucesso!', 'success');
+      } else {
+        const error = await res.json();
+        addToast(error.error || 'Erro ao guardar', 'error');
+      }
+    } catch (error) {
+      addToast('Erro ao guardar nome do sender', 'error');
+    } finally {
+      setSavingSenderName(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="bg-white rounded-lg border border-gray-200 p-6">
@@ -363,13 +392,45 @@ function GmailIntegration() {
 
       {connected && gmailInfo ? (
         <>
-          <div className="space-y-3 mb-4">
+          <div className="space-y-4 mb-6">
             {gmailInfo.email && (
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Email</p>
                 <p className="text-sm text-gray-900">{gmailInfo.email}</p>
               </div>
             )}
+            
+            <div>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Nome do Sender</p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={senderName}
+                  onChange={(e) => setSenderName(e.target.value)}
+                  placeholder="Vecino Custom"
+                  className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+                <button
+                  onClick={handleSaveSenderName}
+                  disabled={savingSenderName}
+                  className="px-4 py-2 rounded-lg font-semibold text-sm text-white bg-blue-600 hover:bg-blue-700 transition disabled:opacity-50 flex items-center gap-2"
+                >
+                  {savingSenderName ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Guardando...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="h-4 w-4" />
+                      Guardar
+                    </>
+                  )}
+                </button>
+              </div>
+              <p className="text-xs text-gray-400 mt-1">Como aparecerá nos emails enviados</p>
+            </div>
+
             {gmailInfo.scopes && (
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Permissões</p>

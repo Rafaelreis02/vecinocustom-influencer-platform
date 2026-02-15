@@ -204,7 +204,10 @@ export default function MessagesPage() {
       setSendingNewEmail(true);
       const res = await fetch('/api/emails/compose', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-sender-name': 'Vecino Custom',
+        },
         body: JSON.stringify({
           to: newEmailTo,
           subject: newEmailSubject,
