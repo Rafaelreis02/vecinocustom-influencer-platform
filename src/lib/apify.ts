@@ -150,57 +150,88 @@ async function scrapeTikTokProfile(handle: string): Promise<ParsedProfile> {
 async function scrapeInstagramProfile(handle: string): Promise<ParsedProfile> {
   const cleanHandle = handle.replace('@', '');
   
-  const run = await client.actor('dSAXeB8J9K2mL5p1').call({
+  // Usar o actor oficial apify/instagram-scraper
+  const run = await client.actor('apify/instagram-scraper').call({
     usernames: [cleanHandle],
     resultsLimit: 1,
+    resultsType: "details", // Garantir detalhes do perfil
+    searchLimit: 1,
   });
 
+  // Obter resultados do dataset
   const { items } = await client.dataset(run.defaultDatasetId).listItems();
   
   if (!items || items.length === 0) {
     throw new Error(`Instagram profile not found: @${cleanHandle}`);
   }
 
+  // O primeiro item deve ser o perfil (ou um post, depende do output mode, mas com usernames costuma ser perfil)
+  // O apify/instagram-scraper retorna objetos de perfil com estrutura específica
   const profile = items[0] as any;
   
-  // Calculate engagement rate (likes per post / followers)
-  let engagementRate: number | null = null;
-  const followersCount = (profile.followersCount as number) ?? 0;
-  const likesCount = (profile.likesCount as number) ?? 0;
-  const mediaCount = (profile.mediaCount as number) ?? 0;
-  
-  if (followersCount > 0 && likesCount > 0 && mediaCount > 0) {
-    const avgLikesPerPost = likesCount / Math.max(mediaCount, 1);
-    engagementRate = (avgLikesPerPost / followersCount) * 100;
+  // Validar se é o perfil correto (as vezes retorna busca)
+  if (profile.username && profile.username.toLowerCase() !== cleanHandle.toLowerCase()) {
+    // Tentar encontrar o match exato se vierem vários
+    const exactMatch = items.find((i: any) => i.username?.toLowerCase() === cleanHandle.toLowerCase());
+    if (exactMatch) {
+      Object.assign(profile, exactMatch);
+    }
   }
 
-  // Estimate price based on followers
+  // Extrair métricas
+  const followersCount = (profile.followersCount as number) ?? 0;
+  const followsCount = (profile.followsCount as number) ?? 0;
+  const mediaCount = (profile.postsCount as number) ?? 0;
+  
+  // Calcular engagement baseado nos últimos posts (se disponíveis)
+  let engagementRate: number | null = null;
+  let avgLikes = 0;
+  let avgComments = 0;
+
+  if (profile.latestPosts && Array.isArray(profile.latestPosts) && profile.latestPosts.length > 0) {
+    const posts = profile.latestPosts;
+    const totalLikes = posts.reduce((sum: number, p: any) => sum + (p.likesCount || 0), 0);
+    const totalComments = posts.reduce((sum: number, p: any) => sum + (p.commentsCount || 0), 0);
+    
+    avgLikes = totalLikes / posts.length;
+    avgComments = totalComments / posts.length;
+    
+    if (followersCount > 0) {
+      engagementRate = ((avgLikes + avgComments) / followersCount) * 100;
+    }
+  } else {
+    // Fallback genérico se não houver posts detalhados
+    engagementRate = 1.5; // Estimativa conservadora
+  }
+
+  // Tentar extrair email da bio
+  const bio = (profile.biography as string) || '';
+  const emailMatch = bio.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/gi);
+  const email = emailMatch ? emailMatch[0] : null;
+
+  // Estimar preço (Lógica Vecino: micro-influencers)
+  // PT: ~43€ media
+  // ES/IT: ~68€ media
   let estimatedPrice: number | null = null;
   if (followersCount > 0) {
-    if (followersCount < 10000) {
-      estimatedPrice = 75;
-    } else if (followersCount < 50000) {
-      estimatedPrice = 200;
-    } else if (followersCount < 100000) {
-      estimatedPrice = 400;
-    } else if (followersCount < 500000) {
-      estimatedPrice = 1000;
-    } else {
-      estimatedPrice = 2500;
-    }
+    if (followersCount < 10000) estimatedPrice = 30; // Nano
+    else if (followersCount < 50000) estimatedPrice = 60; // Micro (Sweet spot)
+    else if (followersCount < 100000) estimatedPrice = 100; // Mid
+    else if (followersCount < 500000) estimatedPrice = 300; // Macro
+    else estimatedPrice = 800; // Mega
   }
 
   return {
     handle: cleanHandle,
     platform: 'INSTAGRAM',
     followers: followersCount > 0 ? followersCount : null,
-    totalLikes: likesCount > 0 ? likesCount : null,
-    engagementRate: engagementRate,
-    biography: (profile.biography as string) || null,
+    totalLikes: null, // Instagram não tem "total likes" público facilmente
+    engagementRate: engagementRate ? parseFloat(engagementRate.toFixed(2)) : null,
+    biography: bio,
     estimatedPrice: estimatedPrice,
-    averageViews: null, // Instagram doesn't always show views
+    averageViews: null,
     verified: (profile.verified as boolean) || false,
-    rawData: profile,
+    rawData: { ...profile, emailExtracted: email }, // Guardar email extraído nos dados brutos
   };
 }
 
