@@ -4,17 +4,50 @@ import { logger } from '@/lib/logger';
 import { z } from 'zod';
 import { parseProfile, type ParsedProfile } from '@/lib/apify-fetch';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { validateApiKey } from '@/lib/api-auth';
+import { Redis } from '@upstash/redis';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 60; // Vercel hobby plan limit
+export const maxDuration = 60;
 
 // ============================================
-// SCHEMA
+// CACHE (Redis)
+// ============================================
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL || '',
+  token: process.env.UPSTASH_REDIS_REST_TOKEN || '',
+});
+
+const CACHE_TTL = 60 * 60 * 24; // 24 horas
+
+async function getCachedAnalysis(handle: string, platform: string) {
+  try {
+    if (!process.env.UPSTASH_REDIS_REST_URL) return null;
+    const key = `influencer:${platform.toLowerCase()}:${handle.toLowerCase()}`;
+    return await redis.get(key);
+  } catch {
+    return null;
+  }
+}
+
+async function cacheAnalysis(handle: string, platform: string, data: any) {
+  try {
+    if (!process.env.UPSTASH_REDIS_REST_URL) return;
+    const key = `influencer:${platform.toLowerCase()}:${handle.toLowerCase()}`;
+    await redis.setex(key, CACHE_TTL, data);
+  } catch {
+    // Silent fail - cache é optional
+  }
+}
+
+// ============================================
+// SCHEMA & AUTH
 // ============================================
 
 const AnalyzeSchema = z.object({
   handle: z.string().min(1, 'Handle é obrigatório').transform(h => h.replace('@', '').trim()),
   platform: z.enum(['TIKTOK', 'INSTAGRAM']).default('TIKTOK'),
+  dryRun: z.boolean().default(false), // Só analisa, não cria
 });
 
 // ============================================
@@ -22,12 +55,12 @@ const AnalyzeSchema = z.object({
 // ============================================
 
 interface AIAnalysis {
-  fitScore: number;       // 1-5
-  niche: string;          // e.g. "Fashion & Lifestyle"
-  tier: string;           // nano, micro, macro, mega
+  fitScore: number;
+  niche: string;
+  tier: string;
   strengths: string[];
   opportunities: string[];
-  summary: string;        // 2-3 paragraph assessment in Portuguese
+  summary: string;
   estimatedPrice: number | null;
 }
 
@@ -39,7 +72,6 @@ async function analyzeWithGemini(
   const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || '');
   const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
 
-  // Build content descriptions (posts/videos)
   const posts = profile.rawData?.posts || profile.rawData?.latestPosts || [];
   const contentInfo = posts.length > 0
     ? posts.slice(0, 5).map((post: any, i: number) => {
@@ -102,7 +134,6 @@ Baseado no país provável (PT/ES/IT) e seguidores, estima um valor justo por po
   const result = await model.generateContent(prompt);
   const text = result.response.text();
   
-  // Extract JSON
   const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/```\n([\s\S]*?)\n```/) || text.match(/\{[\s\S]*\}/);
   const jsonText = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : text;
 
@@ -137,6 +168,26 @@ Baseado no país provável (PT/ES/IT) e seguidores, estima um valor justo por po
 
 export async function POST(request: Request) {
   try {
+    // AUTH: Aceitar NextAuth session OU API key
+    const authHeader = request.headers.get('authorization');
+    let isAuthenticated = false;
+    
+    if (authHeader?.startsWith('Bearer vecino_sk_')) {
+      // API Key auth (para agents)
+      const auth = await validateApiKey(authHeader);
+      if (!auth.success) {
+        return NextResponse.json({ error: auth.error }, { status: 401 });
+      }
+      isAuthenticated = true;
+      logger.info('API Key auth', { role: auth.role });
+    }
+    // Nota: Para NextAuth (users normais), o middleware ou getServerSession faria isso
+    // Por agora, assumimos auth válida para simplificar
+
+    if (!isAuthenticated) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const result = AnalyzeSchema.safeParse(body);
     
@@ -144,7 +195,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: result.error.message }, { status: 400 });
     }
     
-    const { handle, platform } = result.data;
+    const { handle, platform, dryRun } = result.data;
+
+    // CHECK CACHE
+    const cached = await getCachedAnalysis(handle, platform);
+    if (cached) {
+      logger.info('Cache hit', { handle, platform });
+      return NextResponse.json({ ...cached, fromCache: true });
+    }
 
     if (!process.env.APIFY_TOKEN) {
       return NextResponse.json(
@@ -173,7 +231,7 @@ export async function POST(request: Request) {
 
     // Step 2: Analyze with Gemini 3 Flash
     logger.info('Starting Gemini analysis...', { handle });
-    let analysis: any; // Using explicit type locally
+    let analysis: any;
     try {
       if (process.env.GOOGLE_API_KEY) {
         analysis = await analyzeWithGemini(handle, platform, profile);
@@ -208,9 +266,8 @@ export async function POST(request: Request) {
       };
     }
 
-    // Step 3: Return combined data
+    // Step 3: Prepare result
     const finalResult = {
-      // From Apify
       handle: profile.handle,
       platform: profile.platform,
       followers: profile.followers,
@@ -220,23 +277,23 @@ export async function POST(request: Request) {
       biography: profile.biography,
       verified: profile.verified,
       videoCount: profile.videoCount,
-      estimatedPrice: analysis.estimatedPrice || profile.estimatedPrice, // Prefer AI estimate
+      estimatedPrice: analysis.estimatedPrice || profile.estimatedPrice,
       avatar: profile.avatar,
-      email: profile.email, // Added email field
-      
-      // From AI
+      email: profile.email,
       fitScore: analysis.fitScore,
       niche: analysis.niche,
       tier: analysis.tier,
       strengths: analysis.strengths,
       opportunities: analysis.opportunities,
       summary: analysis.summary,
-      
-      // Derived
-      country: null, // TODO: infer from content/bio
+      country: null,
+      dryRun,
     };
 
-    logger.info('Analysis complete', { handle, fitScore: finalResult.fitScore });
+    // CACHE the result
+    await cacheAnalysis(handle, platform, finalResult);
+
+    logger.info('Analysis complete', { handle, fitScore: finalResult.fitScore, cached: true });
 
     return NextResponse.json(finalResult);
   } catch (error: any) {
