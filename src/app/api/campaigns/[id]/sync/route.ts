@@ -62,25 +62,15 @@ export async function POST(
 
     for (const apifyVideo of filteredVideos) {
       try {
-        // Extract data with correct Apify field mappings
-        const url = apifyVideo.webVideoUrl;
-        const authorHandle = apifyVideo.authorMeta?.name || null;
-        const authorDisplayName = apifyVideo.authorMeta?.nickName || apifyVideo.authorMeta?.name || null;
-        const views = apifyVideo.playCount || 0;
-        const likes = apifyVideo.diggCount || 0;
+        // Extract data with correct ScrapedVideo type properties
+        const url = apifyVideo.videoUrl;
+        const authorHandle = apifyVideo.authorUsername || null;
+        const views = apifyVideo.viewCount || 0;
+        const likes = apifyVideo.likeCount || 0;
         const comments = apifyVideo.commentCount || 0;
         const shares = apifyVideo.shareCount || 0;
-        const description = apifyVideo.text || null;
-        
-        let publishedAt: Date;
-        if (apifyVideo.createTimeISO) {
-          publishedAt = new Date(apifyVideo.createTimeISO);
-        } else if (apifyVideo.createTime) {
-          publishedAt = new Date(apifyVideo.createTime * 1000);
-        } else {
-          logger.warn(`[SYNC] No publishedAt data for video ${url}, using current date`);
-          publishedAt = new Date();
-        }
+        const description = apifyVideo.description || null;
+        const publishedAt = apifyVideo.publishedAt || new Date();
 
         if (!url) {
           continue;
