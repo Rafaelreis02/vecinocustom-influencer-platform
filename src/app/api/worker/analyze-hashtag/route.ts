@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { scrapeHashtagVideos } from '@/lib/apify-fetch';
+import { scrapeHashtagVideos } from '@/lib/apify';
 import { logger } from '@/lib/logger';
 import { handleApiError } from '@/lib/api-error';
 
