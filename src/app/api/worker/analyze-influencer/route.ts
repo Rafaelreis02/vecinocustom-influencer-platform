@@ -5,24 +5,26 @@ import { z } from 'zod';
 import { parseProfile, type ParsedProfile } from '@/lib/apify-fetch';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { validateApiKey } from '@/lib/api-auth';
-import { Redis } from '@upstash/redis';
 
-export const dynamic = 'force-dynamic';
-export const maxDuration = 60;
-
-// ============================================
-// CACHE (Redis)
-// ============================================
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL || '',
-  token: process.env.UPSTASH_REDIS_REST_TOKEN || '',
-});
+// Cache opcional (Redis) - só ativo se env vars existirem
+let redis: any = null;
+try {
+  const { Redis } = require('@upstash/redis');
+  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+    redis = new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    });
+  }
+} catch {
+  // Redis não disponível
+}
 
 const CACHE_TTL = 60 * 60 * 24; // 24 horas
 
 async function getCachedAnalysis(handle: string, platform: string) {
   try {
-    if (!process.env.UPSTASH_REDIS_REST_URL) return null;
+    if (!redis) return null;
     const key = `influencer:${platform.toLowerCase()}:${handle.toLowerCase()}`;
     return await redis.get(key);
   } catch {
@@ -32,7 +34,7 @@ async function getCachedAnalysis(handle: string, platform: string) {
 
 async function cacheAnalysis(handle: string, platform: string, data: any) {
   try {
-    if (!process.env.UPSTASH_REDIS_REST_URL) return;
+    if (!redis) return;
     const key = `influencer:${platform.toLowerCase()}:${handle.toLowerCase()}`;
     await redis.setex(key, CACHE_TTL, data);
   } catch {
