@@ -65,6 +65,7 @@ export async function POST(
         // Extract data with correct ScrapedVideo type properties
         const url = apifyVideo.videoUrl;
         const authorHandle = apifyVideo.authorUsername || null;
+        const authorDisplayName = authorHandle; // Use handle as display name for now
         const views = apifyVideo.viewCount || 0;
         const likes = apifyVideo.likeCount || 0;
         const comments = apifyVideo.commentCount || 0;
