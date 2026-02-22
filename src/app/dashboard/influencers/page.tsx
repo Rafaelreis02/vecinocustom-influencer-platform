@@ -7,8 +7,6 @@ import {
   Search,
   Instagram,
   Mail,
-  Edit,
-  Trash2,
   Loader2,
   Users,
   Star,
@@ -18,6 +16,7 @@ import {
 } from 'lucide-react';
 import { ToastContainer, useToast } from '@/components/ui/Toast';
 import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog';
+import { ImportInfluencerModal } from '@/components/ImportInfluencerModal';
 import { PHASES, getStatusConfig } from '@/lib/influencer-status';
 
 const TABS = [
@@ -71,6 +70,7 @@ function InfluencersContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [allInfluencers, setAllInfluencers] = useState<Influencer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const { toasts, addToast, removeToast } = useToast();
   const { dialog, confirm: showConfirm } = useConfirm();
 
@@ -116,6 +116,10 @@ function InfluencersContent() {
     }
   };
 
+  const handleSuccess = () => {
+    fetchInfluencers();
+  };
+
   // Filtrar por tab (fase) e pesquisa
   const currentPhase = TABS.find(t => t.id === activeTab);
   const phaseStatuses = activeTab === 'prospecting' 
@@ -157,6 +161,13 @@ function InfluencersContent() {
         onCancel={dialog.onCancel}
       />
 
+      {/* Import Modal */}
+      <ImportInfluencerModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={handleSuccess}
+      />
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -165,13 +176,13 @@ function InfluencersContent() {
             Gestão de parcerias e campanhas
           </p>
         </div>
-        <Link
-          href="/dashboard/influencers/new"
+        <button
+          onClick={() => setIsModalOpen(true)}
           className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-black text-white rounded-lg font-medium hover:bg-gray-800 transition-colors"
         >
           <Plus className="h-4 w-4" />
           Novo Influencer
-        </Link>
+        </button>
       </div>
 
       {/* Tabs de Fases */}
@@ -263,6 +274,13 @@ function InfluencersContent() {
                   ? 'Nenhum resultado para a pesquisa.' 
                   : `Adiciona influencers para começares a gerir esta fase.`}
               </p>
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg font-medium hover:bg-gray-800 transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+                Adicionar Influencer
+              </button>
             </div>
           )}
 
