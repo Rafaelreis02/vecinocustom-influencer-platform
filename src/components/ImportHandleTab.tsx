@@ -46,7 +46,9 @@ export function ImportHandleTab({ onSuccess, onClose }: ImportHandleTabProps) {
       setResult(data);
       addToast(`✅ @${cleanHandle} analisado com sucesso!`, 'success');
 
-      // Criar o influencer na DB - COM TODOS OS CAMPOS INCLUINDO SUMMARY!
+      console.log('API Response:', data); // DEBUG
+
+      // Criar o influencer na DB - COM TODOS OS CAMPOS!
       const createRes = await fetch('/api/influencers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -55,8 +57,10 @@ export function ImportHandleTab({ onSuccess, onClose }: ImportHandleTabProps) {
           name: data.name || cleanHandle,
           tiktokHandle: `@${cleanHandle}`,
           tiktokFollowers: data.followers,
+          totalLikes: data.totalLikes,           // NOVO!
           engagementRate: data.engagement,
           averageViews: data.averageViews,
+          videoCount: data.videoCount,           // NOVO!
           estimatedPrice: data.estimatedPrice,
           fitScore: data.fitScore,
           niche: data.niche,
@@ -65,8 +69,10 @@ export function ImportHandleTab({ onSuccess, onClose }: ImportHandleTabProps) {
           avatarUrl: data.avatar,
           email: data.email,
           country: data.country,
+          verified: data.verified,               // NOVO!
           language: data.language || 'Português',
-          analysisSummary: data.summary,  // ← CAMPO ADICIONADO!
+          analysisSummary: data.summary,        // NOTAS!
+          analysisDate: new Date().toISOString(), // NOVO!
           status: 'SUGGESTION',
         }),
       });
@@ -125,7 +131,10 @@ export function ImportHandleTab({ onSuccess, onClose }: ImportHandleTabProps) {
             <p><strong>Nicho:</strong> {result.niche}</p>
             <p><strong>Preço Est.:</strong> {result.estimatedPrice}€</p>
             <p><strong>Seguidores:</strong> {result.followers?.toLocaleString()}</p>
+            <p><strong>Likes:</strong> {result.totalLikes?.toLocaleString()}</p>
+            <p><strong>Vídeos:</strong> {result.videoCount}</p>
             <p><strong>Engagement:</strong> {result.engagement}%</p>
+            <p><strong>Verificado:</strong> {result.verified ? 'Sim ✓' : 'Não'}</p>
             {result.summary && (
               <div className="mt-2 pt-2 border-t border-blue-200">
                 <p><strong>Notas da Análise:</strong></p>
