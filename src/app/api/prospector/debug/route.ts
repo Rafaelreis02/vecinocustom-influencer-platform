@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-/**
- * Diagnóstico Avançado - Verifica exatamente qual é o erro do Apify
- * GET /api/prospector/debug
- */
-
 export async function GET(request: NextRequest) {
   const APIFY_TOKEN = process.env.APIFY_API_TOKEN || process.env.APIFY_TOKEN;
+  const ACTOR_PROFILE = 'GdWCkxBtKWOsKjdch';
   
   const results: any = {
     timestamp: new Date().toISOString(),
@@ -15,146 +11,76 @@ export async function GET(request: NextRequest) {
     tests: []
   };
 
-  // Test 1: Verificar token (endpoint users/me)
+  // Test 1: Auth
   try {
-    const userRes = await fetch(`https://api.apify.com/v2/users/me?token=${APIFY_TOKEN}`);
-    const userData = await userRes.json();
-    
+    const res = await fetch(`https://api.apify.com/v2/users/me?token=${APIFY_TOKEN}`);
+    const data = await res.json();
     results.tests.push({
       step: 1,
-      name: 'Apify Auth (users/me)',
-      status: userRes.ok ? 'OK' : 'FAILED',
-      statusCode: userRes.status,
-      username: userData.data?.username || 'N/A',
-      error: !userRes.ok ? userData : null
+      name: 'Auth',
+      ok: res.ok,
+      status: res.status,
+      user: data.data?.username
     });
   } catch (err: any) {
-    results.tests.push({
-      step: 1,
-      name: 'Apify Auth (users/me)',
-      status: 'ERROR',
-      error: err.message
-    });
+    results.tests.push({ step: 1, name: 'Auth', error: err.message });
   }
 
-  // Test 2: Listar actors da conta
+  // Test 2: List actors
   try {
-    const actorsRes = await fetch(`https://api.apify.com/v2/acts?token=${APIFY_TOKEN}&limit=10`);
-    const actorsData = await actorsRes.json();
-    
+    const res = await fetch(`https://api.apify.com/v2/acts?token=${APIFY_TOKEN}&limit=5`);
+    const data = await res.json();
     results.tests.push({
       step: 2,
       name: 'List Actors',
-      status: actorsRes.ok ? 'OK' : 'FAILED',
-      statusCode: actorsRes.status,
-      totalActors: actorsData.data?.total || 0,
-      actors: actorsData.data?.items?.map((a: any) => ({ id: a.id, name: a.name })) || [],
-      error: !actorsRes.ok ? actorsData : null
+      ok: res.ok,
+      count: data.data?.items?.length || 0
     });
   } catch (err: any) {
-    results.tests.push({
-      step: 2,
-      name: 'List Actors',
-      status: 'ERROR',
-      error: err.message
-    });
-  });
-
-  // Test 3: Verificar actor específico (Profile)
-  const ACTOR_PROFILE = 'GdWCkxBtKWOsKjdch';
-  try {
-    const actorRes = await fetch(`https://api.apify.com/v2/acts/${ACTOR_PROFILE}?token=${APIFY_TOKEN}`);
-    const actorData = await actorRes.json();
-    
-    results.tests.push({
-      step: 3,
-      name: `Get Actor ${ACTOR_PROFILE}`,
-      status: actorRes.ok ? 'OK' : 'FAILED',
-      statusCode: actorRes.status,
-      actorName: actorData.data?.name || 'N/A',
-      actorUsername: actorData.data?.username || 'N/A',
-      error: !actorRes.ok ? actorData : null
-    });
-  } catch (err: any) {
-    results.tests.push({
-      step: 3,
-      name: `Get Actor ${ACTOR_PROFILE}`,
-      status: 'ERROR',
-      error: err.message
-    });
+    results.tests.push({ step: 2, name: 'List Actors', error: err.message });
   }
 
-  // Test 4: Tentar iniciar actor COM LOGGING DETALHADO
+  // Test 3: Get specific actor
   try {
-    const input = {
-      profiles: ['https://www.tiktok.com/@tiktok'],
-      resultsPerPage: 1
-    };
-    
-    const startRes = await fetch(`https://api.apify.com/v2/acts/${ACTOR_PROFILE}/runs?token=${APIFY_TOKEN}`, {
+    const res = await fetch(`https://api.apify.com/v2/acts/${ACTOR_PROFILE}?token=${APIFY_TOKEN}`);
+    const data = await res.json();
+    results.tests.push({
+      step: 3,
+      name: 'Get Actor',
+      ok: res.ok,
+      actorName: data.data?.name,
+      actorId: data.data?.id
+    });
+  } catch (err: any) {
+    results.tests.push({ step: 3, name: 'Get Actor', error: err.message });
+  }
+
+  // Test 4: Start actor
+  try {
+    const res = await fetch(`https://api.apify.com/v2/acts/${ACTOR_PROFILE}/runs?token=${APIFY_TOKEN}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(input)
+      body: JSON.stringify({
+        profiles: ['https://www.tiktok.com/@tiktok'],
+        resultsPerPage: 1
+      })
     });
-    
-    const startData = await startRes.json();
-    
+    const data = await res.json();
     results.tests.push({
       step: 4,
-      name: 'Start Actor (detailed)',
-      status: startRes.ok ? 'OK' : 'FAILED',
-      statusCode: startRes.status,
-      statusText: startRes.statusText,
-      response: startData,
-      error: !startRes.ok ? {
-        message: startData.error?.message || startData.message || 'Unknown error',
-        type: startData.error?.type || 'N/A',
-        code: startData.error?.code || 'N/A',
-        fullResponse: startData
-      } : null
+      name: 'Start Actor',
+      ok: res.ok,
+      status: res.status,
+      error: data.error?.message || data.message,
+      runId: data.data?.id
     });
-
-    // Se iniciou com sucesso, cancelar
-    if (startRes.ok && startData.data?.id) {
-      try {
-        await fetch(`https://api.apify.com/v2/actor-runs/${startData.data.id}/abort?token=${APIFY_TOKEN}`, {
-          method: 'POST'
-        });
-      } catch {}
+    
+    if (res.ok && data.data?.id) {
+      await fetch(`https://api.apify.com/v2/actor-runs/${data.data.id}/abort?token=${APIFY_TOKEN}`, { method: 'POST' });
     }
   } catch (err: any) {
-    results.tests.push({
-      step: 4,
-      name: 'Start Actor (detailed)',
-      status: 'EXCEPTION',
-      error: err.message,
-      stack: err.stack
-    });
+    results.tests.push({ step: 4, name: 'Start Actor', error: err.message });
   }
 
-  // Test 5: Verificar input schema do actor
-  try {
-    const schemaRes = await fetch(`https://api.apify.com/v2/acts/${ACTOR_PROFILE}/input-schema?token=${APIFY_TOKEN}`);
-    const schemaData = await schemaRes.json();
-    
-    results.tests.push({
-      step: 5,
-      name: 'Actor Input Schema',
-      status: schemaRes.ok ? 'OK' : 'FAILED',
-      schema: schemaRes.ok ? {
-        required: schemaData.data?.schema?.required || [],
-        properties: Object.keys(schemaData.data?.schema?.properties || {})
-      } : null,
-      error: !schemaRes.ok ? schemaData : null
-    });
-  } catch (err: any) {
-    results.tests.push({
-      step: 5,
-      name: 'Actor Input Schema',
-      status: 'ERROR',
-      error: err.message
-    });
-  }
-
-  return NextResponse.json(results, { status: 200 });
+  return NextResponse.json(results);
 }
