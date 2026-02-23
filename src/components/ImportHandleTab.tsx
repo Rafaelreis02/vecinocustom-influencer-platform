@@ -30,7 +30,7 @@ export function ImportHandleTab({ onSuccess, onClose }: ImportHandleTabProps) {
       const res = await fetch('/api/worker/analyze-influencer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',  // ← IMPORTANTE: Enviar cookies de sessão
+        credentials: 'include',
         body: JSON.stringify({
           handle: cleanHandle,
           platform: 'TIKTOK'
@@ -46,11 +46,11 @@ export function ImportHandleTab({ onSuccess, onClose }: ImportHandleTabProps) {
       setResult(data);
       addToast(`✅ @${cleanHandle} analisado com sucesso!`, 'success');
 
-      // Criar o influencer na DB
+      // Criar o influencer na DB - COM TODOS OS CAMPOS INCLUINDO SUMMARY!
       const createRes = await fetch('/api/influencers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',  // ← IMPORTANTE: Enviar cookies de sessão
+        credentials: 'include',
         body: JSON.stringify({
           name: data.name || cleanHandle,
           tiktokHandle: `@${cleanHandle}`,
@@ -66,6 +66,7 @@ export function ImportHandleTab({ onSuccess, onClose }: ImportHandleTabProps) {
           email: data.email,
           country: data.country,
           language: data.language || 'Português',
+          analysisSummary: data.summary,  // ← CAMPO ADICIONADO!
           status: 'SUGGESTION',
         }),
       });
@@ -125,6 +126,12 @@ export function ImportHandleTab({ onSuccess, onClose }: ImportHandleTabProps) {
             <p><strong>Preço Est.:</strong> {result.estimatedPrice}€</p>
             <p><strong>Seguidores:</strong> {result.followers?.toLocaleString()}</p>
             <p><strong>Engagement:</strong> {result.engagement}%</p>
+            {result.summary && (
+              <div className="mt-2 pt-2 border-t border-blue-200">
+                <p><strong>Notas da Análise:</strong></p>
+                <p className="text-xs mt-1 whitespace-pre-wrap">{result.summary}</p>
+              </div>
+            )}
           </div>
         </div>
       )}
