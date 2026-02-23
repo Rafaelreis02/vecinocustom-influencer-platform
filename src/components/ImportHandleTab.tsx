@@ -44,6 +44,8 @@ export function ImportHandleTab({ onSuccess, onClose }: ImportHandleTabProps) {
       }
 
       setResult(data);
+      console.log('API Response - FULL:', JSON.stringify(data, null, 2)); // DEBUG
+      console.log('Summary value:', data.summary); // DEBUG
       addToast(`✅ @${cleanHandle} analisado com sucesso!`, 'success');
 
       console.log('API Response:', data); // DEBUG
@@ -71,7 +73,7 @@ export function ImportHandleTab({ onSuccess, onClose }: ImportHandleTabProps) {
           country: data.country,
           verified: data.verified,               // NOVO!
           language: data.language || 'Português',
-          analysisSummary: data.summary,        // NOTAS!
+          analysisSummary: data.summary || 'Análise automática do influencer.', // Garante que nunca é vazio
           analysisDate: new Date().toISOString(), // NOVO!
           status: 'SUGGESTION',
         }),
