@@ -55,6 +55,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 
     // Construir comando
     const scriptPath = path.join(process.cwd(), 'scripts', 'influencer-prospector.js');
+    const nodeModulesPath = path.join(process.cwd(), 'node_modules');
     const args = [
       `--language=${language.toUpperCase()}`,
       `--max=${max}`
@@ -69,7 +70,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
 
     // Executar script e retornar resultado
-    return await executeProspector(scriptPath, args);
+    return await executeProspector(scriptPath, args, nodeModulesPath);
 
   } catch (error: any) {
     logger.error('[PROSPECTOR] Erro na API', error);
@@ -81,11 +82,13 @@ export async function POST(request: NextRequest): Promise<Response> {
 }
 
 // Função separada para executar o prospector
-async function executeProspector(scriptPath: string, args: string[]): Promise<Response> {
-  return new Promise((resolve, reject) => {
+async function executeProspector(scriptPath: string, args: string[], nodeModulesPath: string): Promise<Response> {
+  return new Promise((resolve) => {
+    // Configurar NODE_PATH para incluir node_modules
     const child = spawn('node', [scriptPath, ...args], {
       env: {
         ...process.env,
+        NODE_PATH: nodeModulesPath,
         DATABASE_URL: process.env.DATABASE_URL,
         APIFY_API_TOKEN: process.env.APIFY_API_TOKEN || process.env.APIFY_TOKEN,
         GEMINI_API_KEY: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY,
