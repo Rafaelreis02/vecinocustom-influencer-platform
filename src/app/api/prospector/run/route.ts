@@ -104,12 +104,12 @@ async function scrapeFollowingWithData(handle: string, count: number): Promise<F
   if (cached) return cached;
 
   const data = await withRetry(() => runApifyActor(ACTOR_FOLLOWING, {
-    profiles: [handle],
+    profiles: [`https://www.tiktok.com/@${handle}`],
     resultsPerPage: Math.min(count, 200),
     followers: 0,
     following: count,
-    maxFollowersPerProfile: MAX_FOLLOWERS,
-    maxFollowingPerProfile: 10000
+    maxFollowersPerProfile: 0,
+    maxFollowingPerProfile: 200
   }));
 
   const profiles: FollowingData[] = data
