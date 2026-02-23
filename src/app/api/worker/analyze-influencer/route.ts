@@ -5,6 +5,8 @@ import { z } from 'zod';
 import { parseProfile, type ParsedProfile } from '@/lib/apify-fetch';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { validateApiKey } from '@/lib/api-auth';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
 
 // Cache opcional (Redis) - só ativo se env vars existirem
 let redis: any = null;
@@ -21,6 +23,7 @@ try {
 }
 
 const CACHE_TTL = 60 * 60 * 24; // 24 horas
+
 
 async function getCachedAnalysis(handle: string, platform: string) {
   try {
@@ -49,7 +52,7 @@ async function cacheAnalysis(handle: string, platform: string, data: any) {
 const AnalyzeSchema = z.object({
   handle: z.string().min(1, 'Handle é obrigatório').transform(h => h.replace('@', '').trim()),
   platform: z.enum(['TIKTOK', 'INSTAGRAM']).default('TIKTOK'),
-  dryRun: z.boolean().default(false), // Só analisa, não cria
+  dryRun: z.boolean().default(false),
 });
 
 // ============================================
@@ -118,19 +121,16 @@ Avalia o FIT deste influencer com a VecinoCustom. Considera:
 
 **Estimativa de Preço (Importante):**
 Baseado no país provável (PT/ES/IT) e seguidores, estima um valor justo por post/vídeo.
-- PT: ~40-50€ (Micro)
-- ES/IT: ~60-80€ (Micro)
-- Use engagement rate como multiplicador (alto engagement = preço maior)
 
 **Responde APENAS com JSON válido (sem markdown):**
 {
-  "fitScore": <1-5, onde 5 é match perfeito>,
-  "niche": "<nicho principal: Fashion, Lifestyle, Beauty, etc>",
-  "tier": "<nano|micro|macro|mega baseado em followers>",
-  "strengths": ["<ponto forte 1>", "<ponto forte 2>", "<ponto forte 3>"],
-  "opportunities": ["<consideração/risco 1>", "<consideração/risco 2>"],
-  "summary": "<2-3 parágrafos em português: descrição do influencer, análise de fit com VecinoCustom, recomendação>",
-  "estimatedPrice": <número inteiro em euros, ex: 60>
+  "fitScore": <1-5>,
+  "niche": "<nicho principal>",
+  "tier": "<nano|micro|macro|mega>",
+  "strengths": ["<ponto forte 1>", "<ponto forte 2>"],
+  "opportunities": ["<consideração 1>", "<consideração 2>"],
+  "summary": "<2-3 parágrafos em português>",
+  "estimatedPrice": <número em euros>
 }`;
 
   const result = await model.generateContent(prompt);
@@ -170,23 +170,37 @@ Baseado no país provável (PT/ES/IT) e seguidores, estima um valor justo por po
 
 export async function POST(request: Request) {
   try {
-    // AUTH: Aceitar NextAuth session OU API key
+    // AUTH: Verificar sessão do NextAuth OU API key
     const authHeader = request.headers.get('authorization');
     let isAuthenticated = false;
+    let authMethod = 'none';
     
+    // 1. Try API Key auth (for agents)
     if (authHeader?.startsWith('Bearer vecino_sk_')) {
-      // API Key auth (para agents)
       const auth = await validateApiKey(authHeader);
-      if (!auth.success) {
-        return NextResponse.json({ error: auth.error }, { status: 401 });
+      if (auth.success) {
+        isAuthenticated = true;
+        authMethod = 'api_key';
+        logger.info('API Key auth', { role: auth.role });
       }
-      isAuthenticated = true;
-      logger.info('API Key auth', { role: auth.role });
     }
-    // Nota: Para NextAuth (users normais), o middleware ou getServerSession faria isso
-    // Por agora, assumimos auth válida para simplificar
-
+    
+    // 2. If not authenticated via API key, try NextAuth session
     if (!isAuthenticated) {
+      const session = await getServerSession(authOptions);
+      if (session?.user) {
+        isAuthenticated = true;
+        authMethod = 'session';
+        logger.info('NextAuth session valid', { userId: session.user.id });
+      }
+    }
+
+    // 3. If still not authenticated, return 401
+    if (!isAuthenticated) {
+      logger.warn('Authentication failed', { 
+        authHeader: authHeader?.substring(0, 20), 
+        authMethod 
+      });
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -251,7 +265,7 @@ export async function POST(request: Request) {
           strengths: ['Dados básicos importados'],
           opportunities: ['Sem chave de API para análise avançada'],
           summary: 'Análise AI indisponível (chave API em falta).',
-          estimatedPrice: null,
+          estimatedPrice: null
         };
       }
     } catch (geminiError: any) {
@@ -264,7 +278,7 @@ export async function POST(request: Request) {
         strengths: ['Dados do Apify disponíveis'],
         opportunities: [`Análise AI falhou: ${errorMsg}`, 'Requer revisão manual'],
         summary: `Análise AI indisponível (erro: ${errorMsg}). Dados básicos importados do ${platform} via Apify.`,
-        estimatedPrice: null,
+        estimatedPrice: null
       };
     }
 
