@@ -74,8 +74,9 @@ async function analyzeWithGemini(
   platform: 'TIKTOK' | 'INSTAGRAM',
   profile: ParsedProfile
 ): Promise<AIAnalysis> {
-  const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || '');
-  const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
+  // Use gemini-1.5-flash instead of gemini-3-flash-preview (more stable)
+  const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || '');
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
   const posts = profile.rawData?.posts || profile.rawData?.latestPosts || [];
   const contentInfo = posts.length > 0
@@ -136,11 +137,44 @@ Baseado no país provável (PT/ES/IT) e seguidores, estima um valor justo por po
   const result = await model.generateContent(prompt);
   const text = result.response.text();
   
-  const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/```\n([\s\S]*?)\n```/) || text.match(/\{[\s\S]*\}/);
-  const jsonText = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : text;
+  // Try multiple parsing strategies
+  let parsed = null;
+  
+  // Strategy 1: Try to find JSON in markdown code blocks
+  const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/i) || 
+                    text.match(/```\s*([\s\S]*?)\s*```/i);
+  
+  if (jsonMatch) {
+    try {
+      parsed = JSON.parse(jsonMatch[1].trim());
+    } catch {}
+  }
+  
+  // Strategy 2: Try to find any JSON object in the text
+  if (!parsed) {
+    const anyJsonMatch = text.match(/\{[\s\S]*\}/);
+    if (anyJsonMatch) {
+      try {
+        parsed = JSON.parse(anyJsonMatch[0]);
+      } catch {}
+    }
+  }
+  
+  // If still no parsed, return default with the raw text
+  if (!parsed) {
+    logger.warn('Could not parse Gemini JSON, using raw text', { handle, textLength: text.length });
+    return {
+      fitScore: 3,
+      niche: 'Desconhecido',
+      tier: 'micro',
+      strengths: ['Dados disponíveis'],
+      opportunities: ['Análise detalhada indisponível'],
+      summary: text.substring(0, 500) || 'Análise não disponível',
+      estimatedPrice: null,
+    };
+  }
 
   try {
-    const parsed = JSON.parse(jsonText.trim());
     return {
       fitScore: Math.min(5, Math.max(1, parsed.fitScore || 3)),
       niche: parsed.niche || 'Desconhecido',
@@ -249,7 +283,7 @@ export async function POST(request: Request) {
     logger.info('Starting Gemini analysis...', { handle });
     let analysis: any;
     try {
-      if (process.env.GOOGLE_API_KEY) {
+      if (process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY) {
         analysis = await analyzeWithGemini(handle, platform, profile);
         logger.info('Gemini analysis complete', { 
           handle, 
