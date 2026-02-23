@@ -255,7 +255,7 @@ async function handleExistsInDB(handle: string): Promise<boolean> {
 // FUNÇÃO PRINCIPAL COM RETRY DE SEEDS
 // ============================================
 
-async function findWorkingSeed(language: string, maxAttempts = MAX_SEED_ATTEMPTS): Promise<{ seed: any; profile: any } | null> {
+async function findWorkingSeed(language: string, maxAttempts = MAX_SEED_ATTEMPTS): Promise<{ seed: any; handles: string[] } | null> {
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const seed = await getSeedFromDB(language);
     if (!seed) return null;
@@ -263,12 +263,12 @@ async function findWorkingSeed(language: string, maxAttempts = MAX_SEED_ATTEMPTS
     logger.info(`[PROSPECTOR] Trying seed ${attempt + 1}/${maxAttempts}: @${seed.tiktokHandle}`);
 
     try {
-      const profile = await scrapeProfile(seed.tiktokHandle);
-      const followingCount = profile[0]?.authorMeta?.following || 0;
+      // Testar seed diretamente com o actor de following
+      const handles = await scrapeFollowing(seed.tiktokHandle, 200); // Testar com max 200
 
-      if (followingCount > 0) {
-        logger.info(`[PROSPECTOR] ✓ Seed @${seed.tiktokHandle} has ${followingCount} following`);
-        return { seed, profile };
+      if (handles.length > 0) {
+        logger.info(`[PROSPECTOR] ✓ Seed @${seed.tiktokHandle} has ${handles.length} visible following`);
+        return { seed, handles };
       } else {
         logger.warn(`[PROSPECTOR] ✗ Seed @${seed.tiktokHandle} has no visible following, trying next...`);
       }
@@ -304,15 +304,14 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
 
     // 1. FIND WORKING SEED (com retry automático)
-    let seedData, seedProfile;
+    let seedData, handles: string[];
     
     if (seed) {
       // Usar seed específica do utilizador
       seedData = { name: seed, tiktokHandle: seed.replace('@', ''), tiktokFollowers: 0 };
       try {
-        seedProfile = await scrapeProfile(seedData.tiktokHandle);
-        const followingCount = seedProfile[0]?.authorMeta?.following || 0;
-        if (!followingCount) {
+        handles = await scrapeFollowing(seedData.tiktokHandle, 200);
+        if (handles.length === 0) {
           return NextResponse.json({ 
             error: `Specified seed @${seedData.tiktokHandle} has no visible following. Try another seed or let the system choose automatically.` 
           }, { status: 400 });
@@ -329,23 +328,10 @@ export async function POST(request: NextRequest): Promise<Response> {
         }, { status: 404 });
       }
       seedData = workingSeed.seed;
-      seedProfile = workingSeed.profile;
+      handles = workingSeed.handles;
     }
 
-    const followingCount = seedProfile[0]?.authorMeta?.following || 0;
-    logger.info(`[PROSPECTOR] Using seed @${seedData.tiktokHandle} with ${followingCount} following`);
-
-    // 2. SCRAP FOLLOWING
-    let handles;
-    try {
-      handles = await scrapeFollowing(seedData.tiktokHandle, followingCount);
-    } catch (err: any) {
-      return NextResponse.json({ error: `Failed to scrape following: ${err.message}` }, { status: 500 });
-    }
-
-    if (!handles.length) {
-      return NextResponse.json({ error: 'No following found' }, { status: 404 });
-    }
+    logger.info(`[PROSPECTOR] Using seed @${seedData.tiktokHandle} with ${handles.length} following found`);
 
     // 3. PROCESS EACH (SISTEMA TEIA)
     let processed = 0, imported = 0, skipped = 0, failed = 0;
