@@ -378,7 +378,7 @@ async function insertInfluencer(data: any, userId: string) {
       estimatedPrice: data.estimatedPrice,
       tier: data.tier,
       biography: data.biography,
-      createdBy: userId
+      createdById: userId
     }
   });
 }
