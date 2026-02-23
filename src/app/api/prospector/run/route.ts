@@ -12,7 +12,7 @@ import path from 'path';
  * Body: { language: 'PT', max: 50, seed?: '@handle', dryRun?: false }
  */
 
-export async function POST(request: NextRequest) {
+export async function POST(request: NextRequest): Promise<Response> {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
@@ -68,64 +68,8 @@ export async function POST(request: NextRequest) {
       args.push('--dry-run');
     }
 
-    // Executar script
-    return new Promise((resolve) => {
-      const child = spawn('node', [scriptPath, ...args], {
-        env: {
-          ...process.env,
-          DATABASE_URL: process.env.DATABASE_URL,
-          APIFY_API_TOKEN: process.env.APIFY_API_TOKEN || process.env.APIFY_TOKEN,
-          GEMINI_API_KEY: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY,
-        },
-        timeout: 30 * 60 * 1000 // 30 minutos timeout
-      });
-
-      let stdout = '';
-      let stderr = '';
-
-      child.stdout.on('data', (data) => {
-        stdout += data.toString();
-        logger.info('[PROSPECTOR STDOUT]', data.toString().trim());
-      });
-
-      child.stderr.on('data', (data) => {
-        stderr += data.toString();
-        logger.error('[PROSPECTOR STDERR]', data.toString().trim());
-      });
-
-      child.on('close', (code) => {
-        logger.info('[PROSPECTOR] Processo terminado', { code });
-        
-        if (code === 0) {
-          // Extrair estatísticas do output
-          const stats = parseStats(stdout);
-          
-          resolve(NextResponse.json({
-            success: true,
-            message: `Prospecção concluída!`,
-            stats,
-            output: stdout.slice(-2000) // Últimos 2000 chars
-          }));
-        } else {
-          resolve(NextResponse.json(
-            { 
-              error: 'Erro ao executar prospector',
-              details: stderr || stdout.slice(-1000),
-              code
-            },
-            { status: 500 }
-          ));
-        }
-      });
-
-      child.on('error', (error) => {
-        logger.error('[PROSPECTOR] Erro ao iniciar processo', error);
-        resolve(NextResponse.json(
-          { error: 'Erro ao iniciar prospector', details: error.message },
-          { status: 500 }
-        ));
-      });
-    });
+    // Executar script e retornar resultado
+    return await executeProspector(scriptPath, args);
 
   } catch (error: any) {
     logger.error('[PROSPECTOR] Erro na API', error);
@@ -136,9 +80,70 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// Função separada para executar o prospector
+async function executeProspector(scriptPath: string, args: string[]): Promise<Response> {
+  return new Promise((resolve, reject) => {
+    const child = spawn('node', [scriptPath, ...args], {
+      env: {
+        ...process.env,
+        DATABASE_URL: process.env.DATABASE_URL,
+        APIFY_API_TOKEN: process.env.APIFY_API_TOKEN || process.env.APIFY_TOKEN,
+        GEMINI_API_KEY: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY,
+      },
+      timeout: 30 * 60 * 1000 // 30 minutos timeout
+    });
+
+    let stdout = '';
+    let stderr = '';
+
+    child.stdout.on('data', (data) => {
+      stdout += data.toString();
+      logger.info('[PROSPECTOR STDOUT]', data.toString().trim());
+    });
+
+    child.stderr.on('data', (data) => {
+      stderr += data.toString();
+      logger.error('[PROSPECTOR STDERR]', data.toString().trim());
+    });
+
+    child.on('close', (code) => {
+      logger.info('[PROSPECTOR] Processo terminado', { code });
+      
+      if (code === 0) {
+        // Extrair estatísticas do output
+        const stats = parseStats(stdout);
+        
+        resolve(NextResponse.json({
+          success: true,
+          message: `Prospecção concluída!`,
+          stats,
+          output: stdout.slice(-2000) // Últimos 2000 chars
+        }));
+      } else {
+        resolve(NextResponse.json(
+          { 
+            error: 'Erro ao executar prospector',
+            details: stderr || stdout.slice(-1000),
+            code
+          },
+          { status: 500 }
+        ));
+      }
+    });
+
+    child.on('error', (error) => {
+      logger.error('[PROSPECTOR] Erro ao iniciar processo', error);
+      resolve(NextResponse.json(
+        { error: 'Erro ao iniciar prospector', details: error.message },
+        { status: 500 }
+      ));
+    });
+  });
+}
+
 // Helper para extrair estatísticas do output
-function parseStats(output: string) {
-  const stats: Record<string, any> = {};
+function parseStats(output: string): Record<string, string> {
+  const stats: Record<string, string> = {};
   
   // Procurar linhas do relatório final
   const lines = output.split('\n');
