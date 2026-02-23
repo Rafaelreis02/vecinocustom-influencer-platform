@@ -360,7 +360,7 @@ async function handleExists(handle: string): Promise<boolean> {
   return Array.isArray(result) && result.length > 0;
 }
 
-async function insertInfluencer(data: any) {
+async function insertInfluencer(data: any, userId: string) {
   return prisma.influencer.create({
     data: {
       name: data.name,
@@ -377,7 +377,8 @@ async function insertInfluencer(data: any) {
       analysisSummary: data.analysisSummary,
       estimatedPrice: data.estimatedPrice,
       tier: data.tier,
-      biography: data.biography
+      biography: data.biography,
+      createdBy: userId
     }
   });
 }
@@ -543,6 +544,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         if (!dryRun) {
           const author = profileData[0]?.authorMeta;
           await insertInfluencer({
+        userId: session.user.id,
             name: author?.nickName || handle,
             handle: `@${handle}`,
             followers: author?.fans || 0,
