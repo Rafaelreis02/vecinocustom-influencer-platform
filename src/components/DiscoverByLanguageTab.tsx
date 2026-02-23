@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Globe, Loader2, Users, Sparkles } from 'lucide-react';
+import { Globe, Loader2, Sparkles } from 'lucide-react';
 import { useGlobalToast } from '@/contexts/ToastContext';
 
 interface DiscoverByLanguageTabProps {
@@ -9,25 +9,23 @@ interface DiscoverByLanguageTabProps {
   onClose: () => void;
 }
 
-const LANGUAGES = [
-  { code: 'PT', name: 'Português', flag: '🇵🇹' },
-  { code: 'ES', name: 'Espanhol', flag: '🇪🇸' },
-  { code: 'EN', name: 'Inglês', flag: '🇬🇧' },
-  { code: 'DE', name: 'Alemão', flag: '🇩🇪' },
-  { code: 'FR', name: 'Francês', flag: '🇫🇷' },
-  { code: 'IT', name: 'Italiano', flag: '🇮🇹' },
-];
-
 export function DiscoverByLanguageTab({ onSuccess, onClose }: DiscoverByLanguageTabProps) {
   const { addToast } = useGlobalToast();
-  const [language, setLanguage] = useState('PT');
   const [seed, setSeed] = useState('');
-  const [max, setMax] = useState(20);
+  const [max, setMax] = useState(30);
+  const [platform, setPlatform] = useState('tiktok');
   const [dryRun, setDryRun] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
 
   const handleDiscover = async () => {
+    // Validar seed
+    const cleanSeed = seed.trim().replace('@', '');
+    if (!cleanSeed) {
+      addToast('Por favor, insere uma seed (handle do TikTok)', 'error');
+      return;
+    }
+
     try {
       setLoading(true);
       setResult(null);
@@ -38,9 +36,9 @@ export function DiscoverByLanguageTab({ onSuccess, onClose }: DiscoverByLanguage
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          language,
+          seed: cleanSeed,
           max,
-          seed: seed.trim() || undefined,
+          platform,
           dryRun
         }),
       });
@@ -48,7 +46,7 @@ export function DiscoverByLanguageTab({ onSuccess, onClose }: DiscoverByLanguage
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || data.details || 'Erro na execução');
+        throw new Error(data.error || 'Erro na execução');
       }
 
       setResult(data);
@@ -56,7 +54,7 @@ export function DiscoverByLanguageTab({ onSuccess, onClose }: DiscoverByLanguage
       if (dryRun) {
         addToast('✅ Teste concluído! Verifica o output.', 'success');
       } else {
-        const imported = data.stats?.Importados || 'vários';
+        const imported = data.stats?.imported || 0;
         addToast(`✅ ${imported} influencers descobertos e importados!`, 'success');
         
         setTimeout(() => {
@@ -73,34 +71,15 @@ export function DiscoverByLanguageTab({ onSuccess, onClose }: DiscoverByLanguage
 
   return (
     <div className="space-y-6">
-      <div className="text-sm text-gray-600 bg-gray-50 p-4 rounded-lg">
-        <p className="font-medium text-gray-700 mb-1">Descobrir por Idioma</p>
-        <p>A IA vai encontrar até {max} influencers automáticos baseados numa semente do idioma selecionado.</p>
+      <div className="text-sm text-gray-600 bg-blue-50 p-4 rounded-lg border border-blue-100">
+        <p className="font-medium text-blue-800 mb-1">🔍 Prospetor Simplificado</p>
+        <p>Insere uma seed (conta TikTok) e a IA vai encontrar influencers similares based on who they follow.</p>
       </div>
 
-      {/* Idioma */}
+      {/* Seed (OBRIGATÓRIO) */}
       <div>
         <label className="block text-sm font-semibold text-gray-700 mb-2">
-          Idioma *
-        </label>
-        <select
-          value={language}
-          onChange={(e) => setLanguage(e.target.value)}
-          disabled={loading}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-        >
-          {LANGUAGES.map((lang) => (
-            <option key={lang.code} value={lang.code}>
-              {lang.flag} {lang.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Semente (opcional) */}
-      <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-2">
-          Semente (opcional)
+          Seed (TikTok) *
         </label>
         <div className="relative">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">@</span>
@@ -108,14 +87,30 @@ export function DiscoverByLanguageTab({ onSuccess, onClose }: DiscoverByLanguage
             type="text"
             value={seed}
             onChange={(e) => setSeed(e.target.value)}
-            placeholder="Deixa vazio para escolha automática"
+            placeholder="ex: influenciador_pt"
             disabled={loading}
             className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
           />
         </div>
         <p className="text-xs text-gray-500 mt-1">
-          Se especificares uma semente, a IA procura influencers similares a essa conta.
+          A conta que vai servir de base para descobrir similares.
         </p>
+      </div>
+
+      {/* Plataforma */}
+      <div>
+        <label className="block text-sm font-semibold text-gray-700 mb-2">
+          Plataforma
+        </label>
+        <select
+          value={platform}
+          onChange={(e) => setPlatform(e.target.value)}
+          disabled={loading}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+        >
+          <option value="tiktok">TikTok</option>
+          <option value="instagram" disabled>Instagram (em breve)</option>
+        </select>
       </div>
 
       {/* Quantidade */}
@@ -176,13 +171,8 @@ export function DiscoverByLanguageTab({ onSuccess, onClose }: DiscoverByLanguage
             </div>
           )}
           
-          {dryRun && result.output && (
-            <div className="mt-3">
-              <p className="text-xs font-medium text-gray-500 mb-1">Output (últimas linhas):</p>
-              <pre className="text-xs bg-gray-100 p-2 rounded overflow-x-auto max-h-40 overflow-y-auto">
-                {result.output.slice(-500)}
-              </pre>
-            </div>
+          {result.error && (
+            <p className="text-sm text-red-600 mt-2">{result.error}</p>
           )}
         </div>
       )}
@@ -190,7 +180,7 @@ export function DiscoverByLanguageTab({ onSuccess, onClose }: DiscoverByLanguage
       {/* Botão */}
       <button
         onClick={handleDiscover}
-        disabled={loading}
+        disabled={loading || !seed.trim()}
         className="w-full py-3 px-4 rounded-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
       >
         {loading ? (
