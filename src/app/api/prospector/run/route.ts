@@ -112,7 +112,8 @@ async function scrapeFollowingWithData(handle: string, count: number): Promise<F
     profiles: [handle],
     resultsPerPage: Math.min(count, 200),
     followers: 0,
-    following: count
+    following: count,
+    maxFollowersPerProfile: MAX_FOLLOWERS
   }));
 
   // Extrair handle + followers de cada resultado
