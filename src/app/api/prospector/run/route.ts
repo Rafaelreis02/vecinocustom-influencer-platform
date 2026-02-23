@@ -394,11 +394,12 @@ export async function POST(request: NextRequest): Promise<Response> {
         }
 
         imported++;
+        const authorForResult = profile[0]?.authorMeta;
         results.push({ 
           handle, 
           fitScore: analysis.fitScore, 
           niche: analysis.niche,
-          followers: author?.fans || 0
+          followers: authorForResult?.fans || 0
         });
 
       } catch (err: any) {
