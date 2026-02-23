@@ -6,11 +6,9 @@ import { logger } from '@/lib/logger';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 /**
- * API Prospectador - Sistema Teia Completo
- * Mantém exatamente a mesma lógica do influencer-prospector.js
+ * API Prospectador - Sistema Teia com Retry de Seeds
  */
 
-// Config
 const APIFY_TOKEN = process.env.APIFY_API_TOKEN || process.env.APIFY_TOKEN;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
 const ACTOR_PROFILE = 'GdWCkxBtKWOsKjdch';
@@ -19,20 +17,16 @@ const MIN_FOLLOWERS = 5000;
 const MAX_FOLLOWERS = 150000;
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 5000;
+const MAX_SEED_ATTEMPTS = 5;
 const LANGUAGES = ['PT', 'ES', 'EN', 'DE', 'FR', 'IT'];
 
-// Cache em memória
 const memoryCache = new Map<string, { value: any; timestamp: number }>();
 const CACHE_TTL = 24 * 60 * 60 * 1000;
 
-// Gemini setup
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY || '');
 const modelPrimary = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
 const modelFallback = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
-// ============================================
-// CACHE
-// ============================================
 function getCacheKey(handle: string, type: string): string {
   return `${type}_${handle.toLowerCase()}`;
 }
@@ -51,9 +45,6 @@ function setCache(key: string, value: any): void {
   memoryCache.set(key, { value, timestamp: Date.now() });
 }
 
-// ============================================
-// RETRY
-// ============================================
 async function withRetry<T>(fn: () => Promise<T>, maxRetries = MAX_RETRIES): Promise<T> {
   for (let i = 0; i < maxRetries; i++) {
     try {
@@ -66,11 +57,7 @@ async function withRetry<T>(fn: () => Promise<T>, maxRetries = MAX_RETRIES): Pro
   throw new Error('Max retries reached');
 }
 
-// ============================================
-// APIFY
-// ============================================
 async function runApifyActor(actorId: string, input: any): Promise<any[]> {
-  // Start actor
   const startRes = await fetch(`https://api.apify.com/v2/acts/${actorId}/runs?token=${APIFY_TOKEN}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -81,7 +68,6 @@ async function runApifyActor(actorId: string, input: any): Promise<any[]> {
   
   const { data: { id: runId, defaultDatasetId } } = await startRes.json();
   
-  // Wait for completion (max 120s)
   const startTime = Date.now();
   while (Date.now() - startTime < 120000) {
     await new Promise(r => setTimeout(r, 3000));
@@ -136,9 +122,6 @@ async function scrapeFollowing(handle: string, count: number): Promise<string[]>
   return handles;
 }
 
-// ============================================
-// GEMINI
-// ============================================
 async function generateWithFallback(prompt: string): Promise<string> {
   try {
     return (await modelPrimary.generateContent(prompt)).response.text();
@@ -245,9 +228,6 @@ Respond ONLY with JSON:
   }
 }
 
-// ============================================
-// DATABASE
-// ============================================
 async function getSeedFromDB(language: string) {
   const result = await prisma.$queryRaw`
     SELECT id, name, "tiktokHandle", "tiktokFollowers"
@@ -272,22 +252,45 @@ async function handleExistsInDB(handle: string): Promise<boolean> {
 }
 
 // ============================================
-// MAIN API
+// FUNÇÃO PRINCIPAL COM RETRY DE SEEDS
 // ============================================
+
+async function findWorkingSeed(language: string, maxAttempts = MAX_SEED_ATTEMPTS): Promise<{ seed: any; profile: any } | null> {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const seed = await getSeedFromDB(language);
+    if (!seed) return null;
+
+    logger.info(`[PROSPECTOR] Trying seed ${attempt + 1}/${maxAttempts}: @${seed.tiktokHandle}`);
+
+    try {
+      const profile = await scrapeProfile(seed.tiktokHandle);
+      const followingCount = profile[0]?.authorMeta?.following || 0;
+
+      if (followingCount > 0) {
+        logger.info(`[PROSPECTOR] ✓ Seed @${seed.tiktokHandle} has ${followingCount} following`);
+        return { seed, profile };
+      } else {
+        logger.warn(`[PROSPECTOR] ✗ Seed @${seed.tiktokHandle} has no visible following, trying next...`);
+      }
+    } catch (err: any) {
+      logger.warn(`[PROSPECTOR] ✗ Seed @${seed.tiktokHandle} failed: ${err.message}, trying next...`);
+    }
+  }
+
+  return null;
+}
+
 export async function POST(request: NextRequest): Promise<Response> {
   const startTime = Date.now();
   
   try {
-    // Auth
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Parse body
     const { language, max = 50, seed, dryRun = false } = await request.json();
 
-    // Validate
     if (!APIFY_TOKEN || !GEMINI_API_KEY) {
       return NextResponse.json({ error: 'Missing API tokens' }, { status: 500 });
     }
@@ -300,33 +303,39 @@ export async function POST(request: NextRequest): Promise<Response> {
       return NextResponse.json({ error: 'Max must be 1-50' }, { status: 400 });
     }
 
-    // 1. GET SEED
-    let seedData;
+    // 1. FIND WORKING SEED (com retry automático)
+    let seedData, seedProfile;
+    
     if (seed) {
-      seedData = { name: seed, tiktokHandle: seed, tiktokFollowers: 0 };
-    } else {
-      seedData = await getSeedFromDB(language.toUpperCase());
-      if (!seedData) {
-        return NextResponse.json({ error: `No seed found for language ${language}` }, { status: 404 });
+      // Usar seed específica do utilizador
+      seedData = { name: seed, tiktokHandle: seed.replace('@', ''), tiktokFollowers: 0 };
+      try {
+        seedProfile = await scrapeProfile(seedData.tiktokHandle);
+        const followingCount = seedProfile[0]?.authorMeta?.following || 0;
+        if (!followingCount) {
+          return NextResponse.json({ 
+            error: `Specified seed @${seedData.tiktokHandle} has no visible following. Try another seed or let the system choose automatically.` 
+          }, { status: 400 });
+        }
+      } catch (err: any) {
+        return NextResponse.json({ error: `Failed to scrape specified seed: ${err.message}` }, { status: 500 });
       }
-    }
-
-    logger.info(`[PROSPECTOR] Starting with seed: ${seedData.name}`);
-
-    // 2. SCRAP SEED PROFILE
-    let seedProfile;
-    try {
-      seedProfile = await scrapeProfile(seedData.tiktokHandle);
-    } catch (err: any) {
-      return NextResponse.json({ error: `Failed to scrape seed: ${err.message}` }, { status: 500 });
+    } else {
+      // Tentar múltiplas seeds automaticamente
+      const workingSeed = await findWorkingSeed(language.toUpperCase());
+      if (!workingSeed) {
+        return NextResponse.json({ 
+          error: `No working seed found for language ${language} after trying ${MAX_SEED_ATTEMPTS} options. Please specify a seed manually with --seed=@handle` 
+        }, { status: 404 });
+      }
+      seedData = workingSeed.seed;
+      seedProfile = workingSeed.profile;
     }
 
     const followingCount = seedProfile[0]?.authorMeta?.following || 0;
-    if (!followingCount) {
-      return NextResponse.json({ error: 'Seed has no visible following' }, { status: 400 });
-    }
+    logger.info(`[PROSPECTOR] Using seed @${seedData.tiktokHandle} with ${followingCount} following`);
 
-    // 3. SCRAP FOLLOWING
+    // 2. SCRAP FOLLOWING
     let handles;
     try {
       handles = await scrapeFollowing(seedData.tiktokHandle, followingCount);
@@ -338,21 +347,19 @@ export async function POST(request: NextRequest): Promise<Response> {
       return NextResponse.json({ error: 'No following found' }, { status: 404 });
     }
 
-    // 4. PROCESS EACH (THE "WEB" SYSTEM)
+    // 3. PROCESS EACH (SISTEMA TEIA)
     let processed = 0, imported = 0, skipped = 0, failed = 0;
     const results: any[] = [];
 
     for (const handle of handles) {
       if (processed >= max) break;
 
-      // Check duplicate
       if (await handleExistsInDB(handle)) {
         skipped++;
         continue;
       }
 
       try {
-        // Scrap profile
         let profile;
         try {
           profile = await scrapeProfile(handle);
@@ -361,17 +368,13 @@ export async function POST(request: NextRequest): Promise<Response> {
           continue;
         }
 
-        // Validate
         const validation = await validateProfile(handle, profile);
         if (!validation.valid) {
           skipped++;
           continue;
         }
 
-        // Calculate engagement
         const engagement = calculateEngagement(profile);
-
-        // Analyze with Gemini
         const analysis = await analyzeFit(handle, profile, engagement);
 
         if (analysis.fitScore < 3) {
@@ -379,7 +382,6 @@ export async function POST(request: NextRequest): Promise<Response> {
           continue;
         }
 
-        // Insert (if not dry run)
         if (!dryRun) {
           const author = profile[0]?.authorMeta;
           await prisma.influencer.create({
@@ -412,10 +414,9 @@ export async function POST(request: NextRequest): Promise<Response> {
       }
 
       processed++;
-      await new Promise(r => setTimeout(r, 1000)); // Rate limit
+      await new Promise(r => setTimeout(r, 1000));
     }
 
-    // 5. RETURN RESULTS
     return NextResponse.json({
       success: true,
       duration: `${((Date.now() - startTime) / 1000).toFixed(1)}s`,
