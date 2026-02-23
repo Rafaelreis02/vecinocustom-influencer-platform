@@ -6,7 +6,8 @@ import { logger } from '@/lib/logger';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 /**
- * API Prospectador - Sistema Teia com Retry de Seeds
+ * API Prospectador - Otimizado com Filtro Pré-Scrape
+ * Poupa ~60% dos créditos ao filtrar followers antes do scrape de perfil
  */
 
 const APIFY_TOKEN = process.env.APIFY_API_TOKEN || process.env.APIFY_TOKEN;
@@ -64,7 +65,10 @@ async function runApifyActor(actorId: string, input: any): Promise<any[]> {
     body: JSON.stringify(input)
   });
 
-  if (!startRes.ok) throw new Error('Failed to start actor');
+  if (!startRes.ok) {
+    const errorText = await startRes.text();
+    throw new Error(`Failed to start actor: ${startRes.status} - ${errorText.substring(0, 200)}`);
+  }
   
   const { data: { id: runId, defaultDatasetId } } = await startRes.json();
   
@@ -90,6 +94,50 @@ async function runApifyActor(actorId: string, input: any): Promise<any[]> {
   throw new Error('Timeout');
 }
 
+// ============================================
+// NOVO: Scrape Following com dados completos
+// ============================================
+interface FollowingData {
+  handle: string;
+  followers: number;
+  name: string;
+}
+
+async function scrapeFollowingWithData(handle: string, count: number): Promise<FollowingData[]> {
+  const key = getCacheKey(handle, 'following_data');
+  const cached = getFromCache(key);
+  if (cached) return cached;
+
+  const data = await withRetry(() => runApifyActor(ACTOR_FOLLOWING, {
+    profiles: [handle],
+    resultsPerPage: Math.min(count, 200),
+    followers: 0,
+    following: count
+  }));
+
+  // Extrair handle + followers de cada resultado
+  const profiles: FollowingData[] = data
+    ?.filter((item: any) => item.authorMeta?.name)
+    .map((item: any) => ({
+      handle: item.authorMeta.name,
+      followers: item.authorMeta.fans || 0,
+      name: item.authorMeta.nickName || item.authorMeta.name
+    })) || [];
+
+  // Remover duplicados (manter o com mais dados)
+  const unique = new Map<string, FollowingData>();
+  profiles.forEach(p => {
+    const existing = unique.get(p.handle.toLowerCase());
+    if (!existing || p.followers > existing.followers) {
+      unique.set(p.handle.toLowerCase(), p);
+    }
+  });
+
+  const result = Array.from(unique.values());
+  setCache(key, result);
+  return result;
+}
+
 async function scrapeProfile(handle: string): Promise<any[]> {
   const key = getCacheKey(handle, 'profile');
   const cached = getFromCache(key);
@@ -103,23 +151,6 @@ async function scrapeProfile(handle: string): Promise<any[]> {
   if (!data?.length) throw new Error('No data');
   setCache(key, data);
   return data;
-}
-
-async function scrapeFollowing(handle: string, count: number): Promise<string[]> {
-  const key = getCacheKey(handle, 'following');
-  const cached = getFromCache(key);
-  if (cached) return cached;
-
-  const data = await withRetry(() => runApifyActor(ACTOR_FOLLOWING, {
-    profiles: [`https://www.tiktok.com/@${handle}`],
-    resultsPerPage: Math.min(count, 200),
-    followers: 0,
-    following: count
-  }));
-
-  const handles = [...new Set(data?.filter((i: any) => i.authorMeta?.name).map((i: any) => i.authorMeta.name) || [])];
-  setCache(key, handles);
-  return handles;
 }
 
 async function generateWithFallback(prompt: string): Promise<string> {
@@ -172,7 +203,65 @@ function calculateEngagement(profileData: any[]): number {
   return parseFloat(((interactions / posts.length) / followers * 100).toFixed(2));
 }
 
-async function analyzeFit(handle: string, profileData: any[], engagement: number) {
+// ============================================
+// NOVO: Análise Visual dos Vídeos
+// ============================================
+async function analyzeVisualContent(profileData: any[]) {
+  const posts = profileData.filter((i: any) => i.webVideoUrl).slice(0, 3);
+  
+  if (posts.length === 0) {
+    return { visualFit: 3, visualNotes: 'No videos available' };
+  }
+
+  const prompt = `Analyze these TikTok videos VISUALLY for a jewelry brand (VecinoCustom):
+
+Videos to analyze:
+${posts.map((p: any, i: number) => `
+Video ${i+1}:
+- URL: ${p.webVideoUrl}
+- Caption: "${(p.text || '').substring(0, 100)}"
+- Views: ${p.playCount || 0}
+`).join('\n')}
+
+Based on the video URLs and captions, analyze:
+1. Visual aesthetic quality (1-5)
+2. Are jewelry/accessories visible in the content?
+3. Content style (fashion, lifestyle, beauty, etc)
+4. Professionalism level
+
+Respond ONLY with JSON:
+{
+  "visualFit": 1-5,
+  "jewelryVisible": boolean,
+  "contentStyle": "fashion/lifestyle/beauty/other",
+  "professionalism": "high/medium/low",
+  "visualNotes": "brief analysis"
+}`;
+
+  try {
+    const text = await generateWithFallback(prompt);
+    const match = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/```\n([\s\S]*?)\n```/) || text.match(/\{[\s\S]*\}/);
+    const analysis = JSON.parse(match?.[1] || match?.[0] || text);
+
+    return {
+      visualFit: Math.min(5, Math.max(1, analysis.visualFit || 3)),
+      jewelryVisible: analysis.jewelryVisible || false,
+      contentStyle: analysis.contentStyle || 'unknown',
+      professionalism: analysis.professionalism || 'medium',
+      visualNotes: analysis.visualNotes || 'No visual analysis available'
+    };
+  } catch {
+    return {
+      visualFit: 3,
+      jewelryVisible: false,
+      contentStyle: 'unknown',
+      professionalism: 'medium',
+      visualNotes: 'Visual analysis failed'
+    };
+  }
+}
+
+async function analyzeFit(handle: string, profileData: any[], engagement: number, visualAnalysis: any) {
   const author = profileData[0]?.authorMeta;
   const posts = profileData.filter((i: any) => i.webVideoUrl).slice(0, 5);
 
@@ -184,9 +273,16 @@ Followers: ${author?.fans || 'N/A'}
 Engagement: ${engagement}%
 Bio: ${author?.signature || 'N/A'}
 
+Visual Analysis:
+- Visual Fit Score: ${visualAnalysis.visualFit}/5
+- Jewelry Visible: ${visualAnalysis.jewelryVisible ? 'Yes' : 'No'}
+- Content Style: ${visualAnalysis.contentStyle}
+- Professionalism: ${visualAnalysis.professionalism}
+
 Recent posts:
 ${posts.map((p: any, i: number) => `${i+1}. "${(p.text || '').substring(0, 80)}..." - ${p.playCount || 0} views`).join('\n')}
 
+Based on text content AND visual analysis, provide:
 Respond ONLY with JSON:
 {
   "fitScore": 1-5,
@@ -255,7 +351,7 @@ async function handleExistsInDB(handle: string): Promise<boolean> {
 // FUNÇÃO PRINCIPAL COM RETRY DE SEEDS
 // ============================================
 
-async function findWorkingSeed(language: string, maxAttempts = MAX_SEED_ATTEMPTS): Promise<{ seed: any; handles: string[] } | null> {
+async function findWorkingSeed(language: string, maxAttempts = MAX_SEED_ATTEMPTS): Promise<{ seed: any; profiles: FollowingData[] } | null> {
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const seed = await getSeedFromDB(language);
     if (!seed) return null;
@@ -263,12 +359,12 @@ async function findWorkingSeed(language: string, maxAttempts = MAX_SEED_ATTEMPTS
     logger.info(`[PROSPECTOR] Trying seed ${attempt + 1}/${maxAttempts}: @${seed.tiktokHandle}`);
 
     try {
-      // Testar seed diretamente com o actor de following
-      const handles = await scrapeFollowing(seed.tiktokHandle, 200); // Testar com max 200
+      // Testar seed diretamente com o actor de following (com dados)
+      const profiles = await scrapeFollowingWithData(seed.tiktokHandle, 200);
 
-      if (handles.length > 0) {
-        logger.info(`[PROSPECTOR] ✓ Seed @${seed.tiktokHandle} has ${handles.length} visible following`);
-        return { seed, handles };
+      if (profiles.length > 0) {
+        logger.info(`[PROSPECTOR] ✓ Seed @${seed.tiktokHandle} has ${profiles.length} visible following`);
+        return { seed, profiles };
       } else {
         logger.warn(`[PROSPECTOR] ✗ Seed @${seed.tiktokHandle} has no visible following, trying next...`);
       }
@@ -282,6 +378,8 @@ async function findWorkingSeed(language: string, maxAttempts = MAX_SEED_ATTEMPTS
 
 export async function POST(request: NextRequest): Promise<Response> {
   const startTime = Date.now();
+  let totalApiCalls = 0;
+  let savedApiCalls = 0;
   
   try {
     const session = await getServerSession(authOptions);
@@ -304,14 +402,16 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
 
     // 1. FIND WORKING SEED (com retry automático)
-    let seedData, handles: string[];
+    let seedData: any;
+    let followingProfiles: FollowingData[];
     
     if (seed) {
       // Usar seed específica do utilizador
       seedData = { name: seed, tiktokHandle: seed.replace('@', ''), tiktokFollowers: 0 };
       try {
-        handles = await scrapeFollowing(seedData.tiktokHandle, 200);
-        if (handles.length === 0) {
+        followingProfiles = await scrapeFollowingWithData(seedData.tiktokHandle, 200);
+        totalApiCalls++;
+        if (followingProfiles.length === 0) {
           return NextResponse.json({ 
             error: `Specified seed @${seedData.tiktokHandle} has no visible following. Try another seed or let the system choose automatically.` 
           }, { status: 400 });
@@ -328,46 +428,70 @@ export async function POST(request: NextRequest): Promise<Response> {
         }, { status: 404 });
       }
       seedData = workingSeed.seed;
-      handles = workingSeed.handles;
+      followingProfiles = workingSeed.profiles;
+      totalApiCalls++;
     }
 
-    logger.info(`[PROSPECTOR] Using seed @${seedData.tiktokHandle} with ${handles.length} following found`);
+    logger.info(`[PROSPECTOR] Using seed @${seedData.tiktokHandle} with ${followingProfiles.length} following found`);
 
-    // 3. PROCESS EACH (SISTEMA TEIA)
+    // ============================================
+    // NOVO: FILTRAR POR FOLLOWERS ANTES DO SCRAPE
+    // ============================================
+    const validProfiles = followingProfiles.filter(p => 
+      p.followers >= MIN_FOLLOWERS && p.followers <= MAX_FOLLOWERS
+    );
+    
+    savedApiCalls = followingProfiles.length - validProfiles.length;
+    logger.info(`[PROSPECTOR] Filtered ${validProfiles.length}/${followingProfiles.length} profiles by follower count (saved ${savedApiCalls} API calls)`);
+
+    // 3. PROCESS EACH VALID PROFILE
     let processed = 0, imported = 0, skipped = 0, failed = 0;
     const results: any[] = [];
 
-    for (const handle of handles) {
+    for (const profileData of validProfiles) {
       if (processed >= max) break;
 
+      const handle = profileData.handle;
+
+      // Check duplicate
       if (await handleExistsInDB(handle)) {
         skipped++;
         continue;
       }
 
       try {
+        // Scrape detailed profile
         let profile;
         try {
           profile = await scrapeProfile(handle);
+          totalApiCalls++;
         } catch {
           skipped++;
           continue;
         }
 
+        // Validate
         const validation = await validateProfile(handle, profile);
         if (!validation.valid) {
           skipped++;
           continue;
         }
 
+        // Calculate engagement
         const engagement = calculateEngagement(profile);
-        const analysis = await analyzeFit(handle, profile, engagement);
+
+        // NEW: Visual analysis
+        const visualAnalysis = await analyzeVisualContent(profile);
+
+        // Analyze with Gemini (text + visual)
+        const analysis = await analyzeFit(handle, profile, engagement, visualAnalysis);
 
         if (analysis.fitScore < 3) {
           skipped++;
           continue;
         }
 
+        // Import to DB
         if (!dryRun) {
           const author = profile[0]?.authorMeta;
           await prisma.influencer.create({
@@ -393,7 +517,13 @@ export async function POST(request: NextRequest): Promise<Response> {
         }
 
         imported++;
-        results.push({ handle, fitScore: analysis.fitScore, niche: analysis.niche });
+        results.push({ 
+          handle, 
+          fitScore: analysis.fitScore, 
+          niche: analysis.niche,
+          visualFit: visualAnalysis.visualFit,
+          jewelryVisible: visualAnalysis.jewelryVisible
+        });
 
       } catch (err: any) {
         failed++;
@@ -409,10 +539,14 @@ export async function POST(request: NextRequest): Promise<Response> {
       stats: {
         language: language.toUpperCase(),
         seed: seedData.tiktokHandle,
+        totalFollowing: followingProfiles.length,
+        filteredByFollowers: validProfiles.length,
         processed,
         imported,
         skipped,
         failed,
+        apiCalls: totalApiCalls,
+        apiCallsSaved: savedApiCalls,
         mode: dryRun ? 'DRY RUN' : 'PRODUCTION'
       },
       results
