@@ -74,9 +74,9 @@ async function analyzeWithGemini(
   platform: 'TIKTOK' | 'INSTAGRAM',
   profile: ParsedProfile
 ): Promise<AIAnalysis> {
-  // Use gemini-1.5-flash instead of gemini-3-flash-preview (more stable)
+  // Use gemini-1.5-flash-latest for better availability
   const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || '');
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
 
   const posts = profile.rawData?.posts || profile.rawData?.latestPosts || [];
   const contentInfo = posts.length > 0

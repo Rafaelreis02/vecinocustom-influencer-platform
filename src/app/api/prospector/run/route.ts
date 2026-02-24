@@ -24,7 +24,7 @@ const CACHE_TTL = 24 * 60 * 60 * 1000;
 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY || '');
 const modelPrimary = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
-const modelFallback = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+const modelFallback = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
 
 function getCacheKey(handle: string, type: string): string {
   return `${type}_${handle.toLowerCase()}`;

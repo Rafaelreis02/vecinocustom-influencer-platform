@@ -178,7 +178,7 @@ export async function POST(request: Request) {
     // Link videos if TikTok handle provided
     if (validated.tiktokHandle) {
       try {
-        await linkVideosToInfluencer(influencer.id, validated.tiktokHandle.replace('@', ''));
+        await linkVideosToInfluencer(influencer.id, validated.tiktokHandle.replace('@', ''), 'TIKTOK');
         logger.info('Videos linked', { id: influencer.id });
       } catch (videoError) {
         logger.warn('Video linking failed', videoError);
