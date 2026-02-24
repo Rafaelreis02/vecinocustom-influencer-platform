@@ -17,6 +17,7 @@ import {
 import { ToastContainer, useToast } from '@/components/ui/Toast';
 import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog';
 import { ImportInfluencerModal } from '@/components/ImportInfluencerModal';
+import { ProcessingBanner } from '@/components/ProcessingBanner';
 import { PHASES, getStatusConfig } from '@/lib/influencer-status';
 
 const TABS = [
@@ -184,6 +185,9 @@ function InfluencersContent() {
           Novo Influencer
         </button>
       </div>
+
+      {/* Processing Banner */}
+      <ProcessingBanner />
 
       {/* Tabs de Fases */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">

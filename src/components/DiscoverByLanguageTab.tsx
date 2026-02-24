@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Globe, Loader2, Sparkles, Smartphone } from 'lucide-react';
+import { Globe } from 'lucide-react';
 import { useGlobalToast } from '@/contexts/ToastContext';
+import { startProcessing } from '@/components/ProcessingBanner';
 
 interface DiscoverByLanguageTabProps {
   onSuccess: () => void;
@@ -20,10 +21,8 @@ export function DiscoverByLanguageTab({ onSuccess, onClose }: DiscoverByLanguage
   const [platform, setPlatform] = useState('tiktok');
   const [max, setMax] = useState(30);
   const [dryRun, setDryRun] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
 
-  const handleDiscover = async () => {
+  const handleDiscover = () => {
     // Validar seed obrigatória
     if (!seed.trim()) {
       addToast('A seed é obrigatória. Insere um handle do TikTok.', 'error');
@@ -33,61 +32,18 @@ export function DiscoverByLanguageTab({ onSuccess, onClose }: DiscoverByLanguage
     // Limpar seed (remover @ se existir)
     const cleanSeed = seed.trim().replace('@', '');
 
-    try {
-      setLoading(true);
-      setResult(null);
-
-      addToast('🔄 A iniciar descoberta...', 'info');
-
-      const res = await fetch('/api/prospector/run', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          seed: cleanSeed,
-          platform,
-          max,
-          dryRun
-        }),
-      });
-
-      // Check if response is JSON
-      const contentType = res.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        const text = await res.text();
-        console.error('Non-JSON response:', text.substring(0, 500));
-        throw new Error(`Server returned non-JSON response (status ${res.status}). Check server logs.`);
-      }
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || data.details || 'Erro na execução');
-      }
-
-      setResult(data);
-      
-      // Mostrar mensagem clara sobre quantos foram encontrados vs pedidos
-      const requested = data.requested || max;
-      const imported = data.stats?.imported || 0;
-      
-      if (dryRun) {
-        addToast('✅ Teste concluído! Verifica o output.', 'success');
-      } else if (imported >= requested) {
-        addToast(`✅ ${imported} influencers bons encontrados (de ${requested} pedidos)!`, 'success');
-      } else {
-        addToast(`⚠️ Só ${imported} influencers bons encontrados de ${requested} pedidos.`, 'info');
-      }
-      
-      if (imported > 0 && !dryRun) {
-        setTimeout(() => {
-          onSuccess();
-          onClose();
-        }, 3000);
-      }
-    } catch (error: any) {
-      addToast(`Erro: ${error.message}`, 'error');
-    } finally {
-      setLoading(false);
+    // Iniciar processamento em background
+    startProcessing(cleanSeed, max, platform, dryRun);
+    
+    addToast('🚀 Descoberta iniciada! Podes continuar a trabalhar.', 'success');
+    
+    // Fechar modal imediatamente
+    onClose();
+    
+    // Chamar onSuccess para atualizar a lista
+    if (onSuccess) {
+      // Dar um delay para quando terminar, atualizar
+      setTimeout(() => onSuccess(), 5000);
     }
   };
 
@@ -110,7 +66,6 @@ export function DiscoverByLanguageTab({ onSuccess, onClose }: DiscoverByLanguage
             value={seed}
             onChange={(e) => setSeed(e.target.value)}
             placeholder="Ex: influencer_popular"
-            disabled={loading}
             className="w-full pl-8 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
           />
         </div>
@@ -129,7 +84,7 @@ export function DiscoverByLanguageTab({ onSuccess, onClose }: DiscoverByLanguage
             <button
               key={p.id}
               onClick={() => !p.disabled && setPlatform(p.id)}
-              disabled={p.disabled || loading}
+              disabled={p.disabled}
               className={`flex-1 py-3 px-4 rounded-lg border-2 flex items-center justify-center gap-2 transition ${
                 platform === p.id 
                   ? 'border-blue-500 bg-blue-50 text-blue-700' 
@@ -155,7 +110,6 @@ export function DiscoverByLanguageTab({ onSuccess, onClose }: DiscoverByLanguage
           max="50"
           value={max}
           onChange={(e) => setMax(parseInt(e.target.value))}
-          disabled={loading}
           className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
         />
         <div className="flex justify-between text-xs text-gray-500 mt-1">
@@ -171,7 +125,6 @@ export function DiscoverByLanguageTab({ onSuccess, onClose }: DiscoverByLanguage
           id="dryRun"
           checked={dryRun}
           onChange={(e) => setDryRun(e.target.checked)}
-          disabled={loading}
           className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
         />
         <label htmlFor="dryRun" className="text-sm text-gray-700 cursor-pointer">
@@ -179,87 +132,19 @@ export function DiscoverByLanguageTab({ onSuccess, onClose }: DiscoverByLanguage
         </label>
       </div>
 
-      {/* Resultado */}
-      {result && (
-        <div className={`border rounded-lg p-4 space-y-2 ${
-          result.success ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
-        }`}>
-          <h3 className={`font-semibold text-sm flex items-center gap-2 ${
-            result.success ? 'text-green-900' : 'text-red-900'
-          }`}>
-            <Sparkles className="h-4 w-4" />
-            {result.success ? 'Concluído!' : 'Erro'}
-          </h3>
-          
-          {result.stats && (
-            <div className="text-sm space-y-1">
-              {result.requested && (
-                <div className="flex justify-between font-semibold text-blue-700 border-b border-blue-200 pb-1 mb-2">
-                  <span>Pedidos:</span>
-                  <span>{result.requested}</span>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <span className="text-gray-600">Seed:</span>
-                <span className="font-medium">@{result.stats.seed}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Total following:</span>
-                <span className="font-medium">{result.stats.totalFollowing}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Filtrados (5k-150k):</span>
-                <span className="font-medium">{result.stats.filteredByFollowers}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Processados:</span>
-                <span className="font-medium">{result.stats.processed}</span>
-              </div>
-              <div className={`flex justify-between font-semibold border-t pt-1 mt-1 ${
-                result.stats.imported >= (result.requested || max) 
-                  ? 'text-green-600' 
-                  : 'text-orange-600'
-              }`}>
-                <span>Importados:</span>
-                <span>{result.stats.imported} {result.requested ? `/ ${result.requested}` : ''}</span>
-              </div>
-              <div className="flex justify-between text-gray-500 text-xs">
-                <span>API calls:</span>
-                <span>{result.stats.apiCalls}</span>
-              </div>
-              <div className="flex justify-between text-green-600 text-xs">
-                <span>Calls poupados:</span>
-                <span>{result.stats.apiCallsSaved}</span>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Botão */}
       <button
         onClick={handleDiscover}
-        disabled={loading || !seed.trim()}
-        className="w-full py-3 px-4 rounded-lg font-semibold text-white bg-blue-600 hover:bg disabled:opacity--blue-700 transition50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        disabled={!seed.trim()}
+        className="w-full py-3 px-4 rounded-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
       >
-        {loading ? (
-          <>
-            <Loader2 className="h-5 w-5 animate-spin" />
-            A processar... (pode demorar vários minutos)
-          </>
-        ) : (
-          <>
-            <Globe className="h-5 w-5" />
-            {dryRun ? 'Testar Descoberta' : 'Iniciar Descoberta'}
-          </>
-        )}
+        <Globe className="h-5 w-5" />
+        {dryRun ? 'Testar Descoberta' : 'Iniciar Descoberta'}
       </button>
 
-      {loading && (
-        <p className="text-xs text-gray-500 text-center">
-          ⏳ Isto pode demorar 5-15 minutos. Não feches esta janela!
-        </p>
-      )}
+      <p className="text-xs text-gray-500 text-center">
+        💡 Podes continuar a trabalhar enquanto processa em segundo plano
+      </p>
     </div>
   );
 }
