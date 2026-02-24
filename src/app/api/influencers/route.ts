@@ -17,7 +17,7 @@ export async function GET(request: Request) {
     const status = searchParams.get('status');
     const search = searchParams.get('search');
     const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '50');
+    const limit = parseInt(searchParams.get('limit') || '10000');
     const skip = (page - 1) * limit;
 
     const where: Prisma.InfluencerWhereInput = {};

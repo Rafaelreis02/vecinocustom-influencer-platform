@@ -155,6 +155,8 @@ export async function POST(request: Request) {
       // Discovery
       discoveryMethod: 'AI Import',
       notes: `${profileData.biography || ''}\n\nANÁLISE DE FIT:\n${fitAnalysis.reasoning}`,
+      analysisSummary: fitAnalysis.reasoning,
+      analysisDate: new Date(),
       
       // Status
       status: 'suggestion', // Start as suggestion

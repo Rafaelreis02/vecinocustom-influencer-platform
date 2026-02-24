@@ -149,6 +149,9 @@ export default function InfluencerDetailPage() {
 
   // Sync videos
   const [syncingVideos, setSyncingVideos] = useState(false);
+  
+  // AI Analysis
+  const [analyzingAI, setAnalyzingAI] = useState(false);
 
   useEffect(() => {
     fetchInfluencer();
@@ -231,6 +234,31 @@ export default function InfluencerDetailPage() {
       );
     } finally {
       setSyncingVideos(false);
+    }
+  };
+
+  const handleAnalyzeAI = async () => {
+    try {
+      setAnalyzingAI(true);
+      const res = await fetch(`/api/influencers/${id}/reanalyze`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Erro ao analisar com IA');
+      }
+
+      addToast(`✅ Análise concluída! Fit: ${data.fitScore}/5`, 'success');
+      fetchInfluencer(); // Recarregar para ver a nova análise
+    } catch (error) {
+      console.error('Error analyzing with AI:', error);
+      addToast(
+        error instanceof Error ? error.message : 'Erro ao analisar com IA',
+        'error'
+      );
+    } finally {
+      setAnalyzingAI(false);
     }
   };
 
@@ -580,6 +608,18 @@ export default function InfluencerDetailPage() {
                 <Loader2 className="h-4 w-4 text-white animate-spin" />
               ) : (
                 <Link2 className="h-4 w-4 text-white" />
+              )}
+            </button>
+            <button
+              onClick={handleAnalyzeAI}
+              disabled={analyzingAI}
+              className="p-2 rounded bg-white/10 border border-white/20 hover:bg-white/20 transition active:scale-95 disabled:opacity-50"
+              title="Analisar com IA"
+            >
+              {analyzingAI ? (
+                <Loader2 className="h-4 w-4 text-white animate-spin" />
+              ) : (
+                <Sparkles className="h-4 w-4 text-white" />
               )}
             </button>
             <Link
@@ -1189,6 +1229,24 @@ export default function InfluencerDetailPage() {
         {/* Notas */}
         <CollapsibleSection title="Notas Internas" icon={Sparkles} defaultOpen={!!influencer.notes}>
           <div className="pt-4 space-y-3">
+            {/* AI Analysis Summary - Always show if exists */}
+            {influencer.analysisSummary && (
+              <div className="p-3 rounded-lg bg-blue-50 border border-blue-200">
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-semibold text-blue-900">Análise AI</span>
+                  {influencer.analysisDate && (
+                    <span className="text-xs text-blue-600">
+                      {new Date(influencer.analysisDate).toLocaleDateString('pt-PT')}
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-blue-800 whitespace-pre-line">
+                  {influencer.analysisSummary}
+                </p>
+              </div>
+            )}
+
             {editingNotes ? (
               <>
                 <textarea
