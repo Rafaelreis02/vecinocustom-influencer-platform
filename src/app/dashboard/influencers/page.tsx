@@ -12,7 +12,11 @@ import {
   Star,
   Target,
   CheckCircle,
-  ChevronRight
+  ChevronRight,
+  X,
+  ArrowUpDown,
+  ArrowDown,
+  ArrowUp
 } from 'lucide-react';
 import { ToastContainer, useToast } from '@/components/ui/Toast';
 import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog';
@@ -61,9 +65,11 @@ type Influencer = {
   totalFollowers: number;
   engagement: number;
   matchScore: number | null;
+  fitScore: number | null;
   campaigns: number;
   totalRevenue: number;
   activeCoupons: number;
+  createdAt: string;
 };
 
 function InfluencersContent() {
@@ -74,6 +80,11 @@ function InfluencersContent() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { toasts, addToast, removeToast } = useToast();
   const { dialog, confirm: showConfirm } = useConfirm();
+
+  // Filtros
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [sortBy, setSortBy] = useState<'date' | 'fitScore'>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
     fetchInfluencers();
@@ -121,18 +132,30 @@ function InfluencersContent() {
     fetchInfluencers();
   };
 
-  // Filtrar por tab (fase) e pesquisa
+  // Filtrar por tab (fase), pesquisa, status e ordenação
   const currentPhase = TABS.find(t => t.id === activeTab);
-  const phaseStatuses = activeTab === 'prospecting' 
-    ? PHASES.PROSPECTING.statuses 
-    : activeTab === 'negotiating' 
-    ? PHASES.NEGOTIATING.statuses 
+  const phaseStatuses = activeTab === 'prospecting'
+    ? PHASES.PROSPECTING.statuses
+    : activeTab === 'negotiating'
+    ? PHASES.NEGOTIATING.statuses
     : PHASES.CLOSING.statuses;
+
+  // Reset status filter quando muda de tab
+  useEffect(() => {
+    setStatusFilter('ALL');
+  }, [activeTab]);
 
   const filteredInfluencers = allInfluencers
     .filter((inf: Influencer) => {
       const infStatus = (inf.status || 'UNKNOWN').toUpperCase();
       return phaseStatuses.map(s => s.toUpperCase()).includes(infStatus);
+    })
+    .filter((inf: Influencer) => {
+      // Filtro por status específico
+      if (statusFilter !== 'ALL') {
+        return (inf.status || 'UNKNOWN').toUpperCase() === statusFilter.toUpperCase();
+      }
+      return true;
     })
     .filter((inf: Influencer) => {
       if (!searchQuery.trim()) return true;
@@ -143,7 +166,26 @@ function InfluencersContent() {
         (inf.instagramHandle && inf.instagramHandle.toLowerCase().includes(q)) ||
         (inf.tiktokHandle && inf.tiktokHandle.toLowerCase().includes(q))
       );
+    })
+    .sort((a: Influencer, b: Influencer) => {
+      // Ordenação
+      if (sortBy === 'fitScore' && activeTab === 'prospecting') {
+        const scoreA = a.fitScore || 0;
+        const scoreB = b.fitScore || 0;
+        return sortOrder === 'asc' ? scoreA - scoreB : scoreB - scoreA;
+      } else {
+        // Por data (createdAt)
+        const dateA = new Date(a.createdAt || 0).getTime();
+        const dateB = new Date(b.createdAt || 0).getTime();
+        return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+      }
     });
+
+  // Opções de status para o filtro (baseado na aba atual)
+  const statusOptions = phaseStatuses.map(status => ({
+    value: status,
+    label: getStatusConfig(status).label
+  }));
 
   return (
     <div className="space-y-6">
