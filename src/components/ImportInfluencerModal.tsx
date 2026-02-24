@@ -59,7 +59,7 @@ export function ImportInfluencerModal({
             }`}
           >
             <Globe className="h-4 w-4" />
-            Descobrir por Idioma
+            Descobrir por Seed
           </button>
         </div>
 

@@ -118,6 +118,8 @@ model Influencer {
   files             File[]
   emails            Email[]           @relation("InfluencerEmails")
   
+  @@unique([tiktokHandle], name: "unique_tiktok_handle", map: "unique_tiktok_handle")
+  @@unique([instagramHandle], name: "unique_instagram_handle", map: "unique_instagram_handle")
   @@map("influencers")
 }
 
