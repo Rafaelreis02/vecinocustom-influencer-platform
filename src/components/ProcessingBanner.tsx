@@ -37,29 +37,33 @@ export function startProcessing(seed: string, max: number, platform: string, dry
     body: JSON.stringify({ seed, max, platform, dryRun }),
   })
     .then(async res => {
+      const contentType = res.headers.get('content-type');
+      
+      // Se não for JSON, é erro do servidor
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await res.text();
+        throw new Error(`Server error: ${text.substring(0, 100)}`);
+      }
+      
       const data = await res.json();
       
       if (!res.ok) {
-        globalJobs.set(id, {
-          ...globalJobs.get(id)!,
-          status: 'error',
-          message: data.error || 'Erro desconhecido',
-        });
-      } else {
-        globalJobs.set(id, {
-          ...globalJobs.get(id)!,
-          status: 'completed',
-          result: data,
-          message: data.message || `${data.stats?.imported} influencers encontrados`,
-        });
+        throw new Error(data.error || `HTTP ${res.status}`);
       }
+      
+      globalJobs.set(id, {
+        ...globalJobs.get(id)!,
+        status: 'completed',
+        result: data,
+        message: data.message || `${data.stats?.imported} influencers encontrados`,
+      });
       notifyListeners();
     })
     .catch(err => {
       globalJobs.set(id, {
         ...globalJobs.get(id)!,
         status: 'error',
-        message: err.message,
+        message: err.message || 'Erro no processamento',
       });
       notifyListeners();
     });
