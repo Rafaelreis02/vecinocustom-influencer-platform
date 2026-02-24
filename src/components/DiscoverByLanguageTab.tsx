@@ -75,7 +75,7 @@ export function DiscoverByLanguageTab({ onSuccess, onClose }: DiscoverByLanguage
       } else if (imported >= requested) {
         addToast(`✅ ${imported} influencers bons encontrados (de ${requested} pedidos)!`, 'success');
       } else {
-        addToast(`⚠️ Só ${imported} influencers bons encontrados de ${requested} pedidos.`, 'warning');
+        addToast(`⚠️ Só ${imported} influencers bons encontrados de ${requested} pedidos.`, 'info');
       }
       
       if (imported > 0 && !dryRun) {
