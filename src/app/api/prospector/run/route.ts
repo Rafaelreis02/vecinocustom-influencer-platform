@@ -212,10 +212,11 @@ function calculateEngagement(profileData: any[]): number {
 }
 
 async function analyzeFit(handle: string, profileData: any[], engagement: number) {
-  const author = profileData[0]?.authorMeta;
-  const posts = profileData.filter((i: any) => i.webVideoUrl).slice(0, 5);
+  try {
+    const author = profileData[0]?.authorMeta;
+    const posts = profileData.filter((i: any) => i.webVideoUrl).slice(0, 5);
 
-  const prompt = `Analyze this influencer for VecinoCustom (Portuguese jewelry brand):
+    const prompt = `Analyze this influencer for VecinoCustom (Portuguese jewelry brand):
 
 Profile: @${handle}
 Name: ${author?.nickName || handle}
@@ -238,7 +239,6 @@ Respond ONLY with JSON:
   "country": "PT/ES/IT/etc"
 }`;
 
-  try {
     const text = await generateWithFallback(prompt);
     const match = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/```\n([\s\S]*?)\n```/) || text.match(/\{[\s\S]*\}/);
     const analysis = JSON.parse(match?.[1] || match?.[0] || text);
