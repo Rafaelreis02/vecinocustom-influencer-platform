@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { serializeBigInt } from '@/lib/serialize';
 import { InfluencerCreateSchema } from '@/lib/validation';
@@ -135,6 +136,11 @@ export async function GET(request: Request) {
 // POST /api/influencers - Criar novo influencer
 export async function POST(request: Request) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     
     // Validate input
@@ -143,11 +149,54 @@ export async function POST(request: Request) {
     // Download and store avatar if provided (external URL)
     let avatarUrl = validated.avatarUrl;
     if (avatarUrl && (avatarUrl.includes('tiktokcdn.com') || avatarUrl.includes('instagram.com'))) {
-      console.log(`[INFLUENCER] Downloading avatar from: ${avatarUrl}`);
-      const storedUrl = await downloadAndStoreImage(
+      logger.info(`[INFLUENCER] Downloading avatar from: ${avatarUrl}`);
+      try {
+        const storedUrl = await downloadAndStoreImage(
+          avatarUrl,
+          `avatars/${Date.now()}-${validated.tiktokHandle || validated.instagramHandle || 'influencer'}.jpg`
+        );
+        if (storedUrl) {
+          avatarUrl = storedUrl;
+          logger.info(`[INFLUENCER] Avatar downloaded successfully`);
+        }
+      } catch (avatarError) {
+        logger.warn('[INFLUENCER] Avatar download failed, using original URL', avatarError);
+      }
+    }
+
+    // Create influencer
+    const influencer = await prisma.influencer.create({
+      data: {
+        ...validated,
         avatarUrl,
-        `avatars/${Date.now()}-${validated.tiktokHandle || validated.instagramHandle || 'influencer'}.jpg`
+        createdById: session.user.id,
+      },
+    });
+
+    logger.info('Influencer created', { id: influencer.id, name: influencer.name });
+
+    // Link videos if TikTok handle provided
+    if (validated.tiktokHandle) {
+      try {
+        await linkVideosToInfluencer(influencer.id, validated.tiktokHandle.replace('@', ''));
+        logger.info('Videos linked', { id: influencer.id });
+      } catch (videoError) {
+        logger.warn('Video linking failed', videoError);
+      }
+    }
+
+    return NextResponse.json(serializeBigInt(influencer), { status: 201 });
+  } catch (error) {
+    logger.error('POST /api/influencers failed', error);
+    
+    // Handle Zod validation errors
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: error.errors },
+        { status: 400 }
       );
-      if (storedUrl) {
-        avatarUrl = storedUrl;
-        console.log(`[INFLUENCER] Av
+    }
+    
+    return handleApiError(error);
+  }
+}
