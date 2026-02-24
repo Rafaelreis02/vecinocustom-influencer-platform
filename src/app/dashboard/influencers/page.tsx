@@ -287,17 +287,70 @@ function InfluencersContent() {
 
         {/* Conteúdo da Tab Ativa */}
         <div className="p-4 sm:p-6">
-          {/* Search */}
-          <div className="flex gap-4 mb-6">
+          {/* Search & Filters */}
+          <div className="flex flex-col md:flex-row gap-4 mb-6">
+            {/* Search */}
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder={`Pesquisar em ${currentPhase?.label.toLowerCase()}...`}
+                placeholder={`Pesquisar...`}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full rounded-md border border-gray-200 bg-white py-2 pl-10 pr-4 text-sm focus:border-gray-900 focus:outline-none transition-colors"
               />
+            </div>
+
+            {/* Filters */}
+            <div className="flex gap-3 overflow-x-auto pb-2 md:pb-0">
+              {/* Status Filter */}
+              <div className="relative">
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="appearance-none h-10 pl-3 pr-8 rounded-md border border-gray-200 bg-white text-sm text-gray-700 hover:border-gray-300 focus:border-black focus:outline-none cursor-pointer"
+                >
+                  <option value="ALL">Todos os Status</option>
+                  {statusOptions.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+                <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 rotate-90 pointer-events-none" />
+                
+                {statusFilter !== 'ALL' && (
+                  <button 
+                    onClick={() => setStatusFilter('ALL')}
+                    className="absolute -top-2 -right-2 bg-gray-100 rounded-full p-0.5 hover:bg-gray-200 shadow-sm border border-gray-200"
+                  >
+                    <X className="w-3 h-3 text-gray-500" />
+                  </button>
+                )}
+              </div>
+
+              {/* Sort */}
+              <div className="flex items-center bg-white border border-gray-200 rounded-md p-1 h-10">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  className="h-full pl-2 pr-1 text-sm bg-transparent border-none focus:ring-0 text-gray-700 cursor-pointer outline-none"
+                >
+                  <option value="date">Data</option>
+                  {activeTab === 'prospecting' && <option value="fitScore">Fit Score</option>}
+                </select>
+                
+                <div className="w-px h-4 bg-gray-200 mx-1" />
+                
+                <button
+                  onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                  className="p-1.5 hover:bg-gray-100 rounded-md transition-colors"
+                  title={sortOrder === 'asc' ? 'Ascendente' : 'Descendente'}
+                >
+                  {sortOrder === 'asc' 
+                    ? <ArrowUp className="w-4 h-4 text-gray-600" /> 
+                    : <ArrowDown className="w-4 h-4 text-gray-600" />
+                  }
+                </button>
+              </div>
             </div>
           </div>
 
