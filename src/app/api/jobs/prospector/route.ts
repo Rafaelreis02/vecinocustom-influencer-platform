@@ -52,15 +52,28 @@ async function processProspectorJob(jobId: string, userId: string) {
     const job = updateJob(jobId, {});
     if (!job) return;
 
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ''}/api/prospector/run`, {
+    // Usar URL absoluta da Vercel ou localhost
+    const baseUrl = process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}` 
+      : process.env.NEXT_PUBLIC_BASE_URL 
+      ? process.env.NEXT_PUBLIC_BASE_URL 
+      : 'http://localhost:3000';
+
+    const response = await fetch(`${baseUrl}/api/prospector/run`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(job.config),
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      failJob(jobId, error.error || 'Unknown error');
+      const errorText = await response.text();
+      let errorData;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch {
+        errorData = { error: errorText || `HTTP ${response.status}` };
+      }
+      failJob(jobId, errorData.error || `HTTP ${response.status}`);
       return;
     }
 
