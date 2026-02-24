@@ -66,16 +66,23 @@ export function DiscoverByLanguageTab({ onSuccess, onClose }: DiscoverByLanguage
 
       setResult(data);
       
+      // Mostrar mensagem clara sobre quantos foram encontrados vs pedidos
+      const requested = data.requested || max;
+      const imported = data.stats?.imported || 0;
+      
       if (dryRun) {
         addToast('✅ Teste concluído! Verifica o output.', 'success');
+      } else if (imported >= requested) {
+        addToast(`✅ ${imported} influencers bons encontrados (de ${requested} pedidos)!`, 'success');
       } else {
-        const imported = data.stats?.imported || data.stats?.importados || 0;
-        addToast(`✅ ${imported} influencers descobertos!`, 'success');
-        
+        addToast(`⚠️ Só ${imported} influencers bons encontrados de ${requested} pedidos.`, 'warning');
+      }
+      
+      if (imported > 0 && !dryRun) {
         setTimeout(() => {
           onSuccess();
           onClose();
-        }, 2000);
+        }, 3000);
       }
     } catch (error: any) {
       addToast(`Erro: ${error.message}`, 'error');
@@ -186,6 +193,12 @@ export function DiscoverByLanguageTab({ onSuccess, onClose }: DiscoverByLanguage
           
           {result.stats && (
             <div className="text-sm space-y-1">
+              {result.requested && (
+                <div className="flex justify-between font-semibold text-blue-700 border-b border-blue-200 pb-1 mb-2">
+                  <span>Pedidos:</span>
+                  <span>{result.requested}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-gray-600">Seed:</span>
                 <span className="font-medium">@{result.stats.seed}</span>
@@ -202,9 +215,13 @@ export function DiscoverByLanguageTab({ onSuccess, onClose }: DiscoverByLanguage
                 <span className="text-gray-600">Processados:</span>
                 <span className="font-medium">{result.stats.processed}</span>
               </div>
-              <div className="flex justify-between text-green-600 font-semibold">
+              <div className={`flex justify-between font-semibold border-t pt-1 mt-1 ${
+                result.stats.imported >= (result.requested || max) 
+                  ? 'text-green-600' 
+                  : 'text-orange-600'
+              }`}>
                 <span>Importados:</span>
-                <span>{result.stats.imported}</span>
+                <span>{result.stats.imported} {result.requested ? `/ ${result.requested}` : ''}</span>
               </div>
               <div className="flex justify-between text-gray-500 text-xs">
                 <span>API calls:</span>

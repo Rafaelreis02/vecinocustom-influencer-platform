@@ -349,15 +349,21 @@ export async function POST(request: NextRequest): Promise<Response> {
     // 3. PROCESSAR CADA PERFIL
     let processed = 0, imported = 0, skipped = 0, failed = 0;
     const results: any[] = [];
+    const MAX_ATTEMPTS = Math.min(validProfiles.length, 200); // Limite de segurança
 
     for (const profileData of validProfiles) {
-      if (processed >= max) break;
+      // PARAR quando atingir o max de IMPORTADOS (bons), não de processados
+      if (imported >= max) break;
+      
+      // PARAR se exceder o limite de tentativas
+      if (processed >= MAX_ATTEMPTS) break;
 
       const handle = profileData.handle;
 
       // Verificar duplicado
       if (await handleExistsInDB(handle)) {
         skipped++;
+        processed++;
         continue;
       }
 
@@ -369,6 +375,7 @@ export async function POST(request: NextRequest): Promise<Response> {
           totalApiCalls++;
         } catch {
           skipped++;
+          processed++;
           continue;
         }
 
@@ -376,6 +383,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         const validation = await validateProfile(handle, profile);
         if (!validation.valid) {
           skipped++;
+          processed++;
           continue;
         }
 
@@ -387,6 +395,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 
         if (analysis.fitScore < 3) {
           skipped++;
+          processed++;
           continue;
         }
 
@@ -448,6 +457,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     return NextResponse.json({
       success: true,
       duration: `${((Date.now() - startTime) / 1000).toFixed(1)}s`,
+      requested: max,  // Quantos o user pediu
       stats: {
         seed: cleanSeed,
         platform,
@@ -461,7 +471,10 @@ export async function POST(request: NextRequest): Promise<Response> {
         apiCallsSaved: savedApiCalls,
         mode: dryRun ? 'DRY RUN' : 'PRODUCTION'
       },
-      results
+      results,
+      message: imported >= max 
+        ? `✅ Encontrados ${imported} influencers bons!` 
+        : `⚠️ Só encontrados ${imported} influencers bons de ${max} pedidos. A seed não tem mais perfis adequados.`
     });
 
   } catch (error: any) {
