@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { Globe, Loader2, Sparkles, Smartphone } from 'lucide-react';
 import { useGlobalToast } from '@/contexts/ToastContext';
-import { useBackgroundJobs } from '@/hooks/useBackgroundJobs';
 
 interface DiscoverByLanguageTabProps {
   onSuccess: () => void;
@@ -17,7 +16,6 @@ const PLATFORMS = [
 
 export function DiscoverByLanguageTab({ onSuccess, onClose }: DiscoverByLanguageTabProps) {
   const { addToast } = useGlobalToast();
-  const { createProspectorJob, activeJobs } = useBackgroundJobs();
   const [seed, setSeed] = useState('');
   const [platform, setPlatform] = useState('tiktok');
   const [max, setMax] = useState(30);
@@ -37,23 +35,54 @@ export function DiscoverByLanguageTab({ onSuccess, onClose }: DiscoverByLanguage
 
     try {
       setLoading(true);
-      
-      // Criar job em background
-      const jobId = await createProspectorJob({
-        seed: cleanSeed,
-        max,
-        platform,
-        dryRun,
+      setResult(null);
+
+      addToast('🔄 A iniciar descoberta...', 'info');
+
+      const res = await fetch('/api/prospector/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          seed: cleanSeed,
+          platform,
+          max,
+          dryRun
+        }),
       });
 
-      addToast('🚀 Job criado! O processamento está a correr em segundo plano.', 'success');
+      // Check if response is JSON
+      const contentType = res.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await res.text();
+        console.error('Non-JSON response:', text.substring(0, 500));
+        throw new Error(`Server returned non-JSON response (status ${res.status}). Check server logs.`);
+      }
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || data.details || 'Erro na execução');
+      }
+
+      setResult(data);
       
-      // Fechar modal imediatamente
-      onClose();
+      // Mostrar mensagem clara sobre quantos foram encontrados vs pedidos
+      const requested = data.requested || max;
+      const imported = data.stats?.imported || 0;
       
-      // Callback de sucesso (refresh da lista)
-      if (onSuccess) {
-        onSuccess();
+      if (dryRun) {
+        addToast('✅ Teste concluído! Verifica o output.', 'success');
+      } else if (imported >= requested) {
+        addToast(`✅ ${imported} influencers bons encontrados (de ${requested} pedidos)!`, 'success');
+      } else {
+        addToast(`⚠️ Só ${imported} influencers bons encontrados de ${requested} pedidos.`, 'info');
+      }
+      
+      if (imported > 0 && !dryRun) {
+        setTimeout(() => {
+          onSuccess();
+          onClose();
+        }, 3000);
       }
     } catch (error: any) {
       addToast(`Erro: ${error.message}`, 'error');

@@ -17,7 +17,6 @@ import {
 import { ToastContainer, useToast } from '@/components/ui/Toast';
 import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog';
 import { ImportInfluencerModal } from '@/components/ImportInfluencerModal';
-import { BackgroundJobsProgress } from '@/components/BackgroundJobsProgress';
 import { PHASES, getStatusConfig } from '@/lib/influencer-status';
 
 const TABS = [
@@ -170,14 +169,12 @@ function InfluencersContent() {
       />
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <div className="flex-1">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
           <h1 className="text-2xl font-bold text-gray-900">Influencers</h1>
           <p className="text-sm text-gray-600 mt-1">
             Gestão de parcerias e campanhas
           </p>
-          {/* Background Jobs Progress Bar - Logo abaixo do header */}
-          <BackgroundJobsProgress />
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
