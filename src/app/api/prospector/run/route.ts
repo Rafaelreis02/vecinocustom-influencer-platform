@@ -371,12 +371,23 @@ export async function POST(request: NextRequest): Promise<Response> {
         // Importar para DB
         if (!dryRun) {
           const author = profile[0]?.authorMeta;
+          const posts = profile.filter((i: any) => i.webVideoUrl);
+          
+          // Calcular médias
+          const totalLikes = posts.reduce((sum: number, p: any) => sum + (p.diggCount || 0), 0);
+          const totalViews = posts.reduce((sum: number, p: any) => sum + (p.playCount || 0), 0);
+          const averageViews = posts.length > 0 ? Math.round(totalViews / posts.length) : 0;
+          
           await prisma.influencer.create({
             data: {
               name: author?.nickName || handle,
               tiktokHandle: `@${handle}`,
               tiktokFollowers: author?.fans || 0,
+              totalLikes: totalLikes,
               engagementRate: engagement,
+              averageViews: averageViews.toString(),
+              videoCount: posts.length,
+              verified: author?.verified || false,
               country: analysis.country,
               language: 'PT', // Default para PT
               niche: analysis.niche,
@@ -385,9 +396,11 @@ export async function POST(request: NextRequest): Promise<Response> {
               status: 'SUGGESTION',
               discoveryMethod: 'AUTOMATED_API',
               analysisSummary: analysis.summary,
+              analysisDate: new Date().toISOString(),
               estimatedPrice: analysis.estimatedPrice,
               tier: analysis.tier,
               biography: author?.signature || '',
+              avatarUrl: author?.avatar || '',
               createdById: session.user.id
             }
           });
