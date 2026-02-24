@@ -74,9 +74,23 @@ async function analyzeWithGemini(
   platform: 'TIKTOK' | 'INSTAGRAM',
   profile: ParsedProfile
 ): Promise<AIAnalysis> {
-  // Use gemini-1.5-flash-latest for better availability
+  // Try gemini-3-flash-preview first, fallback to gemini-1.5-flash-latest
   const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || '');
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
+  const modelPrimary = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
+  const modelFallback = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
+
+  // Helper to try primary then fallback
+  async function generateWithFallbackModel(prompt: string): Promise<string> {
+    try {
+      const result = await modelPrimary.generateContent(prompt);
+      return result.response.text();
+    } catch (primaryError: any) {
+      // If primary fails (404 or other error), try fallback
+      logger.warn('Primary model failed, trying fallback', { error: primaryError.message });
+      const result = await modelFallback.generateContent(prompt);
+      return result.response.text();
+    }
+  }
 
   const posts = profile.rawData?.posts || profile.rawData?.latestPosts || [];
   const contentInfo = posts.length > 0
@@ -134,8 +148,7 @@ Baseado no país provável (PT/ES/IT) e seguidores, estima um valor justo por po
   "estimatedPrice": <número em euros>
 }`;
 
-  const result = await model.generateContent(prompt);
-  const text = result.response.text();
+  const text = await generateWithFallbackModel(prompt);
   
   // Try multiple parsing strategies
   let parsed = null;

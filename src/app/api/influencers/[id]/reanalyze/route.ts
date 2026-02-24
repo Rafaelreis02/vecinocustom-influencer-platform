@@ -63,7 +63,8 @@ export async function POST(
     if (hasApiKey) {
       try {
         const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || '');
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
+        const modelPrimary = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
+        const modelFallback = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
 
         const prompt = `Analisa este influencer para a marca VecinoCustom (joias personalizadas portuguesas).
 
@@ -85,8 +86,16 @@ Retorna APENAS JSON válido:
   "estimatedPrice": <número em euros>
 }`;
 
-        const result = await model.generateContent(prompt);
-        const text = result.response.text();
+        // Try primary first, then fallback
+        let text;
+        try {
+          const result = await modelPrimary.generateContent(prompt);
+          text = result.response.text();
+        } catch (primaryError: any) {
+          logger.warn('[Re-analyze] Primary model failed, trying fallback', { error: primaryError.message });
+          const result = await modelFallback.generateContent(prompt);
+          text = result.response.text();
+        }
         
         // Parse JSON
         const jsonMatch = text.match(/\{[\s\S]*\}/);
