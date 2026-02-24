@@ -112,6 +112,19 @@ async function scrapeFollowingWithData(handle: string, count: number): Promise<F
     maxFollowingPerProfile: 200
   }));
 
+  // Check if Apify returned a note instead of data (e.g., private following)
+  const noteItem = data?.find((item: any) => item.note);
+  if (noteItem) {
+    const note = noteItem.note;
+    logger.warn('[PROSPECTOR] Apify returned note', { handle, note });
+    
+    if (note.includes("following anyone") || note.includes("isn't following")) {
+      throw new Error(`FOLLOWING_PRIVATE: @${handle} has private following list. Try another seed profile.`);
+    }
+    
+    throw new Error(`APIFY_NOTE: ${note}`);
+  }
+
   const profiles: FollowingData[] = data
     ?.filter((item: any) => item.authorMeta?.name)
     .map((item: any) => ({
@@ -305,6 +318,15 @@ export async function POST(request: NextRequest): Promise<Response> {
       followingProfiles = await scrapeFollowingWithData(cleanSeed, 200);
       totalApiCalls++;
     } catch (err: any) {
+      // Check for specific error types
+      if (err.message?.includes('FOLLOWING_PRIVATE')) {
+        return NextResponse.json({ 
+          error: `❌ @${cleanSeed} has private following list. Please try another seed profile with public following.`,
+          code: 'FOLLOWING_PRIVATE',
+          suggestion: 'Choose a different TikTok profile that publicly shows who they follow.'
+        }, { status: 400 });
+      }
+      
       return NextResponse.json({ error: `Failed to scrape seed: ${err.message}` }, { status: 500 });
     }
 
