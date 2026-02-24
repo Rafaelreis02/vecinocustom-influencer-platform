@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Loader2, CheckCircle2, Sparkles } from 'lucide-react';
+import { X, Loader2, CheckCircle2 } from 'lucide-react';
 
 interface ProcessingJob {
   id: string;
-  seed: string;
+  name: string;
+  type: 'discover' | 'import';
   status: 'running' | 'completed' | 'error';
   message?: string;
   result?: any;
@@ -19,27 +20,27 @@ function notifyListeners() {
   listeners.forEach(fn => fn());
 }
 
-export function startProcessing(seed: string, max: number, platform: string, dryRun: boolean): string {
+// Descoberta em massa
+export function startProcessing(name: string, max: number, platform: string, dryRun: boolean): string {
   const id = `proc_${Date.now()}`;
   
   globalJobs.set(id, {
     id,
-    seed,
+    name,
+    type: 'discover',
     status: 'running',
   });
   
   notifyListeners();
   
-  // Fazer o fetch
   fetch('/api/prospector/run', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ seed, max, platform, dryRun }),
+    body: JSON.stringify({ seed: name, max, platform, dryRun }),
   })
     .then(async res => {
       const contentType = res.headers.get('content-type');
       
-      // Se não for JSON, é erro do servidor
       if (!contentType || !contentType.includes('application/json')) {
         const text = await res.text();
         throw new Error(`Server error: ${text.substring(0, 100)}`);
@@ -55,7 +56,7 @@ export function startProcessing(seed: string, max: number, platform: string, dry
         ...globalJobs.get(id)!,
         status: 'completed',
         result: data,
-        message: data.message || `${data.stats?.imported} influencers encontrados`,
+        message: `${data.stats?.imported || 0} influencers encontrados`,
       });
       notifyListeners();
     })
@@ -64,6 +65,92 @@ export function startProcessing(seed: string, max: number, platform: string, dry
         ...globalJobs.get(id)!,
         status: 'error',
         message: err.message || 'Erro no processamento',
+      });
+      notifyListeners();
+    });
+  
+  return id;
+}
+
+// Import único
+export function startImportSingle(handle: string): string {
+  const id = `import_${Date.now()}`;
+  
+  globalJobs.set(id, {
+    id,
+    name: handle,
+    type: 'import',
+    status: 'running',
+  });
+  
+  notifyListeners();
+  
+  // Primeiro analisar
+  fetch('/api/worker/analyze-influencer', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ handle, platform: 'TIKTOK' }),
+  })
+    .then(async res => {
+      const contentType = res.headers.get('content-type');
+      
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await res.text();
+        throw new Error(`Server error: ${text.substring(0, 100)}`);
+      }
+      
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
+      
+      // Depois criar na DB
+      const createRes = await fetch('/api/influencers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: data.name || handle,
+          tiktokHandle: `@${handle}`,
+          tiktokFollowers: data.followers,
+          totalLikes: data.totalLikes,
+          engagementRate: data.engagement,
+          averageViews: data.averageViews,
+          videoCount: data.videoCount,
+          estimatedPrice: data.estimatedPrice,
+          fitScore: data.fitScore,
+          niche: data.niche,
+          tier: data.tier,
+          biography: data.biography,
+          avatarUrl: data.avatar,
+          email: data.email,
+          country: data.country,
+          verified: data.verified,
+          language: data.language || 'Português',
+          analysisSummary: data.summary || 'Análise automática.',
+          analysisDate: new Date().toISOString(),
+          status: 'SUGGESTION',
+        }),
+      });
+      
+      if (!createRes.ok) {
+        const errorText = await createRes.text();
+        throw new Error(errorText);
+      }
+      
+      globalJobs.set(id, {
+        ...globalJobs.get(id)!,
+        status: 'completed',
+        result: data,
+        message: `@${handle} importado (Score: ${data.fitScore}/5)`,
+      });
+      notifyListeners();
+    })
+    .catch(err => {
+      globalJobs.set(id, {
+        ...globalJobs.get(id)!,
+        status: 'error',
+        message: err.message || 'Erro no import',
       });
       notifyListeners();
     });
@@ -128,14 +215,16 @@ export function ProcessingBanner() {
               'text-red-900'
             }`}>
               {job.status === 'running' 
-                ? `🔍 A descobrir influencers @${job.seed}...`
+                ? job.type === 'import' 
+                  ? `📥 A importar @${job.name}...`
+                  : `🔍 A descobrir @${job.name}...`
                 : job.message
               }
             </p>
             
-            {job.status === 'completed' && job.result?.stats && (
+            {job.status === 'completed' && job.type === 'discover' && job.result?.stats && (
               <p className="text-xs text-emerald-700 mt-0.5">
-                {job.result.stats.imported} importados de {job.result.requested || job.result.stats.processed} pedidos
+                {job.result.stats.imported} importados
               </p>
             )}
           </div>

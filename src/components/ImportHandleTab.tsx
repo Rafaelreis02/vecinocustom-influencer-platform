@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Loader2, Sparkles } from 'lucide-react';
+import { Search, Sparkles } from 'lucide-react';
 import { useGlobalToast } from '@/contexts/ToastContext';
+import { startImportSingle } from '@/components/ProcessingBanner';
 
 interface ImportHandleTabProps {
   onSuccess: () => void;
@@ -12,10 +13,9 @@ interface ImportHandleTabProps {
 export function ImportHandleTab({ onSuccess, onClose }: ImportHandleTabProps) {
   const { addToast } = useGlobalToast();
   const [handle, setHandle] = useState('');
-  const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
 
-  const handleImport = async () => {
+  const handleImport = () => {
     if (!handle.trim()) {
       addToast('Preenche o handle do TikTok', 'error');
       return;
@@ -23,83 +23,24 @@ export function ImportHandleTab({ onSuccess, onClose }: ImportHandleTabProps) {
 
     const cleanHandle = handle.replace('@', '').trim();
 
-    try {
-      setLoading(true);
-      setResult(null);
-
-      const res = await fetch('/api/worker/analyze-influencer', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          handle: cleanHandle,
-          platform: 'TIKTOK'
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Erro na análise');
-      }
-
-      setResult(data);
-      console.log('API Response - FULL:', JSON.stringify(data, null, 2)); // DEBUG
-      console.log('Summary value:', data.summary); // DEBUG
-      addToast(`✅ @${cleanHandle} analisado com sucesso!`, 'success');
-
-      console.log('API Response:', data); // DEBUG
-
-      // Criar o influencer na DB - COM TODOS OS CAMPOS!
-      const createRes = await fetch('/api/influencers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          name: data.name || cleanHandle,
-          tiktokHandle: `@${cleanHandle}`,
-          tiktokFollowers: data.followers,
-          totalLikes: data.totalLikes,           // NOVO!
-          engagementRate: data.engagement,
-          averageViews: data.averageViews,
-          videoCount: data.videoCount,           // NOVO!
-          estimatedPrice: data.estimatedPrice,
-          fitScore: data.fitScore,
-          niche: data.niche,
-          tier: data.tier,
-          biography: data.biography,
-          avatarUrl: data.avatar,
-          email: data.email,
-          country: data.country,
-          verified: data.verified,               // NOVO!
-          language: data.language || 'Português',
-          analysisSummary: data.summary || 'Análise automática do influencer.', // Garante que nunca é vazio
-          analysisDate: new Date().toISOString(), // NOVO!
-          status: 'SUGGESTION',
-        }),
-      });
-
-      if (createRes.ok) {
-        addToast(`✅ @${cleanHandle} importado com sucesso!`, 'success');
-        setTimeout(() => {
-          onSuccess();
-          onClose();
-        }, 1500);
-      } else {
-        const error = await createRes.text();
-        throw new Error(error);
-      }
-    } catch (error: any) {
-      addToast(`Erro: ${error.message}`, 'error');
-    } finally {
-      setLoading(false);
+    // Iniciar import em background
+    startImportSingle(cleanHandle);
+    
+    addToast('🚀 Importação iniciada! Podes continuar a trabalhar.', 'success');
+    
+    // Fechar modal imediatamente
+    onClose();
+    
+    // Atualizar lista
+    if (onSuccess) {
+      setTimeout(() => onSuccess(), 3000);
     }
   };
 
   return (
     <div className="space-y-6">
       <div className="text-sm text-gray-600 bg-gray-50 p-4 rounded-lg">
-        <p className="font-medium text-gray-700 mb-1">Importar Handle Específico</p>
+        <p className="font-medium text-gray-700 mb-1">📥 Importar Handle Específico</p>
         <p>Insere o @handle do TikTok e a IA vai buscar todos os dados automaticamente.</p>
       </div>
 
@@ -116,7 +57,6 @@ export function ImportHandleTab({ onSuccess, onClose }: ImportHandleTabProps) {
               onChange={(e) => setHandle(e.target.value)}
               placeholder="giuliaconti.ch"
               className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-              disabled={loading}
             />
           </div>
         </div>
@@ -133,10 +73,6 @@ export function ImportHandleTab({ onSuccess, onClose }: ImportHandleTabProps) {
             <p><strong>Nicho:</strong> {result.niche}</p>
             <p><strong>Preço Est.:</strong> {result.estimatedPrice}€</p>
             <p><strong>Seguidores:</strong> {result.followers?.toLocaleString()}</p>
-            <p><strong>Likes:</strong> {result.totalLikes?.toLocaleString()}</p>
-            <p><strong>Vídeos:</strong> {result.videoCount}</p>
-            <p><strong>Engagement:</strong> {result.engagement}%</p>
-            <p><strong>Verificado:</strong> {result.verified ? 'Sim ✓' : 'Não'}</p>
             {result.summary && (
               <div className="mt-2 pt-2 border-t border-blue-200">
                 <p><strong>Notas da Análise:</strong></p>
@@ -149,21 +85,16 @@ export function ImportHandleTab({ onSuccess, onClose }: ImportHandleTabProps) {
 
       <button
         onClick={handleImport}
-        disabled={loading || !handle.trim()}
+        disabled={!handle.trim()}
         className="w-full py-3 px-4 rounded-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
       >
-        {loading ? (
-          <>
-            <Loader2 className="h-5 w-5 animate-spin" />
-            A analisar...
-          </>
-        ) : (
-          <>
-            <Search className="h-5 w-5" />
-            Analisar e Importar
-          </>
-        )}
+        <Search className="h-5 w-5" />
+        Analisar e Importar
       </button>
+
+      <p className="text-xs text-gray-500 text-center">
+        💡 Podes continuar a trabalhar enquanto processa em segundo plano
+      </p>
     </div>
   );
 }
