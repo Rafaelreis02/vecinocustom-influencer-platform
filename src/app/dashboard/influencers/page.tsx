@@ -320,9 +320,10 @@ function InfluencersContent() {
                 {statusFilter !== 'ALL' && (
                   <button 
                     onClick={() => setStatusFilter('ALL')}
-                    className="absolute -top-2 -right-2 bg-gray-100 rounded-full p-0.5 hover:bg-gray-200 shadow-sm border border-gray-200"
+                    className="absolute -top-1.5 -right-1.5 bg-white rounded-full p-0.5 hover:bg-gray-100 shadow-md border border-gray-300 z-10"
+                    title="Limpar filtro"
                   >
-                    <X className="w-3 h-3 text-gray-500" />
+                    <X className="w-3.5 h-3.5 text-gray-600" />
                   </button>
                 )}
               </div>
