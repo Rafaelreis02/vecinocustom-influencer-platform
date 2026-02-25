@@ -100,13 +100,13 @@ export async function POST(
     const variables = {
       nome: influencer.name,
       valor: workflow.agreedPrice?.toString() || '0',
-      email: workflow.contactEmail || influencer.email,
-      instagram: workflow.contactInstagram,
-      whatsapp: workflow.contactWhatsapp,
-      morada: workflow.shippingAddress,
-      sugestao1: workflow.productSuggestion1,
-      sugestao2: workflow.productSuggestion2,
-      sugestao3: workflow.productSuggestion3,
+      email: workflow.contactEmail || influencer.email || undefined,
+      instagram: workflow.contactInstagram || undefined,
+      whatsapp: workflow.contactWhatsapp || undefined,
+      morada: workflow.shippingAddress || undefined,
+      sugestao1: workflow.productSuggestion1 || undefined,
+      sugestao2: workflow.productSuggestion2 || undefined,
+      sugestao3: workflow.productSuggestion3 || undefined,
     };
 
     await sendWorkflowEmail(
