@@ -33,22 +33,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check if there's already an active workflow for this influencer
-    const existingActive = await prisma.partnershipWorkflow.findFirst({
-      where: {
-        influencerId,
-        status: 'ACTIVE',
-      },
-    });
-
-    if (existingActive) {
-      return NextResponse.json(
-        { error: 'Influencer already has an active partnership workflow' },
-        { status: 409 }
-      );
-    }
-
     // Create new workflow starting at step 1
+    // Allow multiple workflows - don't check for existing active ones
     const workflow = await prisma.partnershipWorkflow.create({
       data: {
         influencerId,
@@ -75,10 +61,10 @@ export async function POST(req: NextRequest) {
       { success: true, data: workflow },
       { status: 201 }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating workflow:', error);
     return NextResponse.json(
-      { error: 'Failed to create workflow' },
+      { error: 'Failed to create workflow: ' + error.message },
       { status: 500 }
     );
   }
