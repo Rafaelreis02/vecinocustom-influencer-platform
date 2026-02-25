@@ -35,7 +35,7 @@ export async function GET(
     const workflow = await prisma.partnershipWorkflow.findFirst({
       where: {
         influencerId: influencer.id,
-        status: 'ACTIVE',
+        status: 'ACTIVE' as any,
       },
     });
 
@@ -71,7 +71,11 @@ export async function GET(
       couponCode: workflow.couponCode,
     };
 
-    return NextResponse.json(response);
+    // Serialize to handle any BigInt values
+    return new NextResponse(JSON.stringify(response), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
   } catch (error) {
     logger.error('GET /api/portal/[token]/workflow failed', error);
     return NextResponse.json(
