@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Mail, Instagram, Phone, Euro, Loader2, Check } from 'lucide-react';
+import { Euro, Loader2, Check, User } from 'lucide-react';
 
 interface PartnershipStep1Props {
   workflow: {
@@ -17,9 +17,6 @@ interface PartnershipStep1Props {
 export function PartnershipStep1({ workflow, onUpdate, isLocked }: PartnershipStep1Props) {
   const [formData, setFormData] = useState({
     agreedPrice: workflow.agreedPrice?.toString() || '',
-    contactEmail: workflow.contactEmail || '',
-    contactInstagram: workflow.contactInstagram || '',
-    contactWhatsapp: workflow.contactWhatsapp || '',
   });
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -36,9 +33,6 @@ export function PartnershipStep1({ workflow, onUpdate, isLocked }: PartnershipSt
     if (formData.agreedPrice !== '') {
       updates.agreedPrice = parseFloat(formData.agreedPrice);
     }
-    if (formData.contactEmail) updates.contactEmail = formData.contactEmail;
-    if (formData.contactInstagram) updates.contactInstagram = formData.contactInstagram;
-    if (formData.contactWhatsapp) updates.contactWhatsapp = formData.contactWhatsapp;
     
     const success = await onUpdate(updates);
     if (success) {
@@ -53,84 +47,49 @@ export function PartnershipStep1({ workflow, onUpdate, isLocked }: PartnershipSt
       <div>
         <h4 className="text-lg font-medium text-gray-900 mb-1">Step 1: Partnership</h4>
         <p className="text-sm text-gray-500">
-          <span className="font-medium text-blue-600">Por nós:</span> Valor (pode ser 0€) | 
-          <span className="font-medium text-purple-600"> Pelo influencer:</span> Email, Instagram, Whatsapp
+          <span className="font-medium text-blue-600">Por nós:</span> Definir o valor da parceria
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Valor Acordado */}
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">
-            Valor Acordado (€) <span className="text-red-500">*</span>
-          </label>
-          <div className="relative">
-            <Euro className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={formData.agreedPrice}
-              onChange={(e) => handleChange('agreedPrice', e.target.value)}
-              disabled={isLocked}
-              placeholder="0.00"
-              className="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:border-black focus:outline-none disabled:bg-gray-50 disabled:text-gray-500"
-            />
-          </div>
-          <p className="text-xs text-gray-500">Pode ser 0€ para parcerias apenas com comissão</p>
+      {/* Valor Acordado - Nosso campo */}
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700">
+          Valor Acordado (€) <span className="text-red-500">*</span>
+        </label>
+        <div className="relative">
+          <Euro className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={formData.agreedPrice}
+            onChange={(e) => handleChange('agreedPrice', e.target.value)}
+            disabled={isLocked}
+            placeholder="0.00"
+            className="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:border-black focus:outline-none disabled:bg-gray-50 disabled:text-gray-500"
+          />
         </div>
+        <p className="text-xs text-gray-500">Pode ser 0€ para parcerias apenas com comissão</p>
+      </div>
 
-        {/* Email */}
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">
-            Email <span className="text-red-500">*</span>
-          </label>
-          <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="email"
-              value={formData.contactEmail}
-              onChange={(e) => handleChange('contactEmail', e.target.value)}
-              disabled={isLocked}
-              placeholder="email@exemplo.com"
-              className="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:border-black focus:outline-none disabled:bg-gray-50 disabled:text-gray-500"
-            />
-          </div>
+      {/* Dados do Influencer - Só leitura */}
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <User className="h-4 w-4 text-gray-500" />
+          <span className="text-sm font-medium text-gray-700">Dados do Influencer (preenchidos no portal)</span>
         </div>
-
-        {/* Instagram */}
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">
-            Instagram <span className="text-red-500">*</span>
-          </label>
-          <div className="relative">
-            <Instagram className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              value={formData.contactInstagram}
-              onChange={(e) => handleChange('contactInstagram', e.target.value)}
-              disabled={isLocked}
-              placeholder="@username"
-              className="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:border-black focus:outline-none disabled:bg-gray-50 disabled:text-gray-500"
-            />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+          <div>
+            <span className="text-gray-500">Email:</span>
+            <p className="text-gray-900">{workflow.contactEmail || <span className="text-gray-400 italic">Aguardando...</span>}</p>
           </div>
-        </div>
-
-        {/* Whatsapp */}
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">
-            Whatsapp <span className="text-red-500">*</span>
-          </label>
-          <div className="relative">
-            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="tel"
-              value={formData.contactWhatsapp}
-              onChange={(e) => handleChange('contactWhatsapp', e.target.value)}
-              disabled={isLocked}
-              placeholder="+351 912 345 678"
-              className="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:border-black focus:outline-none disabled:bg-gray-50 disabled:text-gray-500"
-            />
+          <div>
+            <span className="text-gray-500">Instagram:</span>
+            <p className="text-gray-900">{workflow.contactInstagram || <span className="text-gray-400 italic">Aguardando...</span>}</p>
+          </div>
+          <div>
+            <span className="text-gray-500">Whatsapp:</span>
+            <p className="text-gray-900">{workflow.contactWhatsapp || <span className="text-gray-400 italic">Aguardando...</span>}</p>
           </div>
         </div>
       </div>
@@ -147,7 +106,7 @@ export function PartnershipStep1({ workflow, onUpdate, isLocked }: PartnershipSt
             ) : saved ? (
               <Check className="h-4 w-4" />
             ) : null}
-            {saved ? 'Guardado!' : isSaving ? 'A guardar...' : 'Guardar'}
+            {saved ? 'Guardado!' : isSaving ? 'A guardar...' : 'Guardar Valor'}
           </button>
         </div>
       )}

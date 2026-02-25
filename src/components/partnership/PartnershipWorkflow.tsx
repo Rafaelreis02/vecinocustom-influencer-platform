@@ -11,6 +11,7 @@ import { PartnershipStep5 } from './PartnershipStep5';
 interface PartnershipWorkflowProps {
   influencerId: string;
   influencerName: string;
+  portalUrl?: string;
 }
 
 interface Workflow {
@@ -49,7 +50,7 @@ const STEPS = [
   { number: 5, name: 'Shipped', status: 'SHIPPED' },
 ];
 
-export function PartnershipWorkflow({ influencerId, influencerName }: PartnershipWorkflowProps) {
+export function PartnershipWorkflow({ influencerId, influencerName, portalUrl }: PartnershipWorkflowProps) {
   const [workflow, setWorkflow] = useState<Workflow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -328,6 +329,36 @@ export function PartnershipWorkflow({ influencerId, influencerName }: Partnershi
         </div>
       </div>
 
+      {/* Portal Link */}
+      {portalUrl && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="font-medium text-blue-900">Link do Portal do Influencer</h4>
+              <p className="text-sm text-blue-700 mt-1">
+                O influencer acede a este link para preencher os dados e avançar nos steps.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => navigator.clipboard.writeText(portalUrl)}
+                className="px-3 py-2 bg-white border border-blue-300 text-blue-700 text-sm font-medium rounded-lg hover:bg-blue-100 transition-colors"
+              >
+                Copiar Link
+              </button>
+              <a
+                href={portalUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Abrir Portal
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Step Content */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         {advanceError && (
@@ -348,7 +379,6 @@ export function PartnershipWorkflow({ influencerId, influencerName }: Partnershi
         {currentStep === 2 && (
           <PartnershipStep2
             workflow={workflow}
-            onUpdate={updateWorkflow}
             isLocked={isCompleted || isCancelled}
           />
         )}
@@ -362,7 +392,6 @@ export function PartnershipWorkflow({ influencerId, influencerName }: Partnershi
         {currentStep === 4 && (
           <PartnershipStep4
             workflow={workflow}
-            onUpdate={updateWorkflow}
             isLocked={isCompleted || isCancelled}
           />
         )}
