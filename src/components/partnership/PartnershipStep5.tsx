@@ -45,7 +45,7 @@ export function PartnershipStep5({ workflow, onUpdate, isLocked }: PartnershipSt
       <div>
         <h4 className="text-lg font-medium text-gray-900 mb-1">Step 5: Shipped</h4>
         <p className="text-sm text-gray-500">
-          Produto enviado! Insere o tracking e o cupom do influencer.
+          <span className="font-medium text-blue-600">Por nós (obrigatório para avançar):</span> Tracking URL + Cupom do influencer
         </p>
       </div>
 

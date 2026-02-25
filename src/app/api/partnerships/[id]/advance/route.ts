@@ -5,67 +5,83 @@ import { prisma } from '@/lib/prisma';
 import { sendWorkflowEmail } from '@/lib/partnership-email';
 
 // Step configuration with validation rules and status mapping
+// canAdminAdvance: true = nós podemos avançar este step
+// requiredFields: campos obrigatórios para avançar
 const STEP_CONFIG: Record<number, {
   name: string;
   status: string;
   requiredFields: string[];
+  adminRequiredFields: string[]; // Campos que NÓS precisamos preencher
   nextStep: number | null;
   nextStatus: string | null;
+  canAdminAdvance: boolean;
 }> = {
   1: {
     name: 'Partnership',
     status: 'ANALYZING',
     requiredFields: ['agreedPrice', 'contactEmail', 'contactInstagram', 'contactWhatsapp'],
+    adminRequiredFields: ['agreedPrice'], // Só valor é obrigatório por nós
     nextStep: 2,
     nextStatus: 'AGREED',
+    canAdminAdvance: false, // Influencer avança via portal
   },
   2: {
     name: 'Shipping',
     status: 'AGREED',
     requiredFields: ['shippingAddress', 'productSuggestion1'],
+    adminRequiredFields: [], // Nada obrigatório por nós
     nextStep: 3,
     nextStatus: 'PRODUCT_SELECTION',
+    canAdminAdvance: false, // Influencer avança via portal
   },
   3: {
     name: 'Preparing',
     status: 'PRODUCT_SELECTION',
     requiredFields: ['selectedProductUrl'],
+    adminRequiredFields: ['selectedProductUrl'], // Nós inserimos produto
     nextStep: 4,
     nextStatus: 'CONTRACT_PENDING',
+    canAdminAdvance: true, // NÓS avançamos
   },
   4: {
     name: 'Contract',
     status: 'CONTRACT_PENDING',
     requiredFields: ['contractSigned'],
+    adminRequiredFields: [], // Nada obrigatório por nós
     nextStep: 5,
     nextStatus: 'SHIPPED',
+    canAdminAdvance: false, // Influencer avança via portal
   },
   5: {
     name: 'Shipped',
     status: 'SHIPPED',
     requiredFields: ['trackingUrl', 'couponCode'],
+    adminRequiredFields: ['trackingUrl', 'couponCode'], // Nós inserimos tracking + cupom
     nextStep: null,
     nextStatus: 'COMPLETED',
+    canAdminAdvance: true, // NÓS avançamos para completar
   },
 };
 
-// Validate that all required fields are present and not empty
-function validateStep(workflow: any, step: number): { valid: boolean; missing: string[] } {
+// Validate admin-required fields for the current step
+function validateAdminStep(workflow: any, step: number): { valid: boolean; missing: string[]; canAdvance: boolean } {
   const config = STEP_CONFIG[step];
   const missing: string[] = [];
 
-  for (const field of config.requiredFields) {
+  // Check if admin can advance this step
+  if (!config.canAdminAdvance) {
+    return { valid: false, missing: [], canAdvance: false };
+  }
+
+  // Validate only admin-required fields
+  for (const field of config.adminRequiredFields) {
     const value = workflow[field];
     if (value === null || value === undefined || value === '') {
       missing.push(field);
     }
-    // For boolean fields, false is valid but null/undefined is not
-    if (field === 'contractSigned' && value !== true && value !== false) {
-      missing.push(field);
-    }
   }
 
-  return { valid: missing.length === 0, missing };
+  return { valid: missing.length === 0, missing, canAdvance: true };
 }
 
 // Email sending is now handled by @/lib/partnership-email
@@ -108,12 +124,24 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid step' }, { status: 400 });
     }
 
-    // Validate required fields for current step
-    const validation = validateStep(workflow, currentStep);
+    // Check if admin can advance this step
+    const validation = validateAdminStep(workflow, currentStep);
+    if (!validation.canAdvance) {
+      return NextResponse.json(
+        {
+          error: 'Este step só pode ser avançado pelo influencer através do portal',
+          step: currentStep,
+          stepName: config.name,
+        },
+        { status: 403 }
+      );
+    }
+
+    // Validate admin-required fields
     if (!validation.valid) {
       return NextResponse.json(
         {
-          error: 'Missing required fields',
+          error: 'Campos obrigatórios em falta',
           missing: validation.missing,
           step: currentStep,
           stepName: config.name,

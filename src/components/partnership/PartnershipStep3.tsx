@@ -48,7 +48,7 @@ export function PartnershipStep3({ workflow, onUpdate, isLocked }: PartnershipSt
       <div>
         <h4 className="text-lg font-medium text-gray-900 mb-1">Step 3: Preparing</h4>
         <p className="text-sm text-gray-500">
-          A equipa escolhe o produto e envia a prova de design. O influencer pode ajustar detalhes.
+          <span className="font-medium text-blue-600">Por nós (obrigatório para avançar):</span> URL do produto escolhido
         </p>
       </div>
 

@@ -374,8 +374,8 @@ export function PartnershipWorkflow({ influencerId, influencerName }: Partnershi
           />
         )}
 
-        {/* Advance Button */}
-        {!isCompleted && !isCancelled && (
+        {/* Advance Button - Only for steps 3 and 5 where admin can advance */}
+        {!isCompleted && !isCancelled && (currentStep === 3 || currentStep === 5) && (
           <div className="mt-6 flex justify-end">
             <button
               onClick={advanceStep}
@@ -399,6 +399,15 @@ export function PartnershipWorkflow({ influencerId, influencerName }: Partnershi
                 </>
               )}
             </button>
+          </div>
+        )}
+
+        {/* Info message for steps where admin cannot advance */}
+        {!isCompleted && !isCancelled && currentStep !== 3 && currentStep !== 5 && (
+          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-700">
+              <span className="font-medium">ℹ️ Aguardando influencer:</span> Este step só pode ser avançado pelo influencer através do portal de parceria.
+            </p>
           </div>
         )}
       </div>

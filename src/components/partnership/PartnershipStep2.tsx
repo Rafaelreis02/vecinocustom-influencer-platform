@@ -51,7 +51,7 @@ export function PartnershipStep2({ workflow, onUpdate, isLocked }: PartnershipSt
       <div>
         <h4 className="text-lg font-medium text-gray-900 mb-1">Step 2: Shipping</h4>
         <p className="text-sm text-gray-500">
-          Acordo feito! Agora precisamos da morada e das sugestões de produtos.
+          <span className="font-medium text-purple-600">Pelo influencer:</span> Morada completa + 3 sugestões de produtos
         </p>
       </div>
 

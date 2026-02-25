@@ -53,7 +53,8 @@ export function PartnershipStep1({ workflow, onUpdate, isLocked }: PartnershipSt
       <div>
         <h4 className="text-lg font-medium text-gray-900 mb-1">Step 1: Partnership</h4>
         <p className="text-sm text-gray-500">
-          Negociar o acordo com o influencer. Preencha o valor (pode ser 0€) e os dados de contacto.
+          <span className="font-medium text-blue-600">Por nós:</span> Valor (pode ser 0€) | 
+          <span className="font-medium text-purple-600"> Pelo influencer:</span> Email, Instagram, Whatsapp
         </p>
       </div>
 
