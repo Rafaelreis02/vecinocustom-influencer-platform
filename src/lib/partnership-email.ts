@@ -98,7 +98,7 @@ export async function sendWorkflowEmail(
       subject,
     });
 
-    return { success: true, emailId: result.id };
+    return { success: true, emailId: result.id || undefined };
   } catch (error: any) {
     logger.error('[EMAIL] Failed to send', { workflowId, step, error: error.message });
     return { success: false, error: error.message };
