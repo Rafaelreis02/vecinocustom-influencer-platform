@@ -16,7 +16,10 @@ import {
   ShoppingBag,
   Link,
   Mail,
+  FileText,
+  ChevronRight,
 } from 'lucide-react';
+import Link from 'next/link';
 import { useGlobalToast } from '@/contexts/ToastContext';
 
 type UserRole = 'ADMIN' | 'ASSISTANT' | 'AI_AGENT';
@@ -39,9 +42,37 @@ export default function SettingsPage() {
         </p>
       </div>
 
+      <EmailTemplatesSection />
       <ShopifyIntegration />
       <GmailIntegration />
       <UsersManagement />
+    </div>
+  );
+}
+
+function EmailTemplatesSection() {
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-purple-100 rounded-lg">
+            <FileText className="h-5 w-5 text-purple-600" />
+          </div>
+          <div>
+            <h2 className="font-semibold text-gray-900">Templates de Email</h2>
+            <p className="text-sm text-gray-500">
+              Gerir templates de email do workflow de parcerias
+            </p>
+          </div>
+        </div>
+        <Link
+          href="/dashboard/settings/email-templates"
+          className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
+        >
+          Gerir Templates
+          <ChevronRight className="h-4 w-4" />
+        </Link>
+      </div>
     </div>
   );
 }

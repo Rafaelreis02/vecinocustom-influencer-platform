@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { sendWorkflowEmail } from '@/lib/partnership-email';
 
 // Step configuration with validation rules and status mapping
 const STEP_CONFIG: Record<number, {
@@ -67,64 +68,7 @@ function validateStep(workflow: any, step: number): { valid: boolean; missing: s
   return { valid: missing.length === 0, missing };
 }
 
-// Get email template based on step and value
-async function getEmailTemplate(step: number, hasValue: boolean) {
-  const key = hasValue
-    ? `STEP_${step}_${STEP_CONFIG[step].name.toUpperCase()}_WITH_VALUE`
-    : `STEP_${step}_${STEP_CONFIG[step].name.toUpperCase()}_NO_VALUE`;
-
-  let template = await prisma.emailTemplate.findUnique({
-    where: { key },
-  });
-
-  // Fallback to generic template if specific one not found
-  if (!template) {
-    const genericKey = `STEP_${step}_${STEP_CONFIG[step].name.toUpperCase()}`;
-    template = await prisma.emailTemplate.findUnique({
-      where: { key: genericKey },
-    });
-  }
-
-  return template;
-}
-
-// Send email and record it
-async function sendWorkflowEmail(
-  workflowId: string,
-  step: number,
-  template: any,
-  variables: Record<string, any>,
-  sentBy: string
-) {
-  // Replace variables in template
-  let subject = template.subject;
-  let body = template.body;
-
-  for (const [key, value] of Object.entries(variables)) {
-    const regex = new RegExp(`{{${key}}}`, 'g');
-    subject = subject.replace(regex, String(value));
-    body = body.replace(regex, String(value));
-  }
-
-  // Create email record
-  await prisma.partnershipEmail.create({
-    data: {
-      workflowId,
-      step,
-      templateKey: template.key,
-      subject,
-      body,
-      sentBy,
-      variables,
-    },
-  });
-
-  // TODO: Actually send email via Gmail API integration
-  // For now, we just record that it should be sent
-  console.log(`Email would be sent: ${subject}`);
-
-  return { subject, body };
-}
+// Email sending is now handled by @/lib/partnership-email
 
 // POST /api/partnerships/[id]/advance - Advance to next step
 export async function POST(
@@ -212,37 +156,29 @@ export async function POST(
       });
     }
 
-    // Determine which email template to use (based on agreedPrice for step 1)
-    const hasValue = (workflow.agreedPrice || 0) > 0;
-    const template = await getEmailTemplate(currentStep, hasValue);
+    // Send email for current step
+    const variables: Record<string, any> = {
+      nome: workflow.influencer.name,
+      valor: workflow.agreedPrice?.toString() || '0',
+      email: workflow.contactEmail,
+      instagram: workflow.contactInstagram,
+      whatsapp: workflow.contactWhatsapp,
+      morada: workflow.shippingAddress,
+      sugestao1: workflow.productSuggestion1,
+      sugestao2: workflow.productSuggestion2,
+      sugestao3: workflow.productSuggestion3,
+      url_produto: workflow.selectedProductUrl,
+      url_contrato: workflow.contractUrl,
+      tracking_url: workflow.trackingUrl,
+      cupom: workflow.couponCode,
+    };
 
-    let emailSent = null;
-    if (template) {
-      // Prepare variables for email
-      const variables: Record<string, any> = {
-        nome: workflow.influencer.name,
-        valor: workflow.agreedPrice?.toString() || '0',
-        email: workflow.contactEmail,
-        instagram: workflow.contactInstagram,
-        whatsapp: workflow.contactWhatsapp,
-        morada: workflow.shippingAddress,
-        sugestao1: workflow.productSuggestion1,
-        sugestao2: workflow.productSuggestion2,
-        sugestao3: workflow.productSuggestion3,
-        url_produto: workflow.selectedProductUrl,
-        url_contrato: workflow.contractUrl,
-        tracking_url: workflow.trackingUrl,
-        cupom: workflow.couponCode,
-      };
-
-      emailSent = await sendWorkflowEmail(
-        id,
-        currentStep,
-        template,
-        variables,
-        session.user.id || 'system'
-      );
-    }
+    const emailResult = await sendWorkflowEmail(
+      id,
+      currentStep,
+      variables,
+      session.user.id || 'system'
+    );
 
     // Advance to next step
     const now = new Date();
@@ -274,7 +210,8 @@ export async function POST(
       success: true,
       message: `Advanced from ${config.name} to ${STEP_CONFIG[config.nextStep].name}`,
       data: updatedWorkflow,
-      emailSent: emailSent ? { subject: emailSent.subject } : null,
+      emailSent: emailResult.success,
+      emailError: emailResult.error,
     });
   } catch (error) {
     console.error('Error advancing workflow:', error);
