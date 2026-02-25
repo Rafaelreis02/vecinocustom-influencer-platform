@@ -10,6 +10,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { downloadAndStoreImage } from '@/lib/image-storage';
 import { linkVideosToInfluencer } from '@/lib/video-linker';
+import crypto from 'crypto';
 
 // GET /api/influencers - Listar influencers com pagination
 export async function GET(request: Request) {
@@ -164,12 +165,16 @@ export async function POST(request: Request) {
       }
     }
 
+    // Generate portal token
+    const portalToken = crypto.randomUUID();
+
     // Create influencer
     const influencer = await prisma.influencer.create({
       data: {
         ...validated,
         avatarUrl,
         createdById: session.user.id,
+        portalToken,
       },
     });
 
