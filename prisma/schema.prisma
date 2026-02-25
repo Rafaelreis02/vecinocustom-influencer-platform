@@ -117,6 +117,7 @@ model Influencer {
   paymentBatches    PaymentBatch[]    // Pagamentos agregados efetuados
   files             File[]
   emails            Email[]           @relation("InfluencerEmails")
+  partnerships      PartnershipWorkflow[]
   
   @@unique([tiktokHandle], name: "unique_tiktok_handle", map: "unique_tiktok_handle")
   @@unique([instagramHandle], name: "unique_instagram_handle", map: "unique_instagram_handle")
@@ -558,5 +559,109 @@ model AccountChangeLog {
   @@index([platform])
   @@index([changedAt])
   @@map("account_change_logs")
+}
+
+// ============================================
+// PARTNERSHIP WORKFLOW SYSTEM
+// ============================================
+
+model PartnershipWorkflow {
+  id              String   @id @default(cuid())
+  influencerId    String
+  influencer      Influencer @relation(fields: [influencerId], references: [id])
+  
+  // Steps (1-5)
+  currentStep     Int      @default(1) // 1=Partnership, 2=Shipping, 3=Preparing, 4=Contract, 5=Shipped
+  
+  // Step 1: Partnership (ANALYZING/COUNTER_PROPOSAL)
+  agreedPrice        Float?
+  contactEmail       String?
+  contactInstagram   String?
+  contactWhatsapp    String?
+  step1CompletedAt   DateTime?
+  
+  // Step 2: Shipping (AGREED)
+  shippingAddress    String?
+  productSuggestion1 String?
+  productSuggestion2 String?
+  productSuggestion3 String?
+  step2CompletedAt   DateTime?
+  
+  // Step 3: Preparing (PRODUCT_SELECTION)
+  selectedProductUrl String?
+  designProofUrl     String?
+  designNotes        String?
+  step3CompletedAt   DateTime?
+  
+  // Step 4: Contract (CONTRACT_PENDING)
+  contractSigned     Boolean  @default(false)
+  contractUrl        String?
+  step4CompletedAt   DateTime?
+  
+  // Step 5: Shipped (SHIPPED)
+  trackingUrl        String?
+  couponCode         String?
+  step5CompletedAt   DateTime?
+  
+  // Status
+  status             PartnershipStatus @default(ACTIVE)
+  isRestarted        Boolean  @default(false)
+  previousWorkflowId String?
+  
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  
+  // Relations
+  emails             PartnershipEmail[]
+  previousWorkflow   PartnershipWorkflow? @relation("WorkflowRestart", fields: [previousWorkflowId], references: [id])
+  restartedWorkflows PartnershipWorkflow[] @relation("WorkflowRestart")
+  
+  @@index([influencerId])
+  @@index([status])
+  @@index([currentStep])
+  @@map("partnership_workflows")
+}
+
+enum PartnershipStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  RESTARTED
+}
+
+model PartnershipEmail {
+  id          String   @id @default(cuid())
+  workflowId  String
+  workflow    PartnershipWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  
+  step        Int
+  templateKey String
+  subject     String
+  body        String   @db.Text
+  sentAt      DateTime @default(now())
+  sentBy      String
+  variables   Json?
+  
+  @@index([workflowId])
+  @@index([step])
+  @@map("partnership_emails")
+}
+
+model EmailTemplate {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  name        String
+  subject     String
+  body        String   @db.Text
+  step        Int      // 0 = geral, 1-5 = step específico
+  isActive    Boolean  @default(true)
+  hasValue    Boolean  @default(true) // true = template para valor>0, false = valor=0
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([step])
+  @@index([isActive])
+  @@map("email_templates")
 }
 
