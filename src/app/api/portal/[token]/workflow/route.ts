@@ -31,13 +31,14 @@ export async function GET(
       );
     }
 
-    // Find active workflow for this influencer
-    const workflow = await prisma.partnershipWorkflow.findFirst({
-      where: {
-        influencerId: influencer.id,
-        status: 'ACTIVE' as any,
-      },
-    });
+    // Find active workflow for this influencer (using raw query to avoid enum issues)
+    const workflows = await prisma.$queryRaw`
+      SELECT * FROM "partnership_workflows" 
+      WHERE "influencerId" = ${influencer.id} 
+      AND status = 'ACTIVE'
+      LIMIT 1
+    `;
+    const workflow = Array.isArray(workflows) && workflows.length > 0 ? workflows[0] : null;
 
     if (!workflow) {
       return NextResponse.json(
