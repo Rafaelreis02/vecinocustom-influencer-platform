@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma';
 // GET /api/influencers/[id]/partnerships - Get all partnerships for an influencer
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -14,7 +14,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id } = params;
+    const { id } = await params;
 
     // Check if influencer exists
     const influencer = await prisma.influencer.findUnique({

@@ -129,7 +129,7 @@ async function sendWorkflowEmail(
 // POST /api/partnerships/[id]/advance - Advance to next step
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -137,7 +137,7 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id } = params;
+    const { id } = await params;
 
     const workflow = await prisma.partnershipWorkflow.findUnique({
       where: { id },
