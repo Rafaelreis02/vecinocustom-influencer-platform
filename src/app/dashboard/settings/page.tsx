@@ -14,7 +14,7 @@ import {
   X,
   Check,
   ShoppingBag,
-  Link,
+  Link as LinkIcon,
   Mail,
   FileText,
   ChevronRight,
@@ -279,7 +279,7 @@ function ShopifyIntegration() {
                 {connecting ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <Link className="h-4 w-4" />
+                  <LinkIcon className="h-4 w-4" />
                 )}
                 Conectar com Shopify
               </button>
@@ -515,7 +515,7 @@ function GmailIntegration() {
               </>
             ) : (
               <>
-                <Link className="h-4 w-4" />
+                <LinkIcon className="h-4 w-4" />
                 Conectar com Google
               </>
             )}
