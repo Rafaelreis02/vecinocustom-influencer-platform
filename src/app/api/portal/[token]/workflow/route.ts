@@ -2,6 +2,85 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 
+// GET /api/portal/[token]/workflow - Get workflow for portal
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ token: string }> }
+) {
+  try {
+    const { token } = await params;
+
+    // Find influencer by portal token
+    const influencer = await prisma.influencer.findUnique({
+      where: { portalToken: token },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        instagramHandle: true,
+        tiktokHandle: true,
+        phone: true,
+        avatarUrl: true,
+      },
+    });
+
+    if (!influencer) {
+      return NextResponse.json(
+        { error: 'Invalid portal link' },
+        { status: 404 }
+      );
+    }
+
+    // Find active workflow for this influencer
+    const workflow = await prisma.partnershipWorkflow.findFirst({
+      where: {
+        influencerId: influencer.id,
+        status: 'ACTIVE',
+      },
+    });
+
+    if (!workflow) {
+      return NextResponse.json(
+        { error: 'No active partnership found. Please contact VecinoCustom to start a partnership.' },
+        { status: 404 }
+      );
+    }
+
+    // Combine influencer profile data with workflow data
+    const response = {
+      // Profile data (common fields)
+      id: influencer.id,
+      name: influencer.name,
+      email: workflow.contactEmail || influencer.email || '',
+      instagramHandle: workflow.contactInstagram || influencer.instagramHandle || '',
+      tiktokHandle: influencer.tiktokHandle || '',
+      phone: workflow.contactWhatsapp || influencer.phone || '',
+      ddiCode: '+351',
+      avatarUrl: influencer.avatarUrl,
+
+      // Workflow data (partnership-specific)
+      agreedPrice: workflow.agreedPrice,
+      status: workflow.status,
+      currentStep: workflow.currentStep,
+      shippingAddress: workflow.shippingAddress,
+      productSuggestion1: workflow.productSuggestion1,
+      productSuggestion2: workflow.productSuggestion2,
+      productSuggestion3: workflow.productSuggestion3,
+      chosenProduct: workflow.selectedProductUrl,
+      trackingUrl: workflow.trackingUrl,
+      couponCode: workflow.couponCode,
+    };
+
+    return NextResponse.json(response);
+  } catch (error) {
+    logger.error('GET /api/portal/[token]/workflow failed', error);
+    return NextResponse.json(
+      { error: 'Failed to load partnership data' },
+      { status: 500 }
+    );
+  }
+}
+
 // PUT /api/portal/[token]/workflow - Update workflow from portal
 export async function PUT(
   req: NextRequest,
