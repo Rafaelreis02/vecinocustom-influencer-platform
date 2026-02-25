@@ -3,6 +3,8 @@ import { useGlobalToast } from '@/contexts/ToastContext';
 import { StatusDropdown } from '@/components/StatusDropdown';
 import { VideoPreviewList } from '@/components/VideoPreview';
 import { InfluencerDocuments } from '@/components/InfluencerDocuments';
+import { PartnershipWorkflow } from '@/components/partnership/PartnershipWorkflow';
+import { PartnershipHistory } from '@/components/partnership/PartnershipHistory';
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -995,8 +997,25 @@ export default function InfluencerDetailPage() {
           </div>
         </CollapsibleSection>
 
+        {/* Workflow de Parceria */}
+        <CollapsibleSection title="Workflow de Parceria" icon={Link2} defaultOpen={true}>
+          <div className="pt-4">
+            <PartnershipWorkflow
+              influencerId={influencer.id}
+              influencerName={influencer.name}
+            />
+          </div>
+        </CollapsibleSection>
+
+        {/* Histórico de Parcerias */}
+        <CollapsibleSection title="Histórico de Parcerias" icon={Calendar} defaultOpen={false}>
+          <div className="pt-4">
+            <PartnershipHistory partnerships={influencer.partnerships || []} />
+          </div>
+        </CollapsibleSection>
+
         {/* Portal do Influencer */}
-        <CollapsibleSection title="Portal do Influencer" icon={ExternalLink} defaultOpen={true}>
+        <CollapsibleSection title="Portal do Influencer" icon={ExternalLink} defaultOpen={false}>
           <div className="pt-4 space-y-6">
             {/* Progress Bar */}
             <div>

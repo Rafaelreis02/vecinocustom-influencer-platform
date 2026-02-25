@@ -35,6 +35,14 @@ export async function GET(
         files: {
           orderBy: { uploadedAt: 'desc' },
         },
+        partnerships: {
+          include: {
+            _count: {
+              select: { emails: true },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+        },
       },
     });
 
