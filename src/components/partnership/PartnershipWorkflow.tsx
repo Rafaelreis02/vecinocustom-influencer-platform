@@ -293,23 +293,23 @@ export function PartnershipWorkflow({ influencerId, influencerName }: Partnershi
         {/* Steps Visual */}
         <div className="flex items-center justify-between">
           {STEPS.map((step, index) => {
-            const isActive = step.number === currentStep && !isCompleted && !isCancelled;
-            const isCompleted = step.number < currentStep;
-            const isLocked = step.number > currentStep || isCompleted || isCancelled;
+            const stepIsCompleted = step.number < currentStep;
+            const isActive = step.number === currentStep && !stepIsCompleted && !isCancelled;
+            const isLocked = step.number > currentStep || stepIsCompleted || isCancelled;
 
             return (
               <div key={step.number} className="flex items-center">
                 <div className={`flex flex-col items-center ${
                   isActive ? 'text-blue-600' :
-                  isCompleted ? 'text-green-600' :
+                  stepIsCompleted ? 'text-green-600' :
                   'text-gray-400'
                 }`}>
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${
                     isActive ? 'border-blue-600 bg-blue-50' :
-                    isCompleted ? 'border-green-600 bg-green-50' :
+                    stepIsCompleted ? 'border-green-600 bg-green-50' :
                     'border-gray-300 bg-gray-100'
                   }`}>
-                    {isCompleted ? (
+                    {stepIsCompleted ? (
                       <CheckCircle2 className="h-5 w-5" />
                     ) : isLocked ? (
                       <Lock className="h-4 w-4" />
