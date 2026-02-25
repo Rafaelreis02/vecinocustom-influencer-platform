@@ -34,13 +34,17 @@ export async function POST(
       );
     }
 
-    // Find active workflow
-    const workflow = await prisma.partnershipWorkflow.findFirst({
+    // Find workflows and filter for active one (avoid enum comparison issues)
+    const workflows = await prisma.partnershipWorkflow.findMany({
       where: {
         influencerId: influencer.id,
-        status: 'ACTIVE',
+      },
+      orderBy: {
+        createdAt: 'desc',
       },
     });
+
+    const workflow = workflows.find(w => w.status === 'ACTIVE' || (w.status as any) === 'ACTIVE');
 
     if (!workflow) {
       return NextResponse.json(
