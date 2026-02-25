@@ -179,8 +179,8 @@ export function PartnershipWorkflow({ influencerId, influencerName }: Partnershi
     }
   };
 
-  const updateWorkflow = async (updates: Partial<Workflow>) => {
-    if (!workflow) return;
+  const updateWorkflow = async (updates: Partial<Workflow>): Promise<boolean> => {
+    if (!workflow) return false;
     
     try {
       const res = await fetch(`/api/partnerships/${workflow.id}`, {
