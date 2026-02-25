@@ -1003,7 +1003,7 @@ export default function InfluencerDetailPage() {
             <PartnershipWorkflow
               influencerId={influencer.id}
               influencerName={influencer.name}
-              portalUrl={portalUrl}
+              portalUrl={portalUrl || undefined}
             />
           </div>
         </CollapsibleSection>
