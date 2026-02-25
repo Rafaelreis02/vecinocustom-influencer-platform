@@ -131,11 +131,13 @@ export default function PortalPage() {
   const fetchInfluencerData = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/portal/${token}`);
+      // Use workflow API instead of direct influencer API
+      const res = await fetch(`/api/portal/${token}/workflow`);
       
       if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
         if (res.status === 404) {
-          setError('Invalid portal link');
+          setError(errorData.error || 'No active partnership found. Please contact VecinoCustom to start a partnership.');
         } else {
           setError('Failed to load data');
         }
@@ -143,11 +145,19 @@ export default function PortalPage() {
       }
 
       const data = await res.json();
-      setInfluencerData(data);
       
-      // Determine current step based on status
-      const step = getStepFromStatus(data.status);
-      setCurrentStep(step);
+      // Map workflow data to InfluencerData format
+      // chosenProduct in old format = selectedProductUrl in workflow
+      const mappedData: InfluencerData = {
+        ...data,
+        chosenProduct: data.selectedProductUrl,
+        phone: data.phone || '',
+      };
+      
+      setInfluencerData(mappedData);
+      
+      // Use currentStep directly from workflow
+      setCurrentStep(data.currentStep);
       
     } catch (err) {
       console.error('Error fetching data:', err);
@@ -349,18 +359,34 @@ function Step1({ data, token, onUpdate, onNext }: StepProps) {
     setLoading(true);
     
     try {
-      const res = await fetch(`/api/portal/${token}`, {
+      // Map form fields to workflow fields
+      const workflowData = {
+        contactEmail: formData.email,
+        contactInstagram: formData.instagramHandle,
+        contactWhatsapp: formData.phone,
+      };
+      
+      // Update workflow
+      const res = await fetch(`/api/portal/${token}/workflow`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          status: 'AGREED',
-        }),
+        body: JSON.stringify(workflowData),
       });
 
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.error || 'Failed to accept proposal');
+      }
+
+      // Advance step
+      const advanceRes = await fetch(`/api/portal/${token}/advance`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!advanceRes.ok) {
+        const error = await advanceRes.json();
+        throw new Error(error.error || 'Failed to advance step');
       }
 
       await onUpdate();
@@ -388,13 +414,17 @@ function Step1({ data, token, onUpdate, onNext }: StepProps) {
     setLoading(true);
     
     try {
-      const res = await fetch(`/api/portal/${token}`, {
+      // Map form fields to workflow fields
+      const workflowData = {
+        contactEmail: formData.email,
+        contactInstagram: formData.instagramHandle,
+        contactWhatsapp: formData.phone,
+      };
+      
+      const res = await fetch(`/api/portal/${token}/workflow`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          status: 'ANALYZING',
-        }),
+        body: JSON.stringify(workflowData),
       });
 
       if (!res.ok) {
@@ -422,13 +452,17 @@ function Step1({ data, token, onUpdate, onNext }: StepProps) {
     setLoading(true);
     
     try {
-      const res = await fetch(`/api/portal/${token}`, {
+      // Map form fields to workflow fields
+      const workflowData = {
+        contactEmail: formData.email,
+        contactInstagram: formData.instagramHandle,
+        contactWhatsapp: formData.phone,
+      };
+      
+      const res = await fetch(`/api/portal/${token}/workflow`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          status: 'AGREED',
-        }),
+        body: JSON.stringify(workflowData),
       });
 
       if (!res.ok) {
@@ -734,7 +768,8 @@ function Step2({ data, token, onUpdate, onBack, onNext }: StepProps) {
         formData.shippingCountry
       );
 
-      const res = await fetch(`/api/portal/${token}`, {
+      // Update workflow data
+      const res = await fetch(`/api/portal/${token}/workflow`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -742,9 +777,24 @@ function Step2({ data, token, onUpdate, onBack, onNext }: StepProps) {
           productSuggestion1: formData.productSuggestion1,
           productSuggestion2: formData.productSuggestion2,
           productSuggestion3: formData.productSuggestion3,
-          status: 'PRODUCT_SELECTION',
         }),
       });
+      
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to submit');
+      }
+      
+      // Advance to next step via workflow API
+      const advanceRes = await fetch(`/api/portal/${token}/advance`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      
+      if (!advanceRes.ok) {
+        const error = await advanceRes.json();
+        throw new Error(error.error || 'Failed to advance step');
+      }
 
       if (!res.ok) {
         const error = await res.json();
