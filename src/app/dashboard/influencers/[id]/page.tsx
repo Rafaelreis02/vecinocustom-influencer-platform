@@ -1003,6 +1003,7 @@ export default function InfluencerDetailPage() {
             <PartnershipWorkflow
               influencerId={influencer.id}
               influencerName={influencer.name}
+              influencerHandle={influencer.tiktokHandle || influencer.instagramHandle || undefined}
               influencerStatus={influencer.status}
               portalUrl={portalUrl || undefined}
             />

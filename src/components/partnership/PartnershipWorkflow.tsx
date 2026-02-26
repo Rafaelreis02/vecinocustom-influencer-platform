@@ -11,6 +11,7 @@ import { PartnershipStep5 } from './PartnershipStep5';
 interface PartnershipWorkflowProps {
   influencerId: string;
   influencerName: string;
+  influencerHandle?: string;
   influencerStatus?: string;
   portalUrl?: string;
 }
@@ -49,7 +50,7 @@ const STEPS = [
   { number: 5, name: 'Shipped', status: 'SHIPPED' },
 ];
 
-export function PartnershipWorkflow({ influencerId, influencerName, influencerStatus, portalUrl }: PartnershipWorkflowProps) {
+export function PartnershipWorkflow({ influencerId, influencerName, influencerHandle, influencerStatus, portalUrl }: PartnershipWorkflowProps) {
   const [workflow, setWorkflow] = useState<Workflow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -521,6 +522,11 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerSt
         {currentStep === 3 && (
           <PartnershipStep3
             workflow={workflow}
+            influencer={{
+              id: influencerId,
+              name: influencerName,
+              tiktokHandle: influencerHandle,
+            }}
             onUpdate={updateWorkflow}
             isLocked={isCompleted || isCancelled}
           />
