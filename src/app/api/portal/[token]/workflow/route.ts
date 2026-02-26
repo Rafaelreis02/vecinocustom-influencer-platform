@@ -151,6 +151,10 @@ export async function PUT(
       }
     }
 
+    // Check if this is a counterproposal (agreedPrice changed)
+    const isCounterproposal = body.agreedPrice !== undefined && 
+                               workflow.agreedPrice !== body.agreedPrice;
+
     // Update workflow
     const updatedWorkflow = await prisma.partnershipWorkflow.update({
       where: { id: workflow.id },
@@ -162,6 +166,14 @@ export async function PUT(
       await prisma.influencer.update({
         where: { id: influencer.id },
         data: profileUpdateData,
+      });
+    }
+
+    // If counterproposal, update influencer status to ANALYZING
+    if (isCounterproposal) {
+      await prisma.influencer.update({
+        where: { id: influencer.id },
+        data: { status: 'ANALYZING' },
       });
     }
 

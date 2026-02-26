@@ -57,6 +57,12 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // Update influencer status to AGREED (waiting for influencer response)
+    await prisma.influencer.update({
+      where: { id: influencerId },
+      data: { status: 'AGREED' },
+    });
+
     return NextResponse.json(
       { success: true, data: workflow },
       { status: 201 }
