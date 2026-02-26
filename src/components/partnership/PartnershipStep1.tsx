@@ -118,8 +118,8 @@ export function PartnershipStep1({ workflow, onUpdate, isLocked, influencerStatu
         </div>
       )}
 
-      {/* Valor Acordado - Nosso campo (mostra em estados iniciais: sem proposta ou proposta enviada) */}
-      {(!influencerStatus || influencerStatus === 'UNKNOWN' || influencerStatus === 'SUGGESTION' || influencerStatus === 'COUNTER_PROPOSAL') && (
+      {/* Valor Acordado - Nosso campo (só mostra antes de iniciar negociação) */}
+      {(!influencerStatus || influencerStatus === 'UNKNOWN' || influencerStatus === 'SUGGESTION') && (
         <div className="space-y-2">
           <label className="block text-sm font-medium text-gray-700">
             Valor Acordado (€) <span className="text-red-500">*</span>
