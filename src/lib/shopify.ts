@@ -3,19 +3,19 @@
  * Handles coupon creation, retrieval, and order tracking
  */
 
-const SHOPIFY_STORE_URL = process.env.SHOPIFY_STORE_URL || '';
-const SHOPIFY_CLIENT_ID = process.env.SHOPIFY_CLIENT_ID || '';
-const SHOPIFY_CLIENT_SECRET = process.env.SHOPIFY_CLIENT_SECRET || '';
+const SHOPIFY_SHOP_DOMAIN = process.env.SHOPIFY_SHOP_DOMAIN || '';
+const SHOPIFY_ACCESS_TOKEN = process.env.SHOPIFY_ACCESS_TOKEN || '';
 
 // Debug logging (remove in production)
-console.log('[Shopify] Config check:', {
-  hasStoreUrl: !!SHOPIFY_STORE_URL,
-  storeUrl: SHOPIFY_STORE_URL?.substring(0, 10) + '...',
-  hasClientId: !!SHOPIFY_CLIENT_ID,
-  hasClientSecret: !!SHOPIFY_CLIENT_SECRET,
-});
+if (process.env.NODE_ENV !== 'production') {
+  console.log('[Shopify] Config check:', {
+    hasShopDomain: !!SHOPIFY_SHOP_DOMAIN,
+    shopDomain: SHOPIFY_SHOP_DOMAIN,
+    hasAccessToken: !!SHOPIFY_ACCESS_TOKEN,
+  });
+}
 
-// Shopify REST API version
+// Shopify Admin API version
 const API_VERSION = '2025-01';
 
 interface ShopifyCoupon {
@@ -52,35 +52,36 @@ interface CreateCouponPayload {
 }
 
 /**
- * Build authorization header for Shopify API
+ * Check if Shopify is configured
  */
-function getAuthHeader(): string {
-  const credentials = Buffer.from(
-    `${SHOPIFY_CLIENT_ID}:${SHOPIFY_CLIENT_SECRET}`
-  ).toString('base64');
-  return `Basic ${credentials}`;
+export function isShopifyConfigured(): boolean {
+  return !!SHOPIFY_SHOP_DOMAIN && !!SHOPIFY_ACCESS_TOKEN;
 }
 
 /**
  * Make authenticated request to Shopify GraphQL API
+ * Uses Access Token authentication (not Basic Auth)
  */
 async function shopifyGraphQL(query: string, variables?: Record<string, any>) {
-  if (!SHOPIFY_STORE_URL || SHOPIFY_STORE_URL === 'admin') {
-    throw new Error('SHOPIFY_STORE_URL not configured. Expected format: storename.myshopify.com');
+  if (!SHOPIFY_SHOP_DOMAIN || !SHOPIFY_ACCESS_TOKEN) {
+    throw new Error(
+      'Shopify not configured. Missing: ' + 
+      [!SHOPIFY_SHOP_DOMAIN && 'SHOPIFY_SHOP_DOMAIN', !SHOPIFY_ACCESS_TOKEN && 'SHOPIFY_ACCESS_TOKEN'].filter(Boolean).join(', ')
+    );
   }
 
-  // Ensure URL doesn't have protocol or trailing slashes
-  const cleanStoreUrl = SHOPIFY_STORE_URL
+  // Ensure domain doesn't have protocol or trailing slashes
+  const cleanDomain = SHOPIFY_SHOP_DOMAIN
     .replace(/^https?:\/\//, '')
     .replace(/\/+$/, '');
 
-  const url = `https://${cleanStoreUrl}/admin/api/${API_VERSION}/graphql.json`;
+  const url = `https://${cleanDomain}/admin/api/${API_VERSION}/graphql.json`;
 
   const response = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': getAuthHeader(),
+      'X-Shopify-Access-Token': SHOPIFY_ACCESS_TOKEN,
     },
     body: JSON.stringify({
       query,
@@ -89,6 +90,8 @@ async function shopifyGraphQL(query: string, variables?: Record<string, any>) {
   });
 
   if (!response.ok) {
+    const errorText = await response.text();
+    console.error('[Shopify] API error response:', errorText);
     throw new Error(
       `Shopify API error: ${response.status} ${response.statusText}`
     );
@@ -97,7 +100,7 @@ async function shopifyGraphQL(query: string, variables?: Record<string, any>) {
   const data = await response.json();
 
   if (data.errors) {
-    console.error('Shopify GraphQL errors:', data.errors);
+    console.error('[Shopify] GraphQL errors:', data.errors);
     throw new Error(
       `Shopify GraphQL error: ${JSON.stringify(data.errors)}`
     );
@@ -108,7 +111,7 @@ async function shopifyGraphQL(query: string, variables?: Record<string, any>) {
 
 /**
  * Create a discount code (coupon) in Shopify
- * 10% discount for customer + 10% commission for influencer (calculated separately)
+ * 10% discount for customer + 20% commission for influencer (calculated separately)
  */
 export async function createCoupon(payload: CreateCouponPayload) {
   const mutation = `
@@ -118,26 +121,14 @@ export async function createCoupon(payload: CreateCouponPayload) {
           id
           codeDiscount {
             ... on DiscountCodeBasic {
+              id
               title
-              codes(first: 1) {
-                edges {
-                  node {
-                    code
-                  }
-                }
-              }
+              code
+              discountClass
               startsAt
               endsAt
               status
-              appliedCount
               usageLimit
-              customerGets {
-                value {
-                  ... on DiscountPercentage {
-                    percentage
-                  }
-                }
-              }
             }
           }
         }
@@ -156,80 +147,65 @@ export async function createCoupon(payload: CreateCouponPayload) {
       startsAt: new Date().toISOString(),
       endsAt: payload.expiresAt || null,
       usageLimit: payload.usageLimit || null,
-      combinesWith: {
-        orderDiscounts: true,
-        productDiscounts: true,
-        shippingDiscounts: true,
+      customerSelection: {
+        all: true,
       },
       customerGets: {
         value: {
-          percentageValue: payload.discountPercentage,
+          percentage: payload.discountPercentage,
         },
         items: {
           all: true,
         },
       },
       appliesOncePerCustomer: false,
-      minimumRequirement: {
-        subtotal: {
-          greaterThanOrEqualToSubtotal: 0,
-        },
-      },
     },
   };
 
-  try {
-    const result = await shopifyGraphQL(mutation, variables);
+  const data = await shopifyGraphQL(mutation, variables);
 
-    if (result.discountCodeBasicCreate.userErrors.length > 0) {
-      throw new Error(
-        `Failed to create coupon: ${JSON.stringify(
-          result.discountCodeBasicCreate.userErrors
-        )}`
-      );
-    }
-
-    const couponNode = result.discountCodeBasicCreate.codeDiscountNode;
-    return {
-      success: true,
-      coupon: {
-        id: couponNode.id,
-        title: couponNode.codeDiscount.title,
-        code: couponNode.codeDiscount.codes.edges[0]?.node.code,
-        status: couponNode.codeDiscount.status,
-        discount: payload.discountPercentage,
-      },
-    };
-  } catch (error) {
-    console.error('Error creating coupon:', error);
-    throw error;
+  if (data.discountCodeBasicCreate.userErrors.length > 0) {
+    throw new Error(
+      `Shopify error: ${data.discountCodeBasicCreate.userErrors[0].message}`
+    );
   }
+
+  const coupon = data.discountCodeBasicCreate.codeDiscountNode.codeDiscount;
+
+  return {
+    success: true,
+    coupon: {
+      id: coupon.id,
+      title: coupon.title,
+      code: coupon.code,
+      discountClass: coupon.discountClass,
+      startsAt: coupon.startsAt,
+      endsAt: coupon.endsAt,
+      status: coupon.status,
+      usageLimit: coupon.usageLimit,
+    },
+  };
 }
 
 /**
- * Get all discount codes from Shopify
+ * Get coupon by code from Shopify
  */
-export async function getAllCoupons() {
+export async function getCouponByCode(code: string): Promise<ShopifyCoupon | null> {
   const query = `
-    query {
-      codeDiscountNodes(first: 50) {
+    query GetDiscountCodes($query: String!) {
+      codeDiscountNodes(query: $query, first: 1) {
         edges {
           node {
             id
             codeDiscount {
               ... on DiscountCodeBasic {
+                id
                 title
-                codes(first: 1) {
-                  edges {
-                    node {
-                      code
-                    }
-                  }
-                }
+                code
+                discountClass
                 startsAt
                 endsAt
                 status
-                appliedCount
                 usageLimit
               }
             }
@@ -239,104 +215,112 @@ export async function getAllCoupons() {
     }
   `;
 
-  try {
-    const result = await shopifyGraphQL(query);
-    const coupons = result.codeDiscountNodes.edges.map((edge: any) => ({
-      id: edge.node.id,
-      title: edge.node.codeDiscount.title,
-      code: edge.node.codeDiscount.codes.edges[0]?.node.code,
-      status: edge.node.codeDiscount.status,
-      appliedCount: edge.node.codeDiscount.appliedCount,
-      usageLimit: edge.node.codeDiscount.usageLimit,
-    }));
+  const data = await shopifyGraphQL(query, { query: `code:${code}` });
 
-    return coupons;
-  } catch (error) {
-    console.error('Error fetching coupons:', error);
-    throw error;
-  }
+  const edge = data.codeDiscountNodes.edges[0];
+  if (!edge) return null;
+
+  const coupon = edge.node.codeDiscount;
+  return {
+    id: coupon.id,
+    title: coupon.title,
+    code: coupon.code,
+    discountClass: coupon.discountClass,
+    startsAt: coupon.startsAt,
+    endsAt: coupon.endsAt,
+    status: coupon.status,
+    usageLimit: coupon.usageLimit,
+    appliedCount: 0, // Not directly available in this query
+  };
 }
 
 /**
- * Get orders that used a specific coupon code
- * Calculate commission based on order subtotal (excluding shipping + tax)
+ * Get orders by discount code from Shopify
  */
-export async function getOrdersByCounterCode(
-  code: string
-): Promise<ShopifyOrder[]> {
+export async function getOrdersByDiscountCode(code: string): Promise<ShopifyOrder[]> {
   const query = `
-    query {
-      orders(first: 50, query: "discount_code:${code}") {
+    query GetOrders($query: String!) {
+      orders(query: $query, first: 50) {
         edges {
           node {
             id
             name
             email
-            createdAt
-            totalPrice
-            subtotalPrice
-            taxPrice
-            shippingPrice
-            discountApplications(first: 10) {
-              edges {
-                node {
-                  ... on DiscountCode {
-                    code
-                  }
-                }
+            totalPriceSet {
+              shopMoney {
+                amount
               }
             }
+            subtotalPriceSet {
+              shopMoney {
+                amount
+              }
+            }
+            totalTaxSet {
+              shopMoney {
+                amount
+              }
+            }
+            totalShippingPriceSet {
+              shopMoney {
+                amount
+              }
+            }
+            totalDiscountsSet {
+              shopMoney {
+                amount
+              }
+            }
+            discountCode
+            createdAt
           }
         }
       }
     }
   `;
 
-  try {
-    const result = await shopifyGraphQL(query);
-    const orders = result.orders.edges.map((edge: any) => ({
-      id: edge.node.id,
-      name: edge.node.name,
-      email: edge.node.email,
-      createdAt: edge.node.createdAt,
-      totalPrice: parseFloat(edge.node.totalPrice),
-      subtotalPrice: parseFloat(edge.node.subtotalPrice),
-      taxPrice: parseFloat(edge.node.taxPrice),
-      shippingPrice: parseFloat(edge.node.shippingPrice),
-      discountCode: code,
-    }));
+  const data = await shopifyGraphQL(query, { query: `discount_code:${code}` });
 
-    return orders;
-  } catch (error) {
-    console.error('Error fetching orders:', error);
-    throw error;
-  }
+  return data.orders.edges.map((edge: any) => ({
+    id: edge.node.id,
+    name: edge.node.name,
+    email: edge.node.email,
+    totalPrice: parseFloat(edge.node.totalPriceSet.shopMoney.amount),
+    subtotalPrice: parseFloat(edge.node.subtotalPriceSet.shopMoney.amount),
+    taxPrice: parseFloat(edge.node.totalTaxSet.shopMoney.amount),
+    shippingPrice: parseFloat(edge.node.totalShippingPriceSet.shopMoney.amount),
+    discountAmount: parseFloat(edge.node.totalDiscountsSet.shopMoney.amount),
+    discountCode: edge.node.discountCode,
+    createdAt: edge.node.createdAt,
+  }));
 }
 
 /**
- * Test Shopify API connection
+ * Delete a discount code from Shopify
  */
-export async function testShopifyConnection() {
-  try {
-    const query = `
-      query {
-        shop {
-          name
-          currencyCode
+export async function deleteCoupon(shopifyId: string) {
+  const mutation = `
+    mutation DeleteDiscount($id: ID!) {
+      discountCodeDelete(id: $id) {
+        deletedCodeDiscountId
+        userErrors {
+          field
+          message
         }
       }
-    `;
+    }
+  `;
 
-    const result = await shopifyGraphQL(query);
-    return {
-      success: true,
-      shop: result.shop,
-    };
-  } catch (error) {
-    console.error('Shopify connection test failed:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+  const data = await shopifyGraphQL(mutation, { id: shopifyId });
+
+  if (data.discountCodeDelete.userErrors.length > 0) {
+    throw new Error(
+      `Shopify error: ${data.discountCodeDelete.userErrors[0].message}`
+    );
   }
+
+  return {
+    success: true,
+    deletedId: data.discountCodeDelete.deletedCodeDiscountId,
+  };
 }

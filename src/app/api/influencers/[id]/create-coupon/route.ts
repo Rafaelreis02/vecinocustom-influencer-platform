@@ -15,9 +15,10 @@ export async function POST(
 ) {
   try {
     // Check Shopify configuration
-    if (!process.env.SHOPIFY_STORE_URL || !process.env.SHOPIFY_CLIENT_ID || !process.env.SHOPIFY_CLIENT_SECRET) {
+    if (!process.env.SHOPIFY_SHOP_DOMAIN || !process.env.SHOPIFY_ACCESS_TOKEN) {
       return NextResponse.json(
-        { success: false, error: 'Shopify not configured. Please contact admin.' },
+        { success: false, error: 'Shopify not configured. Missing: ' + 
+          [!process.env.SHOPIFY_SHOP_DOMAIN && 'SHOPIFY_SHOP_DOMAIN', !process.env.SHOPIFY_ACCESS_TOKEN && 'SHOPIFY_ACCESS_TOKEN'].filter(Boolean).join(', ') },
         { status: 503 }
       );
     }
