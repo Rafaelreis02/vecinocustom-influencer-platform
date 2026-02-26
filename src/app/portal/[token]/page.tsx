@@ -89,33 +89,22 @@ function isFieldLocked(fieldName: string, data: InfluencerData, status: string):
   const statusOrder = ['UNKNOWN', 'COUNTER_PROPOSAL', 'ANALYZING', 'AGREED', 'PRODUCT_SELECTION', 'CONTRACT_PENDING', 'SHIPPED', 'COMPLETED'];
   const currentStatusIndex = statusOrder.indexOf(status);
   
-  // agreedPrice special case: editable during ANALYZING (negotiation), locked otherwise
-  if (fieldName === 'agreedPrice') {
-    // Locked if already AGREED or beyond, or if has price and not in ANALYZING
-    if (status === 'AGREED' || currentStatusIndex > statusOrder.indexOf('AGREED')) {
-      return true;
-    }
-    // During ANALYZING, allow editing even if has data (for counterproposal)
-    if (status === 'ANALYZING') {
-      return false;
-    }
-    // Otherwise lock if has data
-    return hasFieldData(data.agreedPrice);
+  // If status is ANALYZING: everything is locked (waiting for our review)
+  if (status === 'ANALYZING') {
+    return true;
   }
   
-  // Step 1 fields (except agreedPrice)
-  const step1Fields = ['name', 'email', 'instagramHandle', 'tiktokHandle', 'phone'];
+  // Step 1 fields (including agreedPrice)
+  // During AGREED: all fields editable for counterproposal
+  // Locked only when moved past AGREED (accepted and advanced)
+  const step1Fields = ['name', 'email', 'instagramHandle', 'tiktokHandle', 'phone', 'agreedPrice'];
   if (step1Fields.includes(fieldName)) {
-    // Locked if status has moved past ANALYZING
-    if (currentStatusIndex > statusOrder.indexOf('ANALYZING')) {
+    // Locked if status has moved past AGREED (already accepted)
+    if (currentStatusIndex > statusOrder.indexOf('AGREED')) {
       return true;
     }
-    // During ANALYZING, editable even with data
-    if (status === 'ANALYZING') {
-      return false;
-    }
-    // Locked if field has data
-    return hasFieldData(data[fieldName as keyof InfluencerData]);
+    // During AGREED: editable even with data (for counterproposal)
+    return false;
   }
   
   // Step 2 fields
@@ -533,9 +522,9 @@ function Step1({ data, token, onUpdate, onNext }: StepProps) {
       
       {/* Analyzing Banner */}
       {isAnalyzing && (
-        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-          <p className="text-sm text-green-800 font-semibold">
-            Your proposal is already with our team to be analyzed
+        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <p className="text-sm text-yellow-800 font-semibold">
+            A sua proposta está em análise
           </p>
         </div>
       )}
