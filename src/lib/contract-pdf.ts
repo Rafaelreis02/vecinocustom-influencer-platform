@@ -13,35 +13,63 @@ interface ContractData {
 
 export async function generateContractPDF(data: ContractData): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
-  const page = pdfDoc.addPage();
-  const { width, height } = page.getSize();
+  
+  // A4 size
+  const pageWidth = 595;
+  const pageHeight = 842;
+  const margin = 60;
+  const contentWidth = pageWidth - 2 * margin;
   
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   
-  let y = height - 50;
-  const margin = 50;
-  const maxWidth = width - 2 * margin;
+  let page = pdfDoc.addPage([pageWidth, pageHeight]);
+  let y = pageHeight - margin;
   
-  // Helper to add text
-  const addText = (text: string, size: number, bold = false, lineHeight = 1.2) => {
+  // Helper to check if we need a new page
+  const checkNewPage = (neededSpace: number = 100) => {
+    if (y < neededSpace + margin) {
+      page = pdfDoc.addPage([pageWidth, pageHeight]);
+      y = pageHeight - margin;
+    }
+  };
+  
+  // Helper to add centered text
+  const addCenteredText = (text: string, size: number, bold = false, yOffset = 0) => {
+    const currentFont = bold ? fontBold : font;
+    const textWidth = currentFont.widthOfTextAtSize(text, size);
+    const x = (pageWidth - textWidth) / 2;
+    page.drawText(text, {
+      x,
+      y: y + yOffset,
+      size,
+      font: currentFont,
+      color: rgb(0, 0, 0),
+    });
+  };
+  
+  // Helper to add left-aligned text with wrapping
+  const addWrappedText = (text: string, size: number, bold = false, indent = 0) => {
     const currentFont = bold ? fontBold : font;
     const words = text.split(' ');
     let line = '';
+    const lineHeight = size * 1.4;
+    const maxLineWidth = contentWidth - indent;
     
     for (const word of words) {
       const testLine = line + (line ? ' ' : '') + word;
       const lineWidth = currentFont.widthOfTextAtSize(testLine, size);
       
-      if (lineWidth > maxWidth && line) {
+      if (lineWidth > maxLineWidth && line) {
         page.drawText(line, {
-          x: margin,
+          x: margin + indent,
           y,
           size,
           font: currentFont,
           color: rgb(0, 0, 0),
         });
-        y -= size * lineHeight;
+        y -= lineHeight;
+        checkNewPage();
         line = word;
       } else {
         line = testLine;
@@ -50,119 +78,172 @@ export async function generateContractPDF(data: ContractData): Promise<Uint8Arra
     
     if (line) {
       page.drawText(line, {
-        x: margin,
+        x: margin + indent,
         y,
         size,
         font: currentFont,
         color: rgb(0, 0, 0),
       });
-      y -= size * lineHeight;
+      y -= lineHeight;
     }
   };
   
-  // Helper to add paragraph with spacing
-  const addParagraph = (text: string, size = 11) => {
-    addText(text, size);
+  // Helper to add section title
+  const addSectionTitle = (title: string) => {
+    checkNewPage(80);
     y -= 10;
+    page.drawLine({
+      start: { x: margin, y: y + 5 },
+      end: { x: pageWidth - margin, y: y + 5 },
+      thickness: 1,
+      color: rgb(0.8, 0.8, 0.8),
+    });
+    y -= 15;
+    addWrappedText(title, 12, true);
+    y -= 5;
   };
   
-  // Title
-  addText('COLLABORATION AGREEMENT', 16, true);
-  y -= 5;
-  addText('BETWEEN THE BRAND VECINO CUSTOM AND CONTENT CREATOR', 12, true);
+  // Helper to add bullet point
+  const addBulletPoint = (text: string, indent = 15) => {
+    checkNewPage();
+    page.drawText('•', {
+      x: margin + indent,
+      y,
+      size: 10,
+      font,
+      color: rgb(0.2, 0.2, 0.2),
+    });
+    addWrappedText(text, 10, false, indent + 15);
+    y -= 3;
+  };
+  
+  // === HEADER ===
+  addCenteredText('VECINO CUSTOM', 22, true);
+  y -= 25;
+  addCenteredText('COLLABORATION AGREEMENT', 16, true);
+  y -= 8;
+  addCenteredText('Between the Brand and Content Creator', 11);
+  y -= 30;
+  
+  // Decorative line
+  page.drawLine({
+    start: { x: margin + 50, y },
+    end: { x: pageWidth - margin - 50, y },
+    thickness: 2,
+    color: rgb(0.2, 0.2, 0.2),
+  });
+  y -= 30;
+  
+  // === PARTIES ===
+  addWrappedText('Between the parties:', 10);
+  y -= 8;
+  
+  addWrappedText('1. VECINO CUSTOM', 10, true);
+  addWrappedText('   A registered brand owned by BRILLOSCURO LDA, with registered office at Rua Comendador Sá Couto 112, 4520-192 Santa Maria da Feira, Portugal, Tax ID: 517924773 (hereinafter referred to as the "Brand" or "First Party")', 9, false, 10);
+  y -= 8;
+  
+  addWrappedText(`2. ${data.influencerName}`, 10, true);
+  addWrappedText(`   Content Creator with social media handle @${data.influencerHandle} (hereinafter referred to as the "Creator" or "Second Party")`, 9, false, 10);
+  y -= 15;
+  
+  addWrappedText('Enter into the present Collaboration Agreement, governed by the following clauses:', 10);
   y -= 20;
   
-  // Between parties
-  addParagraph(`Between the parties:`);
-  addParagraph(`VECINO CUSTOM, a registered brand owned by the company BRILLOSCURO LDA, with its registered office at RUA COMENDADOR SÁ COUTO 112, 4520-192 SANTA MARIA DA FEIRA, tax identification number 517924773, hereinafter referred to as the "first contracting party", and`);
-  addParagraph(`${data.influencerName} (@${data.influencerHandle}), hereinafter referred to as the "second contracting party",`);
-  y -= 10;
+  // === CLAUSE 1 ===
+  addSectionTitle('1. Purpose of the Collaboration');
+  addWrappedText(`The purpose of this partnership is the creation of original digital content by the Creator, with the aim of promoting the products of VECINO CUSTOM, namely ${data.productDescription || 'personalized jewelry pieces'}.`, 10);
   
-  addParagraph(`Enter into the present Collaboration Agreement, which shall be governed by the following clauses:`);
-  y -= 10;
+  // === CLAUSE 2 ===
+  addSectionTitle('2. Collaboration Terms');
   
-  // Clause 1
-  addText('1. Purpose of the Collaboration', 12, true);
-  addParagraph(`The purpose of this partnership is the creation of original digital content by the second contracting party, with the aim of promoting the products of the VECINO CUSTOM brand, namely ${data.productDescription || 'a personalized piece of jewelry'}.`);
-  y -= 10;
+  addWrappedText('Obligations of the Brand (First Party):', 10, true);
+  addBulletPoint('Free delivery of 1 personalized jewelry piece, selected based on the Creator\'s personal style and preferences');
+  addBulletPoint(`Assignment of an exclusive discount code providing: (i) 10% discount for the Creator's community; (ii) ${data.commissionRate}% commission on each sale made using the code`);
+  addBulletPoint(`Payment of a fixed remuneration of ${data.agreedPrice.toFixed(2)}€ upon completion of deliverables`);
+  y -= 8;
   
-  // Clause 2
-  addText('2. Collaboration Terms', 12, true);
-  y -= 5;
+  addWrappedText('Obligations of the Creator (Second Party):', 10, true);
+  addBulletPoint('Create and publish one creative video and one photograph on social media platforms (TikTok, Instagram Reels, Instagram Stories)');
+  addBulletPoint('Content must have emotional and aesthetic focus, aligned with the brand\'s identity');
+  addBulletPoint('Content must be completed and published within 5 days after receiving the product');
+  addBulletPoint('Submit content for brand approval prior to publication');
   
-  addText('On the part of the first contracting party:', 11, true);
-  addParagraph('• Free delivery of 1 personalized piece of jewelry, selected by the brand based on the personal style of the second contracting party, who may share their preferences.');
-  addParagraph(`• Assignment of an exclusive discount code, which provides: 1. A 10% discount for the second contracting party's community; 2. A ${data.commissionRate}% commission on each sale made using the aforementioned code.`);
-  addParagraph(`• Payment of a fixed remuneration in the amount of ${data.agreedPrice}€.`);
-  y -= 5;
+  // === CLAUSE 3 ===
+  addSectionTitle('3. Ownership and Usage Rights');
+  addBulletPoint('Content remains the intellectual property of the Creator');
+  addBulletPoint('The Brand has full usage rights and may share content on digital platforms (Instagram, TikTok, Website, Email Marketing) with proper credit');
+  addBulletPoint('The Brand is authorized to use content in paid advertising campaigns without further authorization');
+  addBulletPoint('Creator agrees to provide necessary access for content promotion');
   
-  addText('On the part of the second contracting party:', 11, true);
-  addParagraph('• Creation and publication of one creative video and one photograph on their social media platforms, with an emotional and aesthetic focus, aligned with the brand\'s identity.');
-  addParagraph('• The video shall be published on TikTok and Instagram Reels, and the picture shall be published on Instagram Stories and sent to the first contracting party.');
-  addParagraph('• The content must be completed and published within 5 days after receiving the product.');
-  addParagraph('• The created content must be submitted in advance to the first contracting party for approval prior to publication.');
-  y -= 10;
+  // === CLAUSE 4 ===
+  addSectionTitle('4. Remuneration and Commissions');
+  addBulletPoint(`Fixed remuneration: ${data.agreedPrice.toFixed(2)}€ (paid after content delivery and approval)`);
+  addBulletPoint(`Commission: ${data.commissionRate}% on each sale using the exclusive discount code`);
+  addBulletPoint('Commission payments made monthly by the 10th day of each month');
+  addBulletPoint('Payment requires: (i) Content delivery; (ii) Access codes for sponsorship; (iii) Valid receipt/invoice from Creator');
+  addBulletPoint('Payment via bank transfer to IBAN provided by Creator');
   
-  // Clause 3
-  addText('3. Ownership and Usage Rights', 12, true);
-  addParagraph('• The content shall remain the intellectual property of the second contracting party; however, the first contracting party shall have full usage rights and may share it on its digital platforms (Instagram, TikTok, Website, Email Marketing) with proper credit given.');
-  addParagraph('• The first contracting party is expressly authorized to use the content in paid advertising campaigns and sponsored posts, without the need for further authorization.');
-  addParagraph('• The second contracting party agrees to provide the necessary access codes (TikTok and Instagram) to enable the promotion of the content.');
-  y -= 10;
+  // === CLAUSE 5 ===
+  addSectionTitle('5. Confidentiality and Dispute Resolution');
+  addBulletPoint('Both parties maintain confidentiality of all information exchanged');
+  addBulletPoint('Conflicts shall first be resolved amicably between parties');
+  addBulletPoint('Any dispute governed by Portuguese law, with courts of Santa Maria da Feira as competent authority');
   
-  // Clause 4
-  addText('4. Remuneration and Commissions', 12, true);
-  addParagraph(`• This collaboration includes the provision of a product, a sales commission (${data.commissionRate}%), and a fixed remuneration (${data.agreedPrice}€).`);
-  addParagraph('• Commission payments will be made monthly, by the 10th day of each month.');
-  addParagraph('• Payment of the fixed remuneration and commissions shall only be made after: 1. Delivery and publication of the approved content; 2. Delivery of the necessary access codes for sponsorship; 3. Issuance of a receipt/invoice by the second contracting party.');
-  addParagraph('• Payment will be made by bank transfer to the IBAN provided by the second contracting party.');
-  y -= 10;
+  // === CLAUSE 6 ===
+  addSectionTitle('6. Duration and Termination');
+  addBulletPoint('Agreement enters force upon acceptance by both parties');
+  addBulletPoint('Indefinite duration, terminable with 5 business days notice');
+  addBulletPoint('No retroactive effect on termination regarding content usage');
   
-  // Clause 5
-  addText('5. Confidentiality and Dispute Resolution', 12, true);
-  addParagraph('• Both parties agree to maintain the confidentiality of all information exchanged within the scope of this collaboration, including financial details, strategies, terms of the agreement, and any unpublished content.');
-  addParagraph('• Any conflict or disagreement arising from this collaboration shall first be resolved amicably between the parties.');
-  addParagraph('• If it is not possible to reach an understanding, both parties agree that any dispute shall be governed by Portuguese law, with the court of the district of Santa Maria da Feira being the competent authority to settle any legal matters.');
-  y -= 10;
+  // === CLAUSE 7 ===
+  addSectionTitle('7. Final Considerations');
+  addBulletPoint('Both parties agree to maintain clear, cordial, and professional communication');
+  addBulletPoint('Amendments must be in writing and agreed by both parties');
+  addBulletPoint('By accepting, both parties declare full agreement with all terms');
+  addBulletPoint('If Creator is a minor, legal representative must sign and assume responsibility');
   
-  // Clause 6
-  addText('6. Duration and Termination', 12, true);
-  addParagraph('• This agreement shall enter into force on the date of its acceptance by both parties and shall remain in effect for an indefinite period, being subject to termination by either party upon five (5) business days\' prior notice, without penalty.');
-  addParagraph('• Should the second contracting party express in writing their intention to prohibit future use of the content, such decision shall not have retroactive effect.');
-  y -= 10;
+  // === DIGITAL ACCEPTANCE ===
+  checkNewPage(200);
+  y -= 30;
   
-  // Clause 7
-  addText('7. Final Considerations', 12, true);
-  addParagraph('• Both parties agree to maintain clear, cordial, and professional communication throughout the collaboration.');
-  addParagraph('• Any amendment or addition to this agreement must be made in writing and agreed upon by both parties.');
-  addParagraph('• By accepting this agreement, both parties declare their full agreement with the points described above.');
-  addParagraph('• In the event that the second contracting party is a minor, this agreement must be signed by their legal representative, who hereby: (i) authorizes the minor to participate in this collaboration; (ii) assumes full legal responsibility for all obligations arising from this agreement until the minor reaches the age of majority; and (iii) confirms that the representation is valid and compliant with Portuguese law.');
+  // Box for digital signature
+  page.drawRectangle({
+    x: margin - 10,
+    y: y - 10,
+    width: contentWidth + 20,
+    height: 140,
+    borderColor: rgb(0.3, 0.3, 0.3),
+    borderWidth: 1,
+    color: rgb(0.97, 0.97, 0.97),
+  });
+  
+  y -= 25;
+  addCenteredText('DIGITAL ACCEPTANCE', 13, true, 0);
   y -= 20;
   
-  // Digital Signature Section
-  addText('DIGITAL ACCEPTANCE', 14, true);
-  y -= 10;
-  
-  addParagraph(`This contract was digitally accepted by ${data.influencerName} (@${data.influencerHandle}) on ${data.date}.`);
-  y -= 5;
+  addWrappedText(`This contract was digitally accepted by ${data.influencerName} (@${data.influencerHandle})`, 9);
+  addWrappedText(`Date: ${data.date}`, 9);
   
   if (data.ipAddress) {
-    addParagraph(`IP Address: ${data.ipAddress}`);
-  }
-  if (data.userAgent) {
-    addParagraph(`Device: ${data.userAgent.substring(0, 100)}...`);
+    addWrappedText(`IP Address: ${data.ipAddress}`, 9);
   }
   
-  // Hash for integrity
-  const hash = Buffer.from(`${data.influencerName}-${data.date}-${data.agreedPrice}`).toString('base64');
-  addParagraph(`Document Hash: ${hash}`);
   y -= 10;
+  addWrappedText('This digital acceptance constitutes a valid electronic signature under Portuguese and EU law (eIDAS Regulation).', 8);
   
-  addParagraph('This digital acceptance constitutes a valid electronic signature under Portuguese and EU law (eIDAS Regulation).');
-  y -= 20;
+  // === FOOTER ===
+  checkNewPage(60);
+  y -= 40;
   
-  // Location and Date
-  addText(`Santa Maria da Feira, ${data.date}`, 11);
+  page.drawLine({
+    start: { x: margin, y: y + 20 },
+    end: { x: pageWidth - margin, y: y + 20 },
+    thickness: 0.5,
+    color: rgb(0.7, 0.7, 0.7),
+  });
+  
+  y -= 15;
+  addCenteredText(`Santa Maria da Feira, ${data.date}`, 10);
   
   const pdfBytes = await pdfDoc.save();
   return pdfBytes;
