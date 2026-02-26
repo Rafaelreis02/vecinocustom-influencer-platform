@@ -163,8 +163,13 @@ export async function PUT(
     if (body.tiktokHandle !== undefined && body.tiktokHandle) profileUpdateData.tiktokHandle = body.tiktokHandle;
 
     // Check if this is a counterproposal (agreedPrice changed)
-    const isCounterproposal = body.agreedPrice !== undefined && 
+    const isCounterproposal = body.agreedPrice !== undefined &&
                                workflow.agreedPrice !== body.agreedPrice;
+
+    // If counterproposal, update agreedPrice
+    if (isCounterproposal) {
+      updateData.agreedPrice = parseFloat(body.agreedPrice);
+    }
 
     // Update workflow
     const updatedWorkflow = await prisma.partnershipWorkflow.update({

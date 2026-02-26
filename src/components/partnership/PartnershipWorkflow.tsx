@@ -392,6 +392,35 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerSt
         </div>
       </div>
 
+      {/* Initial Proposal Sent - Waiting for influencer response */}
+      {currentStep === 1 && workflow && !isCompleted && !isCancelled && influencerStatus === 'COUNTER_PROPOSAL' && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  Proposta Enviada
+                </span>
+              </div>
+              <h4 className="font-semibold text-blue-900 mt-2 text-lg">
+                Aguardando Resposta do Influencer
+              </h4>
+              <p className="text-blue-700 mt-1">
+                A proposta foi enviada ao influencer. Estamos à espera que aceite ou envie uma contraproposta.
+              </p>
+              <div className="mt-4 flex items-center gap-3">
+                <span className="text-3xl font-bold text-blue-900">
+                  {workflow.agreedPrice?.toFixed(2) || '0.00'}€
+                </span>
+                <span className="text-sm text-blue-600">
+                  valor proposto
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Counterproposal Management - Only when influencer sent counterproposal */}
       {currentStep === 1 && workflow && !isCompleted && !isCancelled && influencerStatus === 'ANALYZING' && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-6">
