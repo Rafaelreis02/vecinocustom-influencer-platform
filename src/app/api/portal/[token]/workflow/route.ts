@@ -21,6 +21,7 @@ export async function GET(
         tiktokHandle: true,
         phone: true,
         avatarUrl: true,
+        status: true,
       },
     });
 
@@ -61,7 +62,7 @@ export async function GET(
 
       // Workflow data (partnership-specific)
       agreedPrice: workflow.agreedPrice,
-      status: workflow.status,
+      status: influencer.status,
       currentStep: workflow.currentStep,
       shippingAddress: workflow.shippingAddress,
       productSuggestion1: workflow.productSuggestion1,
