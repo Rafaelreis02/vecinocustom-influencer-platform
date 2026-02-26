@@ -14,6 +14,14 @@ export async function POST(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Check Shopify configuration
+    if (!process.env.SHOPIFY_STORE_URL || !process.env.SHOPIFY_CLIENT_ID || !process.env.SHOPIFY_CLIENT_SECRET) {
+      return NextResponse.json(
+        { success: false, error: 'Shopify not configured. Please contact admin.' },
+        { status: 503 }
+      );
+    }
+
     const { id } = await context.params;
     const body = await request.json();
     const { code } = body;

@@ -7,6 +7,14 @@ const SHOPIFY_STORE_URL = process.env.SHOPIFY_STORE_URL || '';
 const SHOPIFY_CLIENT_ID = process.env.SHOPIFY_CLIENT_ID || '';
 const SHOPIFY_CLIENT_SECRET = process.env.SHOPIFY_CLIENT_SECRET || '';
 
+// Debug logging (remove in production)
+console.log('[Shopify] Config check:', {
+  hasStoreUrl: !!SHOPIFY_STORE_URL,
+  storeUrl: SHOPIFY_STORE_URL?.substring(0, 10) + '...',
+  hasClientId: !!SHOPIFY_CLIENT_ID,
+  hasClientSecret: !!SHOPIFY_CLIENT_SECRET,
+});
+
 // Shopify REST API version
 const API_VERSION = '2025-01';
 
@@ -57,7 +65,16 @@ function getAuthHeader(): string {
  * Make authenticated request to Shopify GraphQL API
  */
 async function shopifyGraphQL(query: string, variables?: Record<string, any>) {
-  const url = `https://${SHOPIFY_STORE_URL}/admin/api/${API_VERSION}/graphql.json`;
+  if (!SHOPIFY_STORE_URL || SHOPIFY_STORE_URL === 'admin') {
+    throw new Error('SHOPIFY_STORE_URL not configured. Expected format: storename.myshopify.com');
+  }
+
+  // Ensure URL doesn't have protocol or trailing slashes
+  const cleanStoreUrl = SHOPIFY_STORE_URL
+    .replace(/^https?:\/\//, '')
+    .replace(/\/+$/, '');
+
+  const url = `https://${cleanStoreUrl}/admin/api/${API_VERSION}/graphql.json`;
 
   const response = await fetch(url, {
     method: 'POST',
