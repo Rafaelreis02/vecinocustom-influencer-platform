@@ -397,15 +397,25 @@ function Step1({ data, token, onUpdate, onNext }: StepProps) {
   };
 
   const confirmAccept = async () => {
+    const error = validateForm();
+    if (error) {
+      setValidationError(error);
+      setTimeout(() => setValidationError(null), VALIDATION_ERROR_DISPLAY_DURATION);
+      setShowModal(false);
+      return;
+    }
+
     setShowModal(false);
     setLoading(true);
-    
+
     try {
       // Map form fields to workflow fields
       const workflowData = {
         contactEmail: formData.email,
         contactInstagram: formData.instagramHandle,
         contactWhatsapp: formData.phone,
+        name: formData.name,
+        tiktokHandle: formData.tiktokHandle,
       };
       
       // Update workflow
@@ -461,8 +471,10 @@ function Step1({ data, token, onUpdate, onNext }: StepProps) {
         contactEmail: formData.email,
         contactInstagram: formData.instagramHandle,
         contactWhatsapp: formData.phone,
+        name: formData.name,
+        tiktokHandle: formData.tiktokHandle,
       };
-      
+
       // Include the new proposed value if it changed
       if (priceChanged && formData.agreedPrice > 0) {
         workflowData.agreedPrice = formData.agreedPrice;
