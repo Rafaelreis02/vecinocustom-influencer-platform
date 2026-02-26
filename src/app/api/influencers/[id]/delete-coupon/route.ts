@@ -51,10 +51,12 @@ export async function POST(
     });
 
     if (!coupon) {
-      return NextResponse.json(
-        { success: false, error: 'Coupon not found' },
-        { status: 404 }
-      );
+      // If not in database but user wants to clear it, just return success
+      logger.warn(`Coupon ${code.toUpperCase()} not found in DB, may be already deleted`);
+      return NextResponse.json({
+        success: true,
+        message: `Cupom ${code.toUpperCase()} não encontrado na BD (já pode ter sido removido)`,
+      });
     }
 
     // Delete from Shopify if shopifyId exists
@@ -64,11 +66,14 @@ export async function POST(
         logger.info(`Coupon ${code.toUpperCase()} deleted from Shopify`);
       } catch (shopifyError: any) {
         // If coupon not found in Shopify, continue (maybe already deleted)
-        if (!shopifyError.message?.includes('not found')) {
+        if (!shopifyError.message?.includes('not found') && !shopifyError.message?.includes('not exist')) {
           throw shopifyError;
         }
-        logger.warn(`Coupon ${code.toUpperCase()} not found in Shopify, marking as deleted locally`);
+        logger.warn(`Coupon ${code.toUpperCase()} not found in Shopify, deleting from DB only`);
       }
+    } else {
+      // No shopifyId means it was never created in Shopify (ghost coupon)
+      logger.warn(`Coupon ${code.toUpperCase()} has no shopifyId, deleting from DB only`);
     }
 
     // Delete from database

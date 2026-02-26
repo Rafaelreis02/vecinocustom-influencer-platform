@@ -46,42 +46,67 @@ export async function POST(
       );
     }
 
-    // Check if coupon already exists
+    // Check if coupon already exists in database
     const existingCoupon = await prisma.coupon.findUnique({
       where: { code: code.toUpperCase() },
     });
 
     if (existingCoupon) {
       return NextResponse.json(
-        { success: false, error: 'Este código de cupom já existe' },
+        { success: false, error: 'Este código de cupom já existe na base de dados' },
         { status: 400 }
       );
     }
 
-    // Create coupon in Shopify (10% discount)
-    const shopifyResult = await createCoupon({
-      title: `Cupom ${code} - ${influencer.name}`,
-      code: code.toUpperCase(),
-      discountPercentage: 10,
-    });
-
-    if (!shopifyResult.success) {
-      throw new Error('Failed to create coupon in Shopify');
+    // IMPORTANT: Create in Shopify FIRST, only then save to database
+    let shopifyResult;
+    try {
+      shopifyResult = await createCoupon({
+        title: `Cupom ${code} - ${influencer.name}`,
+        code: code.toUpperCase(),
+        discountPercentage: 10,
+      });
+    } catch (shopifyError: any) {
+      logger.error('Shopify coupon creation failed:', shopifyError);
+      return NextResponse.json(
+        { success: false, error: 'Falha ao criar cupom na Shopify: ' + shopifyError.message },
+        { status: 502 }
+      );
     }
 
-    // Save coupon to database
-    const coupon = await prisma.coupon.create({
-      data: {
-        code: code.toUpperCase(),
-        discountType: 'PERCENTAGE',
-        discountValue: 10,
-        influencerId: id,
-        shopifyId: shopifyResult.coupon.id,
-      },
-      include: {
-        influencer: true,
-      },
-    });
+    if (!shopifyResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Shopify não confirmou a criação do cupom' },
+        { status: 502 }
+      );
+    }
+
+    // Only save to database after successful Shopify creation
+    let coupon;
+    try {
+      coupon = await prisma.coupon.create({
+        data: {
+          code: code.toUpperCase(),
+          discountType: 'PERCENTAGE',
+          discountValue: 10,
+          influencerId: id,
+          shopifyId: shopifyResult.coupon.id,
+        },
+        include: {
+          influencer: true,
+        },
+      });
+    } catch (dbError: any) {
+      // If database fails, we have a orphaned Shopify coupon
+      // Log this for manual cleanup
+      logger.error('Database save failed after Shopify creation:', dbError);
+      logger.error(`ORPHANED SHOPIFY COUPON: ${code.toUpperCase()} with ID ${shopifyResult.coupon.id}`);
+      
+      return NextResponse.json(
+        { success: false, error: 'Cupom criado na Shopify mas falha ao guardar na BD. Contacte admin.' },
+        { status: 500 }
+      );
+    }
 
     // Send email to influencer (optional - requires email service configuration)
     logger.info(`Coupon ${code.toUpperCase()} created for influencer ${influencer.name}`);
