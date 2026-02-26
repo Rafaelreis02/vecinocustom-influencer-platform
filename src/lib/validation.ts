@@ -35,7 +35,7 @@ export const InfluencerCreateSchema = z.object({
   nif: z.string().optional().nullable(),
   address: z.string().optional().nullable(),
   estimatedPrice: z.number().optional().nullable(),
-  fitScore: z.number().int().optional().nullable(),
+  fitScore: z.number().optional().nullable(),
   tier: z.string().optional().nullable(),
   
   // Avatar
