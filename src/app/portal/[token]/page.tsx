@@ -35,6 +35,7 @@ interface StepProps {
   onUpdate: () => Promise<void>;
   onNext: () => void;
   onBack?: () => void;
+  isReviewMode?: boolean;
 }
 
 interface ProductSearchResult {
@@ -148,6 +149,7 @@ export default function PortalPage() {
   const [error, setError] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [searchMode, setSearchMode] = useState(false);
+  const [isReviewMode, setIsReviewMode] = useState(false);
 
   useEffect(() => {
     if (token) {
@@ -270,7 +272,11 @@ export default function PortalPage() {
               data={influencerData}
               token={token}
               onUpdate={fetchInfluencerData}
-              onNext={() => setCurrentStep(2)}
+              onNext={() => {
+                setIsReviewMode(false);
+                setCurrentStep(2);
+              }}
+              isReviewMode={isReviewMode}
             />
           )}
           {currentStep === 2 && (
@@ -278,7 +284,10 @@ export default function PortalPage() {
               data={influencerData}
               token={token}
               onUpdate={fetchInfluencerData}
-              onBack={() => setCurrentStep(1)}
+              onBack={() => {
+                setIsReviewMode(true);
+                setCurrentStep(1);
+              }}
               onNext={() => setCurrentStep(3)}
             />
           )}
@@ -338,7 +347,7 @@ function ProgressBar({ currentStep }: { currentStep: number }) {
 }
 
 // Step 1 - Partnership Details
-function Step1({ data, token, onUpdate, onNext }: StepProps) {
+function Step1({ data, token, onUpdate, onNext, isReviewMode }: StepProps) {
   const [formData, setFormData] = useState({
     name: data.name || '',
     email: data.email || '',
@@ -379,6 +388,7 @@ function Step1({ data, token, onUpdate, onNext }: StepProps) {
 
   // Per-field lock logic
   const getFieldDisabled = (fieldName: string): boolean => {
+    if (isReviewMode) return true; // All fields locked in review mode
     return isFieldLocked(fieldName, data, data.status);
   };
 
@@ -652,7 +662,17 @@ function Step1({ data, token, onUpdate, onNext }: StepProps) {
       </div>
       
       {/* Action Buttons */}
-      {!isAnalyzing && (
+      {isReviewMode ? (
+        // Review mode: only show Next button
+        <div className="mt-6">
+          <button
+            onClick={onNext}
+            className="w-full py-3 bg-[#0E1E37] text-white font-semibold rounded-lg hover:bg-[#1a2f4f] transition"
+          >
+            Next
+          </button>
+        </div>
+      ) : !isAnalyzing && (
         <div className="mt-6 space-y-3">
           {hasPrice ? (
             // Scenario A: Has price - show Accept and Counterproposal
