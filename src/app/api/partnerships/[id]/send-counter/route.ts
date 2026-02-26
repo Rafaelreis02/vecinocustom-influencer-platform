@@ -46,7 +46,7 @@ export async function POST(
     });
 
     // Update influencer status to COUNTER_PROPOSAL
-    await prisma.influencer.update({
+    const updatedInfluencer = await prisma.influencer.update({
       where: { id: workflow.influencerId },
       data: { status: 'COUNTER_PROPOSAL' },
     });
@@ -74,7 +74,10 @@ export async function POST(
     return NextResponse.json({
       success: true,
       message: 'New proposal sent',
-      data: updatedWorkflow,
+      data: {
+        ...updatedWorkflow,
+        influencerStatus: updatedInfluencer.status,
+      },
     });
   } catch (error: any) {
     console.error('Error sending counterproposal:', error);

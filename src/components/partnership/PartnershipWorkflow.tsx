@@ -64,6 +64,12 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerSt
   const [isSendingCounter, setIsSendingCounter] = useState(false);
   const [showCounterModal, setShowCounterModal] = useState(false);
   const [counterPrice, setCounterPrice] = useState('');
+  const [localInfluencerStatus, setLocalInfluencerStatus] = useState(influencerStatus);
+
+  // Update local status when prop changes
+  useEffect(() => {
+    setLocalInfluencerStatus(influencerStatus);
+  }, [influencerStatus]);
 
   const fetchWorkflow = async () => {
     try {
@@ -231,6 +237,10 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerSt
       const data = await res.json();
       if (data.success) {
         setWorkflow(data.data);
+        // Update local status to COUNTER_PROPOSAL
+        if (data.data.influencerStatus) {
+          setLocalInfluencerStatus(data.data.influencerStatus);
+        }
         setShowCounterModal(false);
         setCounterPrice('');
       } else {
@@ -393,7 +403,7 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerSt
       </div>
 
       {/* Counterproposal Management - Only when influencer sent counterproposal */}
-      {currentStep === 1 && workflow && !isCompleted && !isCancelled && influencerStatus === 'ANALYZING' && (
+      {currentStep === 1 && workflow && !isCompleted && !isCancelled && localInfluencerStatus === 'ANALYZING' && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-6">
           <div className="flex items-start justify-between">
             <div>
@@ -548,7 +558,7 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerSt
             workflow={workflow}
             onUpdate={updateWorkflow}
             isLocked={isCompleted || isCancelled}
-            influencerStatus={influencerStatus}
+            influencerStatus={localInfluencerStatus}
           />
         )}
         {currentStep === 2 && (
