@@ -28,8 +28,6 @@ interface Workflow {
   productSuggestion2: string | null;
   productSuggestion3: string | null;
   selectedProductUrl: string | null;
-  designProofUrl: string | null;
-  designNotes: string | null;
   contractSigned: boolean;
   contractUrl: string | null;
   trackingUrl: string | null;
