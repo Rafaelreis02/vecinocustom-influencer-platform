@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Loader2, CheckCircle2, Circle, Lock, ChevronRight, RefreshCcw, X } from 'lucide-react';
+import { Loader2, CheckCircle2, Circle, Lock, ChevronRight, RefreshCcw, X, Check, Send } from 'lucide-react';
 import { PartnershipStep1 } from './PartnershipStep1';
 import { PartnershipStep2 } from './PartnershipStep2';
 import { PartnershipStep3 } from './PartnershipStep3';
@@ -11,6 +11,7 @@ import { PartnershipStep5 } from './PartnershipStep5';
 interface PartnershipWorkflowProps {
   influencerId: string;
   influencerName: string;
+  influencerStatus?: string;
   portalUrl?: string;
 }
 
@@ -59,6 +60,10 @@ export function PartnershipWorkflow({ influencerId, influencerName, portalUrl }:
   const [isRestarting, setIsRestarting] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [advanceError, setAdvanceError] = useState<string | null>(null);
+  const [isAcceptingCounter, setIsAcceptingCounter] = useState(false);
+  const [isSendingCounter, setIsSendingCounter] = useState(false);
+  const [showCounterModal, setShowCounterModal] = useState(false);
+  const [counterPrice, setCounterPrice] = useState('');
 
   const fetchWorkflow = async () => {
     try {
@@ -177,6 +182,64 @@ export function PartnershipWorkflow({ influencerId, influencerName, portalUrl }:
       setError('Failed to cancel partnership');
     } finally {
       setIsCancelling(false);
+    }
+  };
+
+  const acceptCounterproposal = async () => {
+    if (!workflow) return;
+    
+    if (!confirm('Tem a certeza que quer aceitar esta contraproposta? O influencer será notificado e poderá avançar para o Step 2.')) {
+      return;
+    }
+    
+    try {
+      setIsAcceptingCounter(true);
+      const res = await fetch(`/api/partnerships/${workflow.id}/accept-counter`, {
+        method: 'POST',
+      });
+      
+      const data = await res.json();
+      if (data.success) {
+        setWorkflow(data.data);
+      } else {
+        setError(data.error);
+      }
+    } catch (err) {
+      setError('Failed to accept counterproposal');
+    } finally {
+      setIsAcceptingCounter(false);
+    }
+  };
+
+  const sendCounterproposal = async () => {
+    if (!workflow || !counterPrice) return;
+    
+    const price = parseFloat(counterPrice);
+    if (isNaN(price) || price <= 0) {
+      setError('Por favor, insira um valor válido');
+      return;
+    }
+    
+    try {
+      setIsSendingCounter(true);
+      const res = await fetch(`/api/partnerships/${workflow.id}/send-counter`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agreedPrice: price }),
+      });
+      
+      const data = await res.json();
+      if (data.success) {
+        setWorkflow(data.data);
+        setShowCounterModal(false);
+        setCounterPrice('');
+      } else {
+        setError(data.error);
+      }
+    } catch (err) {
+      setError('Failed to send counterproposal');
+    } finally {
+      setIsSendingCounter(false);
     }
   };
 
@@ -328,6 +391,117 @@ export function PartnershipWorkflow({ influencerId, influencerName, portalUrl }:
           })}
         </div>
       </div>
+
+      {/* Counterproposal Management - Only when influencer sent counterproposal */}
+      {currentStep === 1 && workflow && !isCompleted && !isCancelled && influencerStatus === 'ANALYZING' && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-6">
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                  Em Negociação
+                </span>
+              </div>
+              <h4 className="font-semibold text-amber-900 mt-2 text-lg">
+                Contraproposta Recebida
+              </h4>
+              <p className="text-amber-700 mt-1">
+                O influencer propôs um novo valor para a parceria.
+              </p>
+              <div className="mt-4 flex items-center gap-3">
+                <span className="text-3xl font-bold text-amber-900">
+                  {workflow.agreedPrice?.toFixed(2) || '0.00'}€
+                </span>
+                <span className="text-sm text-amber-600">
+                  valor proposto pelo influencer
+                </span>
+              </div>
+            </div>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={acceptCounterproposal}
+                disabled={isAcceptingCounter}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isAcceptingCounter ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Check className="h-4 w-4" />
+                )}
+                Aceitar Contraproposta
+              </button>
+              <button
+                onClick={() => setShowCounterModal(true)}
+                disabled={isSendingCounter}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-amber-300 text-amber-700 font-medium rounded-lg hover:bg-amber-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <Send className="h-4 w-4" />
+                Enviar Nova Proposta
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Counterproposal Modal */}
+      {showCounterModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Enviar Nova Proposta
+              </h3>
+              <button
+                onClick={() => setShowCounterModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              Insira o novo valor que pretende propor ao influencer.
+            </p>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Valor (€)
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  value={counterPrice}
+                  onChange={(e) => setCounterPrice(e.target.value)}
+                  placeholder="0.00"
+                  min="0"
+                  step="0.01"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">
+                  €
+                </span>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowCounterModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={sendCounterproposal}
+                disabled={!counterPrice || isSendingCounter}
+                className="flex-1 px-4 py-2 bg-amber-600 text-white font-medium rounded-lg hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSendingCounter ? (
+                  <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                ) : (
+                  'Enviar Proposta'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Portal Link */}
       {portalUrl && (

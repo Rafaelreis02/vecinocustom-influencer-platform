@@ -19,7 +19,7 @@ export async function GET(
     // Check if influencer exists
     const influencer = await prisma.influencer.findUnique({
       where: { id },
-      select: { id: true, name: true },
+      select: { id: true, name: true, status: true },
     });
 
     if (!influencer) {

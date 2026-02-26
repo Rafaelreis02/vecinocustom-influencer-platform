@@ -1003,6 +1003,7 @@ export default function InfluencerDetailPage() {
             <PartnershipWorkflow
               influencerId={influencer.id}
               influencerName={influencer.name}
+              influencerStatus={influencer.status}
               portalUrl={portalUrl || undefined}
             />
           </div>
