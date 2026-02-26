@@ -129,30 +129,38 @@ export async function PUT(
     }
 
     // Fields that can be updated by influencer based on current step
-    const stepFields: Record<number, string[]> = {
-      1: ['contactEmail', 'contactInstagram', 'contactWhatsapp', 'name', 'tiktokHandle'], // Can fill contact info
+    // workflowFields = stored in partnership_workflows table
+    // profileFields = stored in influencers table
+    const workflowFields: Record<number, string[]> = {
+      1: ['contactEmail', 'contactInstagram', 'contactWhatsapp'],
       2: ['shippingAddress', 'productSuggestion1', 'productSuggestion2', 'productSuggestion3'],
-      3: [], // Read-only for influencer
-      4: [], // Read-only for influencer
-      5: [], // Read-only for influencer
+      3: [],
+      4: [],
+      5: [],
     };
 
-    const allowedFields = stepFields[workflow.currentStep] || [];
+    // Profile fields stored in influencers table
+    const profileFields = ['name', 'tiktokHandle', 'email', 'instagramHandle', 'phone'];
+
+    const allowedWorkflowFields = workflowFields[workflow.currentStep] || [];
     const updateData: Record<string, any> = {};
     const profileUpdateData: Record<string, any> = {};
 
-    for (const key of allowedFields) {
+    // Update workflow fields
+    for (const key of allowedWorkflowFields) {
       if (body[key] !== undefined) {
         updateData[key] = body[key];
 
         // Also update profile if field is empty there
-        if (key === 'contactEmail') profileUpdateData.email = body[key];
-        if (key === 'contactInstagram') profileUpdateData.instagramHandle = body[key];
-        if (key === 'contactWhatsapp') profileUpdateData.phone = body[key];
-        if (key === 'name') profileUpdateData.name = body[key];
-        if (key === 'tiktokHandle') profileUpdateData.tiktokHandle = body[key];
+        if (key === 'contactEmail' && body[key]) profileUpdateData.email = body[key];
+        if (key === 'contactInstagram' && body[key]) profileUpdateData.instagramHandle = body[key];
+        if (key === 'contactWhatsapp' && body[key]) profileUpdateData.phone = body[key];
       }
     }
+
+    // Update profile fields directly
+    if (body.name !== undefined && body.name) profileUpdateData.name = body.name;
+    if (body.tiktokHandle !== undefined && body.tiktokHandle) profileUpdateData.tiktokHandle = body.tiktokHandle;
 
     // Check if this is a counterproposal (agreedPrice changed)
     const isCounterproposal = body.agreedPrice !== undefined && 
