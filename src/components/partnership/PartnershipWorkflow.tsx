@@ -402,57 +402,6 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerSt
         </div>
       </div>
 
-      {/* Counterproposal Management - Only when influencer sent counterproposal */}
-      {currentStep === 1 && workflow && !isCompleted && !isCancelled && localInfluencerStatus === 'ANALYZING' && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-6">
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
-                  Em Negociação
-                </span>
-              </div>
-              <h4 className="font-semibold text-amber-900 mt-2 text-lg">
-                Contraproposta Recebida
-              </h4>
-              <p className="text-amber-700 mt-1">
-                O influencer propôs um novo valor para a parceria.
-              </p>
-              <div className="mt-4 flex items-center gap-3">
-                <span className="text-3xl font-bold text-amber-900">
-                  {workflow.agreedPrice?.toFixed(2) || '0.00'}€
-                </span>
-                <span className="text-sm text-amber-600">
-                  valor proposto pelo influencer
-                </span>
-              </div>
-            </div>
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={acceptCounterproposal}
-                disabled={isAcceptingCounter}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {isAcceptingCounter ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Check className="h-4 w-4" />
-                )}
-                Aceitar Contraproposta
-              </button>
-              <button
-                onClick={() => setShowCounterModal(true)}
-                disabled={isSendingCounter}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-amber-300 text-amber-700 font-medium rounded-lg hover:bg-amber-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <Send className="h-4 w-4" />
-                Enviar Nova Proposta
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Counterproposal Modal */}
       {showCounterModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -559,6 +508,10 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerSt
             onUpdate={updateWorkflow}
             isLocked={isCompleted || isCancelled}
             influencerStatus={localInfluencerStatus}
+            onAcceptCounter={localInfluencerStatus === 'ANALYZING' ? acceptCounterproposal : undefined}
+            onSendCounter={localInfluencerStatus === 'ANALYZING' ? () => setShowCounterModal(true) : undefined}
+            isAcceptingCounter={isAcceptingCounter}
+            isSendingCounter={isSendingCounter}
           />
         )}
         {currentStep === 2 && (

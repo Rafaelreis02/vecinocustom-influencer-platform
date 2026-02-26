@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Euro, Loader2, Check, User } from 'lucide-react';
+import { Euro, Loader2, Check, User, CheckCircle, Send } from 'lucide-react';
 
 interface PartnershipStep1Props {
   workflow: {
@@ -13,9 +13,13 @@ interface PartnershipStep1Props {
   onUpdate: (updates: any) => Promise<boolean>;
   isLocked: boolean;
   influencerStatus?: string;
+  onAcceptCounter?: () => void;
+  onSendCounter?: () => void;
+  isAcceptingCounter?: boolean;
+  isSendingCounter?: boolean;
 }
 
-export function PartnershipStep1({ workflow, onUpdate, isLocked, influencerStatus }: PartnershipStep1Props) {
+export function PartnershipStep1({ workflow, onUpdate, isLocked, influencerStatus, onAcceptCounter, onSendCounter, isAcceptingCounter, isSendingCounter }: PartnershipStep1Props) {
   const [formData, setFormData] = useState({
     agreedPrice: workflow.agreedPrice?.toString() || '',
   });
@@ -82,6 +86,35 @@ export function PartnershipStep1({ workflow, onUpdate, isLocked, influencerStatu
           <p className="text-xs text-amber-600 mt-1">
             Aguardando a nossa resposta (aceitar ou renegociar)
           </p>
+          {/* Botões de ação */}
+          {(onAcceptCounter || onSendCounter) && (
+            <div className="flex flex-col sm:flex-row gap-2 mt-4">
+              {onAcceptCounter && (
+                <button
+                  onClick={onAcceptCounter}
+                  disabled={isAcceptingCounter}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isAcceptingCounter ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <CheckCircle className="h-4 w-4" />
+                  )}
+                  Aceitar Contraproposta
+                </button>
+              )}
+              {onSendCounter && (
+                <button
+                  onClick={onSendCounter}
+                  disabled={isSendingCounter}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white border border-amber-300 text-amber-700 font-medium rounded-lg hover:bg-amber-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <Send className="h-4 w-4" />
+                  Enviar Nova Proposta
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
 
