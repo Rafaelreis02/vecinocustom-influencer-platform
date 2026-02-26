@@ -57,10 +57,10 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Update influencer status to AGREED (waiting for influencer response)
+    // Update influencer status to COUNTER_PROPOSAL (waiting for influencer response)
     await prisma.influencer.update({
       where: { id: influencerId },
-      data: { status: 'AGREED' },
+      data: { status: 'COUNTER_PROPOSAL' },
     });
 
     return NextResponse.json(

@@ -94,16 +94,27 @@ function isFieldLocked(fieldName: string, data: InfluencerData, status: string):
     return true;
   }
   
-  // Step 1 fields (including agreedPrice)
-  // During AGREED: all fields editable for counterproposal
-  // Locked only when moved past AGREED (accepted and advanced)
-  const step1Fields = ['name', 'email', 'instagramHandle', 'tiktokHandle', 'phone', 'agreedPrice'];
+  // agreedPrice is ALWAYS editable (for negotiation) until AGREED
+  if (fieldName === 'agreedPrice') {
+    // Locked only if status is AGREED or beyond (already accepted)
+    return status === 'AGREED' || currentStatusIndex > statusOrder.indexOf('AGREED');
+  }
+  
+  // Step 1 fields (except agreedPrice)
+  const step1Fields = ['name', 'email', 'instagramHandle', 'tiktokHandle', 'phone'];
   if (step1Fields.includes(fieldName)) {
-    // Locked if status has moved past AGREED (already accepted)
+    // Locked if status has moved past AGREED
     if (currentStatusIndex > statusOrder.indexOf('AGREED')) {
       return true;
     }
-    // During AGREED: editable even with data (for counterproposal)
+    // During AGREED: editable even with data
+    if (status === 'AGREED') {
+      return false;
+    }
+    // During COUNTER_PROPOSAL: locked if field already has data
+    if (status === 'COUNTER_PROPOSAL') {
+      return hasFieldData(data[fieldName as keyof InfluencerData]);
+    }
     return false;
   }
   
