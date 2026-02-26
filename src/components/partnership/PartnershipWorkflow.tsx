@@ -51,7 +51,7 @@ const STEPS = [
   { number: 5, name: 'Shipped', status: 'SHIPPED' },
 ];
 
-export function PartnershipWorkflow({ influencerId, influencerName, portalUrl }: PartnershipWorkflowProps) {
+export function PartnershipWorkflow({ influencerId, influencerName, influencerStatus, portalUrl }: PartnershipWorkflowProps) {
   const [workflow, setWorkflow] = useState<Workflow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
