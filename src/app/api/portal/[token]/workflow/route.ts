@@ -139,9 +139,6 @@ export async function PUT(
       5: [],
     };
 
-    // Profile fields stored in influencers table
-    const profileFields = ['name', 'tiktokHandle', 'email', 'instagramHandle', 'phone'];
-
     const allowedWorkflowFields = workflowFields[workflow.currentStep] || [];
     const updateData: Record<string, any> = {};
     const profileUpdateData: Record<string, any> = {};
@@ -150,17 +147,11 @@ export async function PUT(
     for (const key of allowedWorkflowFields) {
       if (body[key] !== undefined) {
         updateData[key] = body[key];
-
-        // Also update profile if field is empty there
-        if (key === 'contactEmail' && body[key]) profileUpdateData.email = body[key];
-        if (key === 'contactInstagram' && body[key]) profileUpdateData.instagramHandle = body[key];
-        if (key === 'contactWhatsapp' && body[key]) profileUpdateData.phone = body[key];
       }
     }
 
-    // Update profile fields directly
+    // Update profile fields (only name and contact info, NOT handles with unique constraints)
     if (body.name !== undefined && body.name) profileUpdateData.name = body.name;
-    if (body.tiktokHandle !== undefined && body.tiktokHandle) profileUpdateData.tiktokHandle = body.tiktokHandle;
 
     // Check if this is a counterproposal (agreedPrice changed)
     const isCounterproposal = body.agreedPrice !== undefined &&
