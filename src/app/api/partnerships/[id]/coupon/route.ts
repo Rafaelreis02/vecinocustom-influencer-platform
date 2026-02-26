@@ -57,3 +57,49 @@ export async function POST(
     );
   }
 }
+
+// DELETE /api/partnerships/[id]/coupon - Clear coupon code from workflow
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { id } = await params;
+
+    // Find the workflow
+    const workflows = await prisma.partnershipWorkflow.findMany({
+      where: { id },
+    });
+
+    const workflow = workflows[0];
+
+    if (!workflow) {
+      return NextResponse.json({ error: 'Workflow not found' }, { status: 404 });
+    }
+
+    // Clear coupon code from workflow
+    const updatedWorkflow = await prisma.partnershipWorkflow.update({
+      where: { id },
+      data: {
+        couponCode: null,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: 'Coupon code cleared',
+      data: updatedWorkflow,
+    });
+  } catch (error: any) {
+    console.error('Error clearing coupon code:', error);
+    return NextResponse.json(
+      { error: 'Failed to clear coupon code: ' + error.message },
+      { status: 500 }
+    );
+  }
+}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Link2, Loader2, Check, Ticket, Percent } from 'lucide-react';
+import { Link2, Loader2, Check, Ticket, Percent, Trash2, AlertTriangle } from 'lucide-react';
 
 interface PartnershipStep3Props {
   workflow: {
@@ -26,6 +26,8 @@ export function PartnershipStep3({ workflow, influencer, onUpdate, isLocked }: P
   });
   const [isSaving, setIsSaving] = useState(false);
   const [isCreatingCoupon, setIsCreatingCoupon] = useState(false);
+  const [isDeletingCoupon, setIsDeletingCoupon] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [saved, setSaved] = useState(false);
   const [couponError, setCouponError] = useState<string | null>(null);
   const [couponSuccess, setCouponSuccess] = useState<string | null>(null);
@@ -86,6 +88,50 @@ export function PartnershipStep3({ workflow, influencer, onUpdate, isLocked }: P
       setCouponError(err.message);
     } finally {
       setIsCreatingCoupon(false);
+    }
+  };
+
+  const handleDeleteCoupon = async () => {
+    if (!workflow.couponCode) return;
+    
+    setIsDeletingCoupon(true);
+    setCouponError(null);
+    setCouponSuccess(null);
+    
+    try {
+      // Delete from Shopify
+      const deleteRes = await fetch(`/api/influencers/${influencer.id}/delete-coupon`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: workflow.couponCode }),
+      });
+      
+      if (!deleteRes.ok) {
+        const error = await deleteRes.json();
+        throw new Error(error.error || 'Failed to delete coupon');
+      }
+      
+      // Clear from workflow
+      const saveRes = await fetch(`/api/partnerships/${workflow.id}/coupon`, {
+        method: 'DELETE',
+      });
+      
+      if (!saveRes.ok) {
+        const error = await saveRes.json();
+        throw new Error(error.error || 'Failed to clear coupon from workflow');
+      }
+      
+      setFormData(prev => ({ ...prev, couponCode: '' }));
+      setCouponSuccess(`Cupom ${workflow.couponCode} revogado com sucesso!`);
+      setShowDeleteConfirm(false);
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setCouponSuccess(null), 3000);
+      
+    } catch (err: any) {
+      setCouponError(err.message);
+    } finally {
+      setIsDeletingCoupon(false);
     }
   };
 
@@ -209,16 +255,68 @@ export function PartnershipStep3({ workflow, influencer, onUpdate, isLocked }: P
         )}
 
         {/* Coupon Created Status */}
-        {workflow.couponCode && (
-          <div className="p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
-            <Check className="h-5 w-5 text-green-600" />
-            <div>
-              <p className="text-sm font-medium text-green-900">
-                Cupom {workflow.couponCode} criado
-              </p>
-              <p className="text-xs text-green-700">
-                Já está ativo na Shopify
-              </p>
+        {workflow.couponCode && !showDeleteConfirm && (
+          <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center gap-2 mb-3">
+              <Check className="h-5 w-5 text-green-600" />
+              <div>
+                <p className="text-sm font-medium text-green-900">
+                  Cupom {workflow.couponCode} criado
+                </p>
+                <p className="text-xs text-green-700">
+                  Já está ativo na Shopify
+                </p>
+              </div>
+            </div>
+            {!isLocked && (
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="w-full py-2 bg-red-100 text-red-700 font-medium rounded-lg hover:bg-red-200 transition flex items-center justify-center gap-2"
+              >
+                <Trash2 className="h-4 w-4" />
+                Revogar Cupom
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Delete Confirmation */}
+        {showDeleteConfirm && workflow.couponCode && (
+          <div className="p-4 bg-red-50 border-2 border-red-300 rounded-lg">
+            <div className="flex items-start gap-3 mb-4">
+              <AlertTriangle className="h-6 w-6 text-red-600 flex-shrink-0" />
+              <div>
+                <p className="font-medium text-red-900">Revogar Cupom?</p>
+                <p className="text-sm text-red-700 mt-1">
+                  O cupom <strong>{workflow.couponCode}</strong> será desativado na Shopify e removido do workflow. Esta ação não pode ser desfeita.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={isDeletingCoupon}
+                className="flex-1 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDeleteCoupon}
+                disabled={isDeletingCoupon}
+                className="flex-1 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isDeletingCoupon ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    A revogar...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4" />
+                    Confirmar Revogação
+                  </>
+                )}
+              </button>
             </div>
           </div>
         )}
