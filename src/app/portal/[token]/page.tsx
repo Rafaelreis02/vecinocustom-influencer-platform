@@ -121,13 +121,15 @@ function isFieldLocked(fieldName: string, data: InfluencerData, status: string):
   // Step 2 fields
   const step2Fields = ['shippingAddress', 'productSuggestion1', 'productSuggestion2', 'productSuggestion3'];
   if (step2Fields.includes(fieldName)) {
-    // Locked if status has moved past AGREED
+    // Locked if status has moved past AGREED (already submitted)
     if (currentStatusIndex > statusOrder.indexOf('AGREED')) {
       return true;
     }
-    // During AGREED, editable
+    // During AGREED: locked if required fields are already filled (submitted)
     if (status === 'AGREED') {
-      return false;
+      // If shipping address and suggestion 1 are filled, consider it submitted
+      const isSubmitted = hasFieldData(data.shippingAddress) && hasFieldData(data.productSuggestion1);
+      return isSubmitted;
     }
     // Locked if field has data
     return hasFieldData(data[fieldName as keyof InfluencerData]);
@@ -454,12 +456,17 @@ function Step1({ data, token, onUpdate, onNext }: StepProps) {
     setLoading(true);
     
     try {
-      // Map form fields to workflow fields
-      const workflowData = {
+      // Map form fields to workflow fields - include agreedPrice for counterproposal
+      const workflowData: any = {
         contactEmail: formData.email,
         contactInstagram: formData.instagramHandle,
         contactWhatsapp: formData.phone,
       };
+      
+      // Include the new proposed value if it changed
+      if (priceChanged && formData.agreedPrice > 0) {
+        workflowData.agreedPrice = formData.agreedPrice;
+      }
       
       const res = await fetch(`/api/portal/${token}/workflow`, {
         method: 'PUT',
