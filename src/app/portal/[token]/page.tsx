@@ -89,21 +89,47 @@ function isFieldLocked(fieldName: string, data: InfluencerData, status: string):
   const statusOrder = ['UNKNOWN', 'COUNTER_PROPOSAL', 'ANALYZING', 'AGREED', 'PRODUCT_SELECTION', 'CONTRACT_PENDING', 'SHIPPED', 'COMPLETED'];
   const currentStatusIndex = statusOrder.indexOf(status);
   
-  // Step 1 fields
-  const step1Fields = ['name', 'email', 'instagramHandle', 'tiktokHandle', 'phone', 'agreedPrice'];
+  // agreedPrice special case: editable during ANALYZING (negotiation), locked otherwise
+  if (fieldName === 'agreedPrice') {
+    // Locked if already AGREED or beyond, or if has price and not in ANALYZING
+    if (status === 'AGREED' || currentStatusIndex > statusOrder.indexOf('AGREED')) {
+      return true;
+    }
+    // During ANALYZING, allow editing even if has data (for counterproposal)
+    if (status === 'ANALYZING') {
+      return false;
+    }
+    // Otherwise lock if has data
+    return hasFieldData(data.agreedPrice);
+  }
+  
+  // Step 1 fields (except agreedPrice)
+  const step1Fields = ['name', 'email', 'instagramHandle', 'tiktokHandle', 'phone'];
   if (step1Fields.includes(fieldName)) {
-    // Locked if field has data (any status)
+    // Locked if status has moved past ANALYZING
+    if (currentStatusIndex > statusOrder.indexOf('ANALYZING')) {
+      return true;
+    }
+    // During ANALYZING, editable even with data
+    if (status === 'ANALYZING') {
+      return false;
+    }
+    // Locked if field has data
     return hasFieldData(data[fieldName as keyof InfluencerData]);
   }
   
   // Step 2 fields
   const step2Fields = ['shippingAddress', 'productSuggestion1', 'productSuggestion2', 'productSuggestion3'];
   if (step2Fields.includes(fieldName)) {
-    // Locked if status has moved past AGREED AND field has data
-    if (currentStatusIndex >= statusOrder.indexOf('PRODUCT_SELECTION')) {
-      return hasFieldData(data[fieldName as keyof InfluencerData]);
+    // Locked if status has moved past AGREED
+    if (currentStatusIndex > statusOrder.indexOf('AGREED')) {
+      return true;
     }
-    // Or if field has data and we're in step 2
+    // During AGREED, editable
+    if (status === 'AGREED') {
+      return false;
+    }
+    // Locked if field has data
     return hasFieldData(data[fieldName as keyof InfluencerData]);
   }
   
@@ -329,6 +355,20 @@ function Step1({ data, token, onUpdate, onNext }: StepProps) {
   const isAnalyzing = data.status === 'ANALYZING';
   const hasPrice = data.agreedPrice && data.agreedPrice > 0;
   const priceChanged = formData.agreedPrice !== originalPrice;
+
+  // Update formData when data changes (e.g., when coming back from Step 2)
+  useEffect(() => {
+    setFormData({
+      name: data.name || '',
+      email: data.email || '',
+      instagramHandle: data.instagramHandle || '',
+      tiktokHandle: data.tiktokHandle || '',
+      ddiCode: data.ddiCode || '+351',
+      phone: data.phone || '',
+      agreedPrice: data.agreedPrice || 0,
+    });
+    setOriginalPrice(data.agreedPrice || 0);
+  }, [data]);
 
   const handleChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
