@@ -292,7 +292,14 @@ export default function PortalPage() {
             />
           )}
           {currentStep === 3 && <Step3 />}
-          {currentStep === 4 && <Step4 />}
+          {currentStep === 4 && (
+            <Step4
+              data={influencerData}
+              token={token}
+              onUpdate={fetchInfluencerData}
+              onNext={() => setCurrentStep(5)}
+            />
+          )}
           {currentStep === 5 && <Step5 data={influencerData} />}
         </div>
 
@@ -1039,18 +1046,128 @@ function Step3() {
   );
 }
 
-function Step4() {
+function Step4({ data, token, onNext }: StepProps) {
+  const [accepted, setAccepted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleAccept = async () => {
+    if (!accepted) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Get IP and user agent
+      const ipResponse = await fetch('https://api.ipify.org?format=json').catch(() => ({ json: () => ({ ip: 'unknown' }) }));
+      const { ip } = await ipResponse.json();
+      
+      const res = await fetch(`/api/portal/${token}/accept-contract`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ipAddress: ip,
+          userAgent: navigator.userAgent,
+        }),
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to accept contract');
+      }
+      
+      await onNext();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const agreedPrice = data.agreedPrice || 0;
+  const handle = data.tiktokHandle || data.instagramHandle || 'influencer';
+
   return (
     <div>
       <h2 className="text-xl font-bold text-[#0E1E37] mb-6 uppercase">Contract</h2>
       
-      <div className="p-6 bg-blue-50 border-2 border-blue-200 rounded-lg text-center">
-        <FileText className="h-12 w-12 mx-auto mb-4 text-blue-600" />
-        <h3 className="text-lg font-bold text-blue-800 mb-3">Just one step away</h3>
-        <p className="text-sm text-blue-700">
-          We&apos;ve sent the contract via e-mail and WhatsApp. Please sign it to move forward.
-        </p>
+      {/* Contract Display */}
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6 max-h-96 overflow-y-auto text-sm">
+        <h3 className="text-center font-bold text-lg mb-4">COLLABORATION AGREEMENT</h3>
+        <p className="text-center text-sm mb-4">BETWEEN THE BRAND VECINO CUSTOM AND CONTENT CREATOR</p>
+        
+        <div className="space-y-3 text-gray-700">
+          <p>Between the parties:</p>
+          <p><strong>VECINO CUSTOM</strong>, a registered brand owned by the company BRILLOSCURO LDA, with its registered office at RUA COMENDADOR SÁ COUTO 112, 4520-192 SANTA MARIA DA FEIRA, tax identification number 517924773, hereinafter referred to as the "first contracting party", and</p>
+          <p><strong>{data.name}</strong> (@{handle}), hereinafter referred to as the "second contracting party",</p>
+          <p>Enter into the present Collaboration Agreement, which shall be governed by the following clauses:</p>
+          
+          <p className="font-bold mt-4">1. Purpose of the Collaboration</p>
+          <p>The purpose of this partnership is the creation of original digital content by the second contracting party, with the aim of promoting the products of the VECINO CUSTOM brand, namely a personalized piece of jewelry.</p>
+          
+          <p className="font-bold mt-4">2. Collaboration Terms</p>
+          <p className="font-semibold">On the part of the first contracting party:</p>
+          <ul className="list-disc pl-5 space-y-1">
+            <li>Free delivery of 1 personalized piece of jewelry, selected by the brand based on the personal style of the second contracting party.</li>
+            <li>Assignment of an exclusive discount code, which provides: 10% discount for the community; 20% commission on each sale.</li>
+            <li>Payment of a fixed remuneration in the amount of {agreedPrice}€.</li>
+          </ul>
+          
+          <p className="font-semibold mt-2">On the part of the second contracting party:</p>
+          <ul className="list-disc pl-5 space-y-1">
+            <li>Creation and publication of one creative video and one photograph on their social media platforms.</li>
+            <li>The video shall be published on TikTok and Instagram Reels, and the picture shall be published on Instagram Stories.</li>
+            <li>The content must be completed and published within 5 days after receiving the product.</li>
+            <li>The created content must be submitted in advance to the first contracting party for approval.</li>
+          </ul>
+          
+          <p className="font-bold mt-4">3. Ownership and Usage Rights</p>
+          <p>The content shall remain the intellectual property of the second contracting party; however, the first contracting party shall have full usage rights and may share it on its digital platforms with proper credit given.</p>
+          
+          <p className="font-bold mt-4">4. Remuneration and Commissions</p>
+          <p>This collaboration includes the provision of a product, a sales commission (20%), and a fixed remuneration ({agreedPrice}€). Commission payments will be made monthly, by the 10th day of each month.</p>
+          
+          <p className="font-bold mt-4">5. Confidentiality and Dispute Resolution</p>
+          <p>Both parties agree to maintain the confidentiality of all information exchanged. Any dispute shall be governed by Portuguese law.</p>
+          
+          <p className="font-bold mt-4">6. Duration and Termination</p>
+          <p>This agreement shall enter into force on the date of its acceptance and shall remain in effect for an indefinite period, subject to termination upon five (5) business days' prior notice.</p>
+          
+          <p className="font-bold mt-4">7. Final Considerations</p>
+          <p>By accepting this agreement, both parties declare their full agreement with the points described above.</p>
+        </div>
       </div>
+      
+      {/* Error Message */}
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-sm text-red-700">{error}</p>
+        </div>
+      )}
+      
+      {/* Acceptance Checkbox */}
+      <div className="mb-6">
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={accepted}
+            onChange={(e) => setAccepted(e.target.checked)}
+            className="mt-1 w-5 h-5 text-[#0E1E37] border-gray-300 rounded focus:ring-[#0E1E37]"
+          />
+          <span className="text-sm text-gray-700">
+            I have read and accept the terms of this collaboration agreement. I understand that this constitutes a legally binding contract.
+          </span>
+        </label>
+      </div>
+      
+      {/* Accept Button */}
+      <button
+        onClick={handleAccept}
+        disabled={!accepted || loading}
+        className="w-full py-3 bg-[#0E1E37] text-white font-semibold rounded-lg hover:bg-[#1a2f4f] transition disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {loading ? 'Processing...' : 'Accept and Sign'}
+      </button>
     </div>
   );
 }
