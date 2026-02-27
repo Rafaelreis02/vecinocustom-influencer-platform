@@ -27,19 +27,41 @@ interface ShopifyOrder {
 
 /**
  * Get the access token from database
+ * Tries multiple shop URL formats for flexibility
  */
 export async function getShopifyAccessToken(): Promise<string | null> {
   try {
-    console.log('[getShopifyAccessToken] Looking for shop:', SHOPIFY_STORE_URL);
-    const auth = await prisma.shopifyAuth.findUnique({
-      where: { shop: SHOPIFY_STORE_URL },
+    // Normalize shop URL - remove protocol and trailing slashes
+    const normalizedShop = SHOPIFY_STORE_URL
+      .replace(/^https?:\/\//, '')
+      .replace(/\/+$/, '');
+
+    console.log('[getShopifyAccessToken] Looking for shop:', normalizedShop);
+
+    // Try exact match first
+    let auth = await prisma.shopifyAuth.findUnique({
+      where: { shop: normalizedShop },
     });
-    console.log('[getShopifyAccessToken] Found auth record:', auth ? 'YES' : 'NO');
+
+    // If not found, try with https:// prefix
     if (!auth) {
-      console.log('[getShopifyAccessToken] Token not found. Available shops:');
-      const allAuths = await prisma.shopifyAuth.findMany();
-      allAuths.forEach(a => console.log(`  - ${a.shop}`));
+      auth = await prisma.shopifyAuth.findUnique({
+        where: { shop: `https://${normalizedShop}` },
+      });
     }
+
+    // If still not found, try to find any shop that contains our domain
+    if (!auth) {
+      const allAuths = await prisma.shopifyAuth.findMany();
+      console.log('[getShopifyAccessToken] Available shops:', allAuths.map(a => a.shop));
+
+      auth = allAuths.find(a => {
+        const authShop = a.shop.replace(/^https?:\/\//, '').replace(/\/+$/, '');
+        return authShop === normalizedShop || normalizedShop.includes(authShop);
+      });
+    }
+
+    console.log('[getShopifyAccessToken] Found auth record:', auth ? 'YES' : 'NO');
     return auth?.accessToken || null;
   } catch (error) {
     console.error('Error fetching Shopify access token:', error);

@@ -6,7 +6,10 @@
 
 import { getShopifyAccessToken } from './shopify-oauth';
 
-const SHOPIFY_SHOP_DOMAIN = process.env.SHOPIFY_SHOP_DOMAIN || process.env.SHOPIFY_STORE_URL || '';
+// Normalize shop domain - remove protocol and trailing slashes
+const SHOPIFY_SHOP_DOMAIN = (process.env.SHOPIFY_SHOP_DOMAIN || process.env.SHOPIFY_STORE_URL || '')
+  .replace(/^https?:\/\//, '')
+  .replace(/\/+$/, '');
 
 // Debug logging (remove in production)
 if (process.env.NODE_ENV !== 'production') {
