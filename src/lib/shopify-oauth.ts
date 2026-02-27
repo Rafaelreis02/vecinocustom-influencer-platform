@@ -39,7 +39,7 @@ export async function getShopifyAccessToken(): Promise<string | null> {
     console.log('[getShopifyAccessToken] Looking for shop:', normalizedShop);
 
     // Try exact match first
-    let auth = await prisma.shopifyAuth.findUnique({
+    let auth: { accessToken: string } | null = await prisma.shopifyAuth.findUnique({
       where: { shop: normalizedShop },
     });
 
@@ -55,10 +55,14 @@ export async function getShopifyAccessToken(): Promise<string | null> {
       const allAuths = await prisma.shopifyAuth.findMany();
       console.log('[getShopifyAccessToken] Available shops:', allAuths.map(a => a.shop));
 
-      auth = allAuths.find(a => {
+      const foundAuth = allAuths.find(a => {
         const authShop = a.shop.replace(/^https?:\/\//, '').replace(/\/+$/, '');
         return authShop === normalizedShop || normalizedShop.includes(authShop);
       });
+      
+      if (foundAuth) {
+        auth = foundAuth;
+      }
     }
 
     console.log('[getShopifyAccessToken] Found auth record:', auth ? 'YES' : 'NO');
