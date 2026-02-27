@@ -7,6 +7,7 @@ import { prisma } from './prisma';
 import crypto from 'crypto';
 
 const SHOPIFY_STORE_URL = process.env.SHOPIFY_STORE_URL || '';
+const SHOPIFY_SHOP_DOMAIN = process.env.SHOPIFY_SHOP_DOMAIN || '';
 const SHOPIFY_CLIENT_ID = process.env.SHOPIFY_CLIENT_ID || '';
 const SHOPIFY_CLIENT_SECRET = process.env.SHOPIFY_CLIENT_SECRET || '';
 
@@ -31,8 +32,16 @@ interface ShopifyOrder {
  */
 export async function getShopifyAccessToken(): Promise<string | null> {
   try {
+    // Use SHOPIFY_SHOP_DOMAIN if available, fallback to SHOPIFY_STORE_URL
+    const shopDomain = SHOPIFY_SHOP_DOMAIN || SHOPIFY_STORE_URL;
+    
+    if (!shopDomain) {
+      console.log('[getShopifyAccessToken] No shop domain configured');
+      return null;
+    }
+    
     // Normalize shop URL - remove protocol and trailing slashes
-    const normalizedShop = SHOPIFY_STORE_URL
+    const normalizedShop = shopDomain
       .replace(/^https?:\/\//, '')
       .replace(/\/+$/, '');
 
