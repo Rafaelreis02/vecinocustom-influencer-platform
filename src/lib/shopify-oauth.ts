@@ -149,6 +149,7 @@ export async function createShopifyCoupon(
           value: `-${discountPercent}`,
           customer_selection: 'all',
           starts_at: new Date().toISOString(),
+          once_per_customer: true,
         },
       }),
     });
