@@ -9,151 +9,147 @@ const DEFAULT_TEMPLATES = [
   {
     key: 'STEP_1_WITH_VALUE',
     name: 'Step 1: Partnership - Com Valor',
-    subject: '✨ A tua proposta está pronta, {{nome}}!',
-    body: `Oii {{nome}}! 👋
+    subject: 'Parceria VecinoCustom - Proposta para ti',
+    body: `Olá {{nome}},
 
-Temos uma proposta super fixe para ti! 💎
+Temos uma proposta de parceria para ti.
 
-Queremos oferecer-te uma peça personalizada da VecinoCustom + {{valor}}€ pela tua criatividade! 😍
+Oferecemos-te uma peça personalizada da VecinoCustom mais {{valor}}€ pela tua colaboração.
 
-E ainda tens um cupom exclusivo para a tua comunidade: 10% desconto e tu ganhas 20% comissão em cada venda! 🎉
+Vantagens para ti:
+- Peça personalizada gratuita
+- Cupom exclusivo com 10% desconto para a tua comunidade
+- 20% de comissão em cada venda realizada com o teu cupom
 
-Tudo o que precisamos é de um vídeo e uma foto a mostrar a tua peça nas redes! 📱✨
-
-Queres aceitar? Clica aqui 👇
+Para aceitar e ver todos os detalhes, acede ao teu portal:
 https://vecinocustom-influencer-platform.vercel.app/portal/{{portalToken}}
 
-Beijinhos,
-Equipa VecinoCustom 💙
+Cumprimentos,
+Equipa VecinoCustom
 
 ---
-Dúvidas? Responde a este email ou fala connosco no WhatsApp! 📲`,
+Para qualquer questão, responde a este email ou contacta-nos via WhatsApp.`,
     step: 1,
     hasValue: true,
   },
   {
     key: 'STEP_1_NO_VALUE',
     name: 'Step 1: Partnership - Sem Valor',
-    subject: '✨ Tens uma parceria à tua espera, {{nome}}!',
-    body: `Oii {{nome}}! 👋
+    subject: 'Parceria VecinoCustom - Oportunidade para ti',
+    body: `Olá {{nome}},
 
-Temos uma oportunidade incrível para ti! 💎
+Temos uma proposta de parceria para ti.
 
-Queremos oferecer-te uma peça personalizada da VecinoCustom e ainda criar um cupom exclusivo para ti! 🎁
+Oferecemos-te uma peça personalizada da VecinoCustom e criamos um cupom exclusivo para a tua comunidade.
 
-A tua comunidade tem 10% desconto e TU ganhas 20% comissão em CADA venda! 💰✨
+Vantagens para ti:
+- Peça personalizada gratuita
+- Cupom exclusivo com 10% desconto para os teus seguidores
+- 20% de comissão em cada venda realizada com o teu cupom
 
-Só precisamos de um vídeo e uma foto com a tua peça! 📱
-
-Topas? Clica aqui para aceitar 👇
+Para aceitar e completar os teus dados, acede ao teu portal:
 https://vecinocustom-influencer-platform.vercel.app/portal/{{portalToken}}
 
-Beijinhos,
-Equipa VecinoCustom 💙
+Cumprimentos,
+Equipa VecinoCustom
 
 ---
-Dúvidas? Responde a este email ou manda WhatsApp! 📲`,
+Para qualquer questão, responde a este email ou contacta-nos via WhatsApp.`,
     step: 1,
     hasValue: false,
   },
   {
     key: 'STEP_2',
     name: 'Step 2: Shipping',
-    subject: '📦 Precisamos da tua morada, {{nome}}!',
-    body: `Yaaay {{nome}}! 🎉
+    subject: 'VecinoCustom - Dados de envio necessários',
+    body: `Olá {{nome}},
 
-A tua proposta foi aceite! Agora precisamos da tua morada para enviarmos a tua peça personalizada! 📦💎
+A tua proposta foi aceite. Agora precisamos dos teus dados de envio para enviarmos a tua peça personalizada.
 
-Clica no link abaixo e preenche:
-• A tua morada completa 🏠
-• 3 sugestões de peças que gostavas de receber ✨
+Por favor, acede ao teu portal e preenche:
+- Morada completa de entrega
+- 3 sugestões de peças que gostarias de receber
 
-É super rápido! 👇
+Link para o portal:
 https://vecinocustom-influencer-platform.vercel.app/portal/{{portalToken}}
 
-Mal recebamos, preparamos tudo com muito carinho! 💙
+Assim que recebermos os dados, preparamos a tua encomenda.
 
-Beijinhos,
+Cumprimentos,
 Equipa VecinoCustom
 
 ---
-Qualquer dúvida estamos aqui! 📲`,
+Para qualquer questão, estamos disponíveis via email ou WhatsApp.`,
     step: 2,
     hasValue: true,
   },
   {
     key: 'STEP_3',
     name: 'Step 3: Preparing',
-    subject: '🔥 Estamos a preparar a tua peça, {{nome}}!',
-    body: `Oii {{nome}}! 💎
+    subject: 'VecinoCustom - Encomenda em preparação',
+    body: `Olá {{nome}},
 
-As tuas sugestões foram aceites e já estamos a preparar a tua peça personalizada! 🔥
+As tuas sugestões foram aceites e a tua peça personalizada está em preparação.
 
-Vais adorar o resultado! ✨
+Em breve enviamos a encomenda e enviamos o código de tracking para acompanhares a entrega.
 
-Em breve enviamos e dámos-te o código de tracking para acompanhares! 📦
+Fica atento ao teu email.
 
-Fica atenta ao teu email! 😉
-
-Beijinhos,
-Equipa VecinoCustom 💙
+Cumprimentos,
+Equipa VecinoCustom
 
 ---
-Dúvidas? Contacta-nos! 📲`,
+Para qualquer questão, contacta-nos via email ou WhatsApp.`,
     step: 3,
     hasValue: true,
   },
   {
     key: 'STEP_4',
     name: 'Step 4: Contract',
-    subject: '📝 Assina o contrato e é tudo teu, {{nome}}!',
-    body: `Hey {{nome}}! 👋
+    subject: 'VecinoCustom - Contrato para assinatura',
+    body: `Olá {{nome}},
 
-A tua peça já está a caminho! 🎁📦
+A tua peça já foi enviada.
 
-Antes de chegar, precisamos que assines o contrato digital. É super rápido e seguro! ✅
+Antes da entrega, precisamos que assines o contrato digital. O processo é simples e seguro.
 
-Clica aqui 👇
+Para acederes ao contrato, usa o seguinte link:
 https://vecinocustom-influencer-platform.vercel.app/portal/{{portalToken}}
 
-Assim que receberes a peça, tens 5 dias para criares o conteúdo e partilhares! 📱✨
+Após receberes a peça, tens 5 dias úteis para criares e partilhares o conteúdo.
 
-Qualquer dúvida estamos aqui para ajudar! 💙
-
-Beijinhos,
+Cumprimentos,
 Equipa VecinoCustom
 
 ---
-Perguntas? Responde a este email! 📧`,
+Para esclarecimentos, responde a este email.`,
     step: 4,
     hasValue: true,
   },
   {
     key: 'STEP_5',
     name: 'Step 5: Shipped',
-    subject: '🚀 Já foi! A tua peça está a caminho, {{nome}}!',
-    body: `Oii {{nome}}! 🎉
+    subject: 'VecinoCustom - Encomenda enviada',
+    body: `Olá {{nome}},
 
-A tua peça personalizada já foi enviada! 📦💎
+A tua peça personalizada foi enviada.
 
-Podes acompanhar aqui: {{tracking_url}}
+Podes acompanhar a entrega aqui: {{tracking_url}}
 
-Assim que receberes:
-1. Grava um vídeo criativo com a peça 📱
-2. Tira uma foto linda 📸
-3. Publica e envia-nos para aprovação ✅
+Após receberes:
+1. Grava um vídeo criativo com a peça
+2. Tira uma fotografia de qualidade
+3. Publica nas tuas redes e envia-nos para aprovação
 
-Tens 5 dias após receber! ✨
+Tens 5 dias úteis após a receção para completares esta etapa.
 
-O teu cupom {{cupom}} já está ativo para a tua comunidade! 🎁
+O teu cupom {{cupom}} está ativo e pronto a usar.
 
-Dúvidas? Estamos aqui! 💙
-
-Beijinhos,
+Cumprimentos,
 Equipa VecinoCustom
 
 ---
-Boa sorte! Vais arrasar! 🌟`,
+Para qualquer questão, estamos disponíveis.`,
     step: 5,
     hasValue: true,
   },
