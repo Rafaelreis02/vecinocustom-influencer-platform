@@ -363,6 +363,81 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
           </span>
         </div>
 
+        {/* Resumo de Dados da Parceria */}
+        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-6">
+          <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <Check className="h-4 w-4 text-blue-600" />
+            Dados da Parceria
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+            {/* Step 1 - Partnership Details */}
+            <div className="p-2 bg-white rounded border border-gray-100">
+              <span className="text-gray-500 text-xs">Valor Acordado:</span>
+              <p className={`font-medium ${workflow.agreedPrice ? 'text-slate-900' : 'text-amber-600'}`}>
+                {workflow.agreedPrice ? `${workflow.agreedPrice.toFixed(2)}€` : 'Em falta'}
+              </p>
+            </div>
+            <div className="p-2 bg-white rounded border border-gray-100">
+              <span className="text-gray-500 text-xs">Email de Contacto:</span>
+              <p className={`font-medium ${workflow.contactEmail ? 'text-slate-900' : 'text-amber-600'}`}>
+                {workflow.contactEmail || 'Em falta'}
+              </p>
+            </div>
+
+            {/* Step 2 - Shipping */}
+            <div className="p-2 bg-white rounded border border-gray-100">
+              <span className="text-gray-500 text-xs">Morada de Envio:</span>
+              <p className={`font-medium ${workflow.shippingAddress ? 'text-slate-900' : 'text-amber-600'}`}>
+                {workflow.shippingAddress || 'Em falta'}
+              </p>
+            </div>
+            <div className="p-2 bg-white rounded border border-gray-100">
+              <span className="text-gray-500 text-xs">Sugestão de Produto 1:</span>
+              <p className={`font-medium ${workflow.productSuggestion1 ? 'text-slate-900' : 'text-amber-600'}`}>
+                {workflow.productSuggestion1 || 'Em falta'}
+              </p>
+            </div>
+
+            {/* Step 3 - Preparing */}
+            <div className="p-2 bg-white rounded border border-gray-100">
+              <span className="text-gray-500 text-xs">Produto Selecionado:</span>
+              <p className={`font-medium ${workflow.selectedProductUrl ? 'text-slate-900' : 'text-amber-600'} truncate`}>
+                {workflow.selectedProductUrl ? (
+                  <a href={workflow.selectedProductUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                    Ver produto
+                  </a>
+                ) : 'Em falta'}
+              </p>
+            </div>
+            <div className="p-2 bg-white rounded border border-gray-100">
+              <span className="text-gray-500 text-xs">Cupom:</span>
+              <p className={`font-medium ${workflow.couponCode ? 'text-slate-900 font-mono' : 'text-amber-600'}`}>
+                {workflow.couponCode || 'Em falta'}
+              </p>
+            </div>
+
+            {/* Step 4 - Contract */}
+            <div className="p-2 bg-white rounded border border-gray-100">
+              <span className="text-gray-500 text-xs">Contrato Assinado:</span>
+              <p className={`font-medium ${workflow.contractSigned ? 'text-green-600' : 'text-amber-600'}`}>
+                {workflow.contractSigned ? 'Sim ✓' : 'Em falta'}
+              </p>
+            </div>
+
+            {/* Step 5 - Shipped */}
+            <div className="p-2 bg-white rounded border border-gray-100">
+              <span className="text-gray-500 text-xs">Tracking URL:</span>
+              <p className={`font-medium ${workflow.trackingUrl ? 'text-slate-900' : 'text-amber-600'} truncate`}>
+                {workflow.trackingUrl ? (
+                  <a href={workflow.trackingUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                    Ver tracking
+                  </a>
+                ) : 'Em falta'}
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Steps Visual */}
         <div className="flex items-center justify-between">
           {STEPS.map((step, index) => {
