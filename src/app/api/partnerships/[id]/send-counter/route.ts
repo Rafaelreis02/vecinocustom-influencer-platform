@@ -66,7 +66,7 @@ export async function POST(
           nome: influencer.name,
           valor: agreedPrice.toString(),
           email: workflow.contactEmail || influencer.email || undefined,
-          portalToken: influencer.portalToken,
+          portalToken: influencer.portalToken || undefined,
         },
         session.user.id || 'system'
       );
