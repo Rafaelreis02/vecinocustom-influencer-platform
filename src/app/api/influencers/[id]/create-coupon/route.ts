@@ -111,9 +111,19 @@ export async function POST(
     // Send email to influencer (optional - requires email service configuration)
     logger.info(`Coupon ${code.toUpperCase()} created for influencer ${influencer.name}`);
 
+    // Convert BigInt fields to strings for JSON serialization
+    const serializedCoupon = {
+      ...coupon,
+      id: coupon.id.toString(),
+      influencer: coupon.influencer ? {
+        ...coupon.influencer,
+        id: coupon.influencer.id.toString(),
+      } : null,
+    };
+
     return NextResponse.json({
       success: true,
-      coupon,
+      coupon: serializedCoupon,
       message: ` Cupom ${code.toUpperCase()} criado com sucesso!`,
     });
   } catch (error) {
