@@ -1,17 +1,18 @@
 /**
  * Shopify API Integration
  * Handles coupon creation, retrieval, and order tracking
+ * Uses OAuth tokens from database (shopify-oauth.ts)
  */
 
-const SHOPIFY_SHOP_DOMAIN = process.env.SHOPIFY_SHOP_DOMAIN || '';
-const SHOPIFY_ACCESS_TOKEN = process.env.SHOPIFY_ACCESS_TOKEN || '';
+import { getShopifyAccessToken } from './shopify-oauth';
+
+const SHOPIFY_SHOP_DOMAIN = process.env.SHOPIFY_SHOP_DOMAIN || process.env.SHOPIFY_STORE_URL || '';
 
 // Debug logging (remove in production)
 if (process.env.NODE_ENV !== 'production') {
   console.log('[Shopify] Config check:', {
     hasShopDomain: !!SHOPIFY_SHOP_DOMAIN,
     shopDomain: SHOPIFY_SHOP_DOMAIN,
-    hasAccessToken: !!SHOPIFY_ACCESS_TOKEN,
   });
 }
 
@@ -54,19 +55,22 @@ interface CreateCouponPayload {
 /**
  * Check if Shopify is configured
  */
-export function isShopifyConfigured(): boolean {
-  return !!SHOPIFY_SHOP_DOMAIN && !!SHOPIFY_ACCESS_TOKEN;
+export async function isShopifyConfigured(): Promise<boolean> {
+  const token = await getShopifyAccessToken();
+  return !!SHOPIFY_SHOP_DOMAIN && !!token;
 }
 
 /**
  * Make authenticated request to Shopify GraphQL API
- * Uses Access Token authentication (not Basic Auth)
+ * Uses OAuth Access Token from database
  */
 async function shopifyGraphQL(query: string, variables?: Record<string, any>) {
-  if (!SHOPIFY_SHOP_DOMAIN || !SHOPIFY_ACCESS_TOKEN) {
+  // Get token from database (OAuth)
+  const accessToken = await getShopifyAccessToken();
+
+  if (!SHOPIFY_SHOP_DOMAIN || !accessToken) {
     throw new Error(
-      'Shopify not configured. Missing: ' + 
-      [!SHOPIFY_SHOP_DOMAIN && 'SHOPIFY_SHOP_DOMAIN', !SHOPIFY_ACCESS_TOKEN && 'SHOPIFY_ACCESS_TOKEN'].filter(Boolean).join(', ')
+      'Shopify not connected. Please authenticate via Settings > Shopify Integration.'
     );
   }
 
@@ -81,7 +85,7 @@ async function shopifyGraphQL(query: string, variables?: Record<string, any>) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-Shopify-Access-Token': SHOPIFY_ACCESS_TOKEN,
+      'X-Shopify-Access-Token': accessToken,
     },
     body: JSON.stringify({
       query,
@@ -296,31 +300,46 @@ export async function getOrdersByDiscountCode(code: string): Promise<ShopifyOrde
 }
 
 /**
- * Delete a discount code from Shopify
+ * Delete a discount code from Shopify using REST API (OAuth)
+ * Uses the OAuth module's delete function
  */
+import { deleteShopifyCoupon } from './shopify-oauth';
+
 export async function deleteCoupon(shopifyId: string) {
-  const mutation = `
-    mutation DeleteDiscount($id: ID!) {
-      discountCodeDelete(id: $id) {
-        deletedCodeDiscountId
-        userErrors {
-          field
-          message
+  // Try to use OAuth REST API first (more reliable)
+  try {
+    await deleteShopifyCoupon(shopifyId);
+    return {
+      success: true,
+      deletedId: shopifyId,
+    };
+  } catch (error: any) {
+    // Fallback to GraphQL if REST fails
+    console.log('[deleteCoupon] REST failed, trying GraphQL:', error.message);
+    
+    const mutation = `
+      mutation DeleteDiscount($id: ID!) {
+        discountCodeDelete(id: $id) {
+          deletedCodeDiscountId
+          userErrors {
+            field
+            message
+          }
         }
       }
+    `;
+
+    const data = await shopifyGraphQL(mutation, { id: shopifyId });
+
+    if (data.discountCodeDelete.userErrors.length > 0) {
+      throw new Error(
+        `Shopify error: ${data.discountCodeDelete.userErrors[0].message}`
+      );
     }
-  `;
 
-  const data = await shopifyGraphQL(mutation, { id: shopifyId });
-
-  if (data.discountCodeDelete.userErrors.length > 0) {
-    throw new Error(
-      `Shopify error: ${data.discountCodeDelete.userErrors[0].message}`
-    );
+    return {
+      success: true,
+      deletedId: data.discountCodeDelete.deletedCodeDiscountId,
+    };
   }
-
-  return {
-    success: true,
-    deletedId: data.discountCodeDelete.deletedCodeDiscountId,
-  };
 }

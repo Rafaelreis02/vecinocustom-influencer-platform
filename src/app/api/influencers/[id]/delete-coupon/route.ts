@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { deleteCoupon, getCouponByCode } from '@/lib/shopify';
+import { deleteShopifyCoupon, getShopifyAccessToken } from '@/lib/shopify-oauth';
 import { handleApiError } from '@/lib/api-error';
 import { logger } from '@/lib/logger';
 
@@ -14,10 +14,11 @@ export async function POST(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Check Shopify configuration
-    if (!process.env.SHOPIFY_SHOP_DOMAIN || !process.env.SHOPIFY_ACCESS_TOKEN) {
+    // Check Shopify OAuth connection
+    const accessToken = await getShopifyAccessToken();
+    if (!accessToken) {
       return NextResponse.json(
-        { success: false, error: 'Shopify not configured' },
+        { success: false, error: 'Shopify não está conectado' },
         { status: 503 }
       );
     }
@@ -62,7 +63,7 @@ export async function POST(
     // Delete from Shopify if shopifyId exists
     if (coupon.shopifyId) {
       try {
-        await deleteCoupon(coupon.shopifyId);
+        await deleteShopifyCoupon(coupon.shopifyId);
         logger.info(`Coupon ${code.toUpperCase()} deleted from Shopify`);
       } catch (shopifyError: any) {
         // If coupon not found in Shopify, continue (maybe already deleted)

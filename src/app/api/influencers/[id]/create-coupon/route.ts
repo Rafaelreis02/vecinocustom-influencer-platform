@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { createCoupon } from '@/lib/shopify';
+import { createShopifyCoupon, getShopifyAccessToken } from '@/lib/shopify-oauth';
 import { handleApiError } from '@/lib/api-error';
 import { logger } from '@/lib/logger';
 
@@ -14,11 +14,11 @@ export async function POST(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Check Shopify configuration
-    if (!process.env.SHOPIFY_SHOP_DOMAIN || !process.env.SHOPIFY_ACCESS_TOKEN) {
+    // Check Shopify OAuth connection
+    const accessToken = await getShopifyAccessToken();
+    if (!accessToken) {
       return NextResponse.json(
-        { success: false, error: 'Shopify not configured. Missing: ' + 
-          [!process.env.SHOPIFY_SHOP_DOMAIN && 'SHOPIFY_SHOP_DOMAIN', !process.env.SHOPIFY_ACCESS_TOKEN && 'SHOPIFY_ACCESS_TOKEN'].filter(Boolean).join(', ') },
+        { success: false, error: 'Shopify não está conectado. Vá a Definições > Shopify Integration para autenticar.' },
         { status: 503 }
       );
     }
@@ -58,25 +58,17 @@ export async function POST(
       );
     }
 
-    // IMPORTANT: Create in Shopify FIRST, only then save to database
+    // IMPORTANT: Create in Shopify FIRST using OAuth, only then save to database
     let shopifyResult;
     try {
-      shopifyResult = await createCoupon({
-        title: `Cupom ${code} - ${influencer.name}`,
-        code: code.toUpperCase(),
-        discountPercentage: 10,
-      });
+      shopifyResult = await createShopifyCoupon(
+        code.toUpperCase(),
+        10
+      );
     } catch (shopifyError: any) {
       logger.error('Shopify coupon creation failed:', shopifyError);
       return NextResponse.json(
         { success: false, error: 'Falha ao criar cupom na Shopify: ' + shopifyError.message },
-        { status: 502 }
-      );
-    }
-
-    if (!shopifyResult.success) {
-      return NextResponse.json(
-        { success: false, error: 'Shopify não confirmou a criação do cupom' },
         { status: 502 }
       );
     }
@@ -90,7 +82,7 @@ export async function POST(
           discountType: 'PERCENTAGE',
           discountValue: 10,
           influencerId: id,
-          shopifyId: shopifyResult.coupon.id,
+          shopifyId: shopifyResult.priceRuleId, // Using priceRuleId from OAuth REST API
         },
         include: {
           influencer: true,
@@ -100,7 +92,7 @@ export async function POST(
       // If database fails, we have a orphaned Shopify coupon
       // Log this for manual cleanup
       logger.error('Database save failed after Shopify creation:', dbError);
-      logger.error(`ORPHANED SHOPIFY COUPON: ${code.toUpperCase()} with ID ${shopifyResult.coupon.id}`);
+      logger.error(`ORPHANED SHOPIFY COUPON: ${code.toUpperCase()} with priceRuleId ${shopifyResult.priceRuleId}`);
       
       return NextResponse.json(
         { success: false, error: 'Cupom criado na Shopify mas falha ao guardar na BD. Contacte admin.' },
