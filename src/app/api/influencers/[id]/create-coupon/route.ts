@@ -91,10 +91,15 @@ export async function POST(
 
       // Also update workflow with coupon code if workflowId provided
       if (workflowId) {
-        await prisma.partnershipWorkflow.update({
-          where: { id: workflowId },
-          data: { couponCode: code.toUpperCase() },
-        });
+        try {
+          await prisma.partnershipWorkflow.update({
+            where: { id: workflowId },
+            data: { couponCode: code.toUpperCase() },
+          });
+        } catch (workflowError: any) {
+          // Log but don't fail if workflow update fails
+          logger.warn(`Failed to update workflow ${workflowId} with coupon: ${workflowError.message}`);
+        }
       }
     } catch (dbError: any) {
       // If database fails, we have a orphaned Shopify coupon
