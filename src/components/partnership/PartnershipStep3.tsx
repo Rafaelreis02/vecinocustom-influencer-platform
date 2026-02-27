@@ -110,9 +110,13 @@ export function PartnershipStep3({ workflow, influencer, onUpdate, isLocked }: P
         throw new Error(error.error || 'Failed to clear coupon from workflow');
       }
       
+      // Update local state and parent component
       setFormData(prev => ({ ...prev, couponCode: '' }));
       setCouponSuccess(`Cupom ${workflow.couponCode} revogado com sucesso!`);
       setShowDeleteConfirm(false);
+      
+      // Refresh workflow data in parent
+      await onUpdate({});
       
       // Clear success message after 3 seconds
       setTimeout(() => setCouponSuccess(null), 3000);
