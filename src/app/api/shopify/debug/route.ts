@@ -1,52 +1,84 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { getShopifyAccessToken } from '@/lib/shopify-oauth';
+
 /**
  * GET /api/shopify/debug
- * 
- * Debug da configuração Shopify OAuth
- * Retorna as variáveis de ambiente relevantes (sem valores sensíveis)
+ * Diagnostic endpoint to check Shopify connection status
  */
+export async function GET(req: NextRequest) {
+  try {
+    const results: any = {
+      timestamp: new Date().toISOString(),
+      environment: {
+        SHOPIFY_STORE_URL: process.env.SHOPIFY_STORE_URL ? '✅ Set' : '❌ Missing',
+        SHOPIFY_SHOP_DOMAIN: process.env.SHOPIFY_SHOP_DOMAIN ? '✅ Set' : '❌ Missing',
+        SHOPIFY_CLIENT_ID: process.env.SHOPIFY_CLIENT_ID ? '✅ Set' : '❌ Missing',
+        SHOPIFY_CLIENT_SECRET: process.env.SHOPIFY_CLIENT_ID ? '✅ Set' : '❌ Missing',
+      },
+      database: {
+        connections: [],
+      },
+      tokenLookup: null,
+    };
 
-import { NextResponse } from 'next/server';
+    // Get all connections from database
+    const allAuths = await prisma.shopifyAuth.findMany();
+    results.database.connections = allAuths.map(auth => ({
+      shop: auth.shop,
+      hasToken: !!auth.accessToken,
+      tokenPreview: auth.accessToken ? `${auth.accessToken.substring(0, 10)}...` : null,
+      scope: auth.scope,
+      updatedAt: auth.updatedAt,
+    }));
 
-export async function GET() {
-  const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL || '';
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
-  const clientId = process.env.SHOPIFY_CLIENT_ID || '';
+    // Try to get token
+    const token = await getShopifyAccessToken();
+    results.tokenLookup = {
+      found: !!token,
+      preview: token ? `${token.substring(0, 10)}...` : null,
+    };
 
-  // Construir o redirect_uri que será usado
-  const redirectUri = `${baseUrl}/api/shopify/callback`;
+    // Try to make a test API call
+    if (token) {
+      try {
+        const shopDomain = (process.env.SHOPIFY_SHOP_DOMAIN || process.env.SHOPIFY_STORE_URL || '')
+          .replace(/^https?:\/\//, '')
+          .replace(/\/+$/, '');
+        
+        const response = await fetch(`https://${shopDomain}/admin/api/2024-01/shop.json`, {
+          headers: {
+            'X-Shopify-Access-Token': token,
+          },
+        });
 
-  // Verificar se as variáveis estão configuradas
-  const config = {
-    shopifyStoreUrl: shopifyStoreUrl ? '✅ Configurado' : '❌ Não configurado',
-    baseUrl: baseUrl ? `✅ ${baseUrl}` : '❌ Não configurado',
-    clientId: clientId ? '✅ Configurado' : '❌ Não configurado',
-    redirectUri: redirectUri,
-  };
+        if (response.ok) {
+          const data = await response.json();
+          results.apiTest = {
+            success: true,
+            shopName: data.shop?.name,
+            shopEmail: data.shop?.email,
+          };
+        } else {
+          results.apiTest = {
+            success: false,
+            status: response.status,
+            error: await response.text(),
+          };
+        }
+      } catch (error: any) {
+        results.apiTest = {
+          success: false,
+          error: error.message,
+        };
+      }
+    }
 
-  // Verificar se o URL é HTTPS (necessário para Shopify)
-  const isHttps = baseUrl.startsWith('https://');
-
-  // Instruções para corrigir o erro
-  const instructions = `
-ERRO: "redirect_uri and application url must have matching hosts"
-
-SOLUÇÃO:
-1. Vai à tua App Shopify (https://partners.shopify.com)
-2. Edita a App > Configuração
-3. Em "App URL", coloca exatamente: ${baseUrl}
-4. Em "Allowed redirection URL(s)", adiciona: ${redirectUri}
-5. Guarda as alterações
-
-IMPORTANTE:
-- O URL na App Shopify deve corresponder EXATAMENTE ao NEXT_PUBLIC_BASE_URL
-- Se o site está em https://vecinocustom.vercel.app, a App URL deve ser https://vecinocustom.vercel.app (sem / no final)
-- O redirect_uri será: https://vecinocustom.vercel.app/api/shopify/callback
-  `;
-
-  return NextResponse.json({
-    config,
-    isHttps: isHttps ? '✅ HTTPS ativado' : '⚠️ HTTPS não detectado (necessário para Shopify)',
-    instructions,
-    allConfigured: !!shopifyStoreUrl && !!baseUrl && !!clientId,
-  });
+    return NextResponse.json(results);
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: 'Debug failed: ' + error.message },
+      { status: 500 }
+    );
+  }
 }
