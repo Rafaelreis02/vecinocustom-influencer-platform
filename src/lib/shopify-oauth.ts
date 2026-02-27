@@ -123,6 +123,14 @@ async function shopifyRestAPI(
     );
   }
 
+  // Handle empty responses (e.g., DELETE returns 204 No Content)
+  const contentType = response.headers.get('content-type');
+  const contentLength = response.headers.get('content-length');
+  
+  if (response.status === 204 || contentLength === '0' || !contentType?.includes('application/json')) {
+    return { data: null, response };
+  }
+
   const data = await response.json();
   return { data, response };
 }
@@ -187,10 +195,10 @@ export async function createShopifyCoupon(
 export async function deleteShopifyCoupon(priceRuleId: string): Promise<void> {
   try {
     console.log(`[deleteShopifyCoupon] Attempting to delete price rule: ${priceRuleId}`);
-    const result = await shopifyRestAPI(`/price_rules/${priceRuleId}.json`, {
+    await shopifyRestAPI(`/price_rules/${priceRuleId}.json`, {
       method: 'DELETE',
     });
-    console.log(`[deleteShopifyCoupon] Successfully deleted price rule: ${priceRuleId}`, result);
+    console.log(`[deleteShopifyCoupon] Successfully deleted price rule: ${priceRuleId}`);
   } catch (error: any) {
     console.error(`[deleteShopifyCoupon] Error deleting price rule ${priceRuleId}:`, error.message);
     throw error;
