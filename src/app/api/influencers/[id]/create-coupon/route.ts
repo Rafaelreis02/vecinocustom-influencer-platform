@@ -116,15 +116,25 @@ export async function POST(
     // Send email to influencer (optional - requires email service configuration)
     logger.info(`Coupon ${code.toUpperCase()} created for influencer ${influencer.name}`);
 
-    // Convert BigInt fields to strings for JSON serialization
-    const serializedCoupon = {
-      ...coupon,
-      id: coupon.id.toString(),
-      influencer: coupon.influencer ? {
-        ...coupon.influencer,
-        id: coupon.influencer.id.toString(),
-      } : null,
+    // Helper function to serialize BigInt values
+    const serializeBigInt = (obj: any): any => {
+      if (obj === null || obj === undefined) return obj;
+      if (typeof obj === 'bigint') return obj.toString();
+      if (typeof obj === 'object') {
+        if (Array.isArray(obj)) {
+          return obj.map(serializeBigInt);
+        }
+        const result: any = {};
+        for (const key in obj) {
+          result[key] = serializeBigInt(obj[key]);
+        }
+        return result;
+      }
+      return obj;
     };
+
+    // Serialize the entire coupon object
+    const serializedCoupon = serializeBigInt(coupon);
 
     return NextResponse.json({
       success: true,
