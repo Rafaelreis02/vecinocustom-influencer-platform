@@ -70,8 +70,10 @@ export function PartnershipStep3({ workflow, influencer, onUpdate, isLocked }: P
       setCouponSuccess(`Cupom ${code} criado com sucesso na Shopify!`);
       setFormData(prev => ({ ...prev, couponCode: code }));
       
-      // Clear success message after 3 seconds
-      setTimeout(() => setCouponSuccess(null), 3000);
+      // Reload page after 1.5 seconds to show updated state
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
       
     } catch (err: any) {
       setCouponError(err.message);
@@ -118,8 +120,10 @@ export function PartnershipStep3({ workflow, influencer, onUpdate, isLocked }: P
       // Refresh workflow data in parent
       await onUpdate({});
       
-      // Clear success message after 3 seconds
-      setTimeout(() => setCouponSuccess(null), 3000);
+      // Reload page after 1.5 seconds to show updated state
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
       
     } catch (err: any) {
       setCouponError(err.message);
