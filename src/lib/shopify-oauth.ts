@@ -186,11 +186,13 @@ export async function createShopifyCoupon(
  */
 export async function deleteShopifyCoupon(priceRuleId: string): Promise<void> {
   try {
-    await shopifyRestAPI(`/price_rules/${priceRuleId}.json`, {
+    console.log(`[deleteShopifyCoupon] Attempting to delete price rule: ${priceRuleId}`);
+    const result = await shopifyRestAPI(`/price_rules/${priceRuleId}.json`, {
       method: 'DELETE',
     });
-  } catch (error) {
-    console.error('Error deleting Shopify coupon:', error);
+    console.log(`[deleteShopifyCoupon] Successfully deleted price rule: ${priceRuleId}`, result);
+  } catch (error: any) {
+    console.error(`[deleteShopifyCoupon] Error deleting price rule ${priceRuleId}:`, error.message);
     throw error;
   }
 }

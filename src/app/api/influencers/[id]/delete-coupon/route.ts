@@ -50,6 +50,8 @@ export async function POST(
     const coupon = await prisma.coupon.findUnique({
       where: { code: code.toUpperCase() },
     });
+    
+    logger.info(`[Delete Coupon] Found coupon: ${JSON.stringify(coupon)}`);
 
     if (!coupon) {
       // If not in database but user wants to clear it, just return success
@@ -61,10 +63,13 @@ export async function POST(
     }
 
     // Delete from Shopify if shopifyId exists
+    logger.info(`[Delete Coupon] Coupon ${code.toUpperCase()} has shopifyId: ${coupon.shopifyId}`);
+    
     if (coupon.shopifyId) {
       try {
+        logger.info(`[Delete Coupon] Attempting to delete from Shopify: ${coupon.shopifyId}`);
         await deleteShopifyCoupon(coupon.shopifyId);
-        logger.info(`Coupon ${code.toUpperCase()} deleted from Shopify`);
+        logger.info(`[Delete Coupon] Successfully deleted ${code.toUpperCase()} from Shopify`);
       } catch (shopifyError: any) {
         // If coupon not found in Shopify (404), continue (maybe already deleted)
         const errorMessage = shopifyError.message?.toLowerCase() || '';
@@ -74,13 +79,14 @@ export async function POST(
                           shopifyError.message?.includes('Not Found');
         
         if (!isNotFound) {
+          logger.error(`[Delete Coupon] Unexpected error deleting from Shopify: ${shopifyError.message}`);
           throw shopifyError;
         }
-        logger.warn(`Coupon ${code.toUpperCase()} not found in Shopify (404), deleting from DB only`);
+        logger.warn(`[Delete Coupon] Coupon ${code.toUpperCase()} not found in Shopify (404), deleting from DB only`);
       }
     } else {
       // No shopifyId means it was never created in Shopify (ghost coupon)
-      logger.warn(`Coupon ${code.toUpperCase()} has no shopifyId, deleting from DB only`);
+      logger.warn(`[Delete Coupon] Coupon ${code.toUpperCase()} has no shopifyId, deleting from DB only`);
     }
 
     // Delete from database
@@ -88,11 +94,16 @@ export async function POST(
       where: { id: coupon.id },
     });
 
-    logger.info(`Coupon ${code.toUpperCase()} deleted for influencer ${influencer.name}`);
+    logger.info(`[Delete Coupon] Coupon ${code.toUpperCase()} deleted from database`);
 
+    // Return detailed info for debugging
     return NextResponse.json({
       success: true,
       message: `Cupom ${code.toUpperCase()} revogado com sucesso!`,
+      details: {
+        shopifyId: coupon.shopifyId,
+        shopifyDeleted: !!coupon.shopifyId,
+      },
     });
   } catch (error) {
     logger.error('POST /api/influencers/[id]/delete-coupon failed', error);
