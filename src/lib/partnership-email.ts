@@ -21,6 +21,7 @@ interface EmailVariables {
   url_contrato?: string;
   tracking_url?: string;
   cupom?: string;
+  portalToken?: string;
 }
 
 /**

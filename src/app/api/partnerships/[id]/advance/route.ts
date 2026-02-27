@@ -199,6 +199,7 @@ export async function POST(
       url_contrato: workflow.contractUrl,
       tracking_url: workflow.trackingUrl,
       cupom: workflow.couponCode,
+      portalToken: workflow.influencer.portalToken,
     };
 
     const emailResult = await sendWorkflowEmail(

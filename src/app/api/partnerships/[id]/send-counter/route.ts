@@ -54,7 +54,7 @@ export async function POST(
     // Get influencer data for email
     const influencer = await prisma.influencer.findUnique({
       where: { id: workflow.influencerId },
-      select: { name: true, email: true },
+      select: { name: true, email: true, portalToken: true },
     });
 
     // Send new proposal email
@@ -66,6 +66,7 @@ export async function POST(
           nome: influencer.name,
           valor: agreedPrice.toString(),
           email: workflow.contactEmail || influencer.email || undefined,
+          portalToken: influencer.portalToken,
         },
         session.user.id || 'system'
       );

@@ -111,6 +111,7 @@ export async function POST(
       sugestao1: workflow.productSuggestion1 || undefined,
       sugestao2: workflow.productSuggestion2 || undefined,
       sugestao3: workflow.productSuggestion3 || undefined,
+      portalToken: token,
     };
 
     await sendWorkflowEmail(
