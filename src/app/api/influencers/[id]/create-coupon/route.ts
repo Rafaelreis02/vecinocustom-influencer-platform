@@ -25,7 +25,7 @@ export async function POST(
 
     const { id } = await context.params;
     const body = await request.json();
-    const { code } = body;
+    const { code, workflowId } = body;
 
     if (!code || typeof code !== 'string') {
       return NextResponse.json(
@@ -88,6 +88,14 @@ export async function POST(
           influencer: true,
         },
       });
+
+      // Also update workflow with coupon code if workflowId provided
+      if (workflowId) {
+        await prisma.partnershipWorkflow.update({
+          where: { id: workflowId },
+          data: { couponCode: code.toUpperCase() },
+        });
+      }
     } catch (dbError: any) {
       // If database fails, we have a orphaned Shopify coupon
       // Log this for manual cleanup

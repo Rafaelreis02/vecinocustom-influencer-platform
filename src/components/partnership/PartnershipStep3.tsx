@@ -53,23 +53,11 @@ export function PartnershipStep3({ workflow, influencer, onUpdate, isLocked }: P
     setCouponSuccess(null);
     
     try {
-      // First save the coupon code to workflow
-      const saveRes = await fetch(`/api/partnerships/${workflow.id}/coupon`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ couponCode: code }),
-      });
-      
-      if (!saveRes.ok) {
-        const error = await saveRes.json();
-        throw new Error(error.error || 'Failed to save coupon');
-      }
-      
-      // Then create the coupon in Shopify
+      // Create coupon in Shopify FIRST - this also saves to workflow on success
       const createRes = await fetch(`/api/influencers/${influencer.id}/create-coupon`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code }),
+        body: JSON.stringify({ code, workflowId: workflow.id }),
       });
       
       const createData = await createRes.json();
@@ -78,6 +66,7 @@ export function PartnershipStep3({ workflow, influencer, onUpdate, isLocked }: P
         throw new Error(createData.error || 'Failed to create coupon in Shopify');
       }
       
+      // Only update UI after successful creation
       setCouponSuccess(`Cupom ${code} criado com sucesso na Shopify!`);
       setFormData(prev => ({ ...prev, couponCode: code }));
       
