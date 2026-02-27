@@ -31,13 +31,21 @@ export function PartnershipStep1({ workflow, onUpdate, isLocked, influencerStatu
     setSaved(false);
   };
 
+  const [error, setError] = useState<string | null>(null);
+
   const handleSave = async () => {
+    setError(null);
+    
+    // Validar que o valor está definido (pode ser 0)
+    if (formData.agreedPrice === '' || formData.agreedPrice === undefined || formData.agreedPrice === null) {
+      setError('Valor Acordado é obrigatório (pode ser 0€ para comissão apenas)');
+      return;
+    }
+    
     setIsSaving(true);
     const updates: any = {};
     
-    if (formData.agreedPrice !== '') {
-      updates.agreedPrice = parseFloat(formData.agreedPrice);
-    }
+    updates.agreedPrice = parseFloat(formData.agreedPrice);
     
     const success = await onUpdate(updates);
     if (success) {
@@ -118,6 +126,13 @@ export function PartnershipStep1({ workflow, onUpdate, isLocked, influencerStatu
         </div>
       )}
 
+      {/* Error Message */}
+      {error && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-sm text-red-700">{error}</p>
+        </div>
+      )}
+
       {/* Valor Acordado - Nosso campo (só mostra antes de iniciar negociação) */}
       {(!influencerStatus || influencerStatus === 'UNKNOWN' || influencerStatus === 'SUGGESTION') && (
         <div className="space-y-2">
@@ -134,7 +149,7 @@ export function PartnershipStep1({ workflow, onUpdate, isLocked, influencerStatu
               onChange={(e) => handleChange('agreedPrice', e.target.value)}
               disabled={isLocked}
               placeholder="0.00"
-              className="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:border-black focus:outline-none disabled:bg-gray-50 disabled:text-gray-500"
+              className={`w-full rounded-lg border ${error ? 'border-red-300 focus:border-red-500' : 'border-gray-200 focus:border-black'} bg-white py-2.5 pl-10 pr-4 text-sm focus:outline-none disabled:bg-gray-50 disabled:text-gray-500`}
             />
           </div>
           <p className="text-xs text-gray-500">Pode ser 0€ para parcerias apenas com comissão</p>

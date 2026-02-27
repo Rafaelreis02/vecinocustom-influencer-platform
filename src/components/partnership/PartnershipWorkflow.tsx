@@ -373,8 +373,10 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
             {/* Step 1 - Partnership Details */}
             <div className="p-2 bg-white rounded border border-gray-100">
               <span className="text-gray-500 text-xs">Valor Acordado:</span>
-              <p className={`font-medium ${workflow.agreedPrice ? 'text-slate-900' : 'text-amber-600'}`}>
-                {workflow.agreedPrice ? `${workflow.agreedPrice.toFixed(2)}€` : 'Em falta'}
+              <p className={`font-medium ${workflow.agreedPrice !== null ? 'text-slate-900' : 'text-amber-600'}`}>
+                {workflow.agreedPrice === null ? 'Em falta' : 
+                 workflow.agreedPrice === 0 ? 'Somente comissão' : 
+                 `${workflow.agreedPrice.toFixed(2)}€`}
               </p>
             </div>
             <div className="p-2 bg-white rounded border border-gray-100">

@@ -159,7 +159,11 @@ export async function generateContractPDF(data: ContractData): Promise<Uint8Arra
   addWrappedText('Obligations of the Brand (First Party):', 10, true);
   addBulletPoint('Free delivery of 1 personalized jewelry piece, selected based on the Creator\'s personal style and preferences');
   addBulletPoint(`Assignment of an exclusive discount code providing: (i) 10% discount for the Creator's community; (ii) ${data.commissionRate}% commission on each sale made using the code`);
-  addBulletPoint(`Payment of a fixed remuneration of ${data.agreedPrice.toFixed(2)}€ upon completion of deliverables`);
+  
+  // Only show fixed remuneration if agreedPrice > 0
+  if (data.agreedPrice > 0) {
+    addBulletPoint(`Payment of a fixed remuneration of ${data.agreedPrice.toFixed(2)}€ upon completion of deliverables`);
+  }
   y -= 8;
   
   addWrappedText('Obligations of the Creator (Second Party):', 10, true);
@@ -177,8 +181,14 @@ export async function generateContractPDF(data: ContractData): Promise<Uint8Arra
   
   // === CLAUSE 4 ===
   addSectionTitle('4. Remuneration and Commissions');
-  addBulletPoint(`Fixed remuneration: ${data.agreedPrice.toFixed(2)}€ (paid after content delivery and approval)`);
-  addBulletPoint(`Commission: ${data.commissionRate}% on each sale using the exclusive discount code`);
+  
+  if (data.agreedPrice > 0) {
+    addBulletPoint(`Fixed remuneration: ${data.agreedPrice.toFixed(2)}€ (paid after content delivery and approval)`);
+    addBulletPoint(`Commission: ${data.commissionRate}% on each sale using the exclusive discount code`);
+  } else {
+    addBulletPoint('This is a commission-only partnership with no fixed remuneration.');
+    addBulletPoint(`Commission: ${data.commissionRate}% on each sale using the exclusive discount code`);
+  }
   addBulletPoint('Commission payments made monthly by the 10th day of each month');
   addBulletPoint('Payment requires: (i) Content delivery; (ii) Access codes for sponsorship; (iii) Valid receipt/invoice from Creator');
   addBulletPoint('Payment via bank transfer to IBAN provided by Creator');
