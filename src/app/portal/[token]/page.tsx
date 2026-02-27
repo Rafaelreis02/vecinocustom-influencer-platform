@@ -882,17 +882,11 @@ function Step2({ data, token, onUpdate, onBack, onNext }: StepProps) {
         throw new Error(error.error || 'Failed to advance step');
       }
 
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Failed to submit');
-      }
-
+      // Refresh data before navigating
       await onUpdate();
       
-      // Wait 1.5s then advance to next step
-      setTimeout(() => {
-        onNext();
-      }, STEP_TRANSITION_DELAY);
+      // Navigate immediately (no delay needed since data is already saved)
+      onNext();
 
     } catch (err: any) {
       alert(err.message);
