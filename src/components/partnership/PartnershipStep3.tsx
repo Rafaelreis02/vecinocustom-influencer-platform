@@ -100,17 +100,17 @@ export function PartnershipStep3({ workflow, influencer, onUpdate, isLocked }: P
         throw new Error(error.error || 'Failed to delete coupon');
       }
       
-      // Clear from workflow
-      const saveRes = await fetch(`/api/partnerships/${workflow.id}/coupon`, {
-        method: 'DELETE',
-      });
-      
-      if (!saveRes.ok) {
-        const error = await saveRes.json();
-        throw new Error(error.error || 'Failed to clear coupon from workflow');
+      // Clear from workflow (best effort - may fail if already cleared)
+      try {
+        await fetch(`/api/partnerships/${workflow.id}/coupon`, {
+          method: 'DELETE',
+        });
+      } catch (workflowError) {
+        // Ignore workflow clear errors
+        console.log('Workflow clear failed (may be already cleared):', workflowError);
       }
       
-      // Update local state and parent component
+      // Update local state
       setFormData(prev => ({ ...prev, couponCode: '' }));
       setCouponSuccess(`Cupom ${workflow.couponCode} revogado com sucesso!`);
       setShowDeleteConfirm(false);

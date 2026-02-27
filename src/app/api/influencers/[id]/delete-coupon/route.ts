@@ -66,11 +66,17 @@ export async function POST(
         await deleteShopifyCoupon(coupon.shopifyId);
         logger.info(`Coupon ${code.toUpperCase()} deleted from Shopify`);
       } catch (shopifyError: any) {
-        // If coupon not found in Shopify, continue (maybe already deleted)
-        if (!shopifyError.message?.includes('not found') && !shopifyError.message?.includes('not exist')) {
+        // If coupon not found in Shopify (404), continue (maybe already deleted)
+        const errorMessage = shopifyError.message?.toLowerCase() || '';
+        const isNotFound = errorMessage.includes('not found') || 
+                          errorMessage.includes('not exist') || 
+                          errorMessage.includes('404') ||
+                          shopifyError.message?.includes('Not Found');
+        
+        if (!isNotFound) {
           throw shopifyError;
         }
-        logger.warn(`Coupon ${code.toUpperCase()} not found in Shopify, deleting from DB only`);
+        logger.warn(`Coupon ${code.toUpperCase()} not found in Shopify (404), deleting from DB only`);
       }
     } else {
       // No shopifyId means it was never created in Shopify (ghost coupon)
