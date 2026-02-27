@@ -96,7 +96,16 @@ async function shopifyRestAPI(
     throw new Error('Shopify not connected. Please authenticate first.');
   }
 
-  const url = `https://${SHOPIFY_STORE_URL}/admin/api/${API_VERSION}${endpoint}`;
+  // Use SHOPIFY_SHOP_DOMAIN if available, fallback to SHOPIFY_STORE_URL
+  const shopDomain = (SHOPIFY_SHOP_DOMAIN || SHOPIFY_STORE_URL)
+    .replace(/^https?:\/\//, '')
+    .replace(/\/+$/, '');
+  
+  if (!shopDomain) {
+    throw new Error('Shopify shop domain not configured. Check SHOPIFY_SHOP_DOMAIN env var.');
+  }
+
+  const url = `https://${shopDomain}/admin/api/${API_VERSION}${endpoint}`;
 
   const response = await fetch(url, {
     ...options,
