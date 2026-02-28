@@ -188,14 +188,18 @@ export async function sendEmail(auth: any, options: {
   inReplyTo?: string; 
   threadId?: string;
 }) {
+  // Encode subject for UTF-8 (MIME encoded-word)
+  const encodedSubject = encodeSubject(options.subject);
+  
   const message = [
     `To: ${options.to}`,
-    `Subject: ${options.subject}`,
-    `In-Reply-To: ${options.inReplyTo || ''}`,
+    `Subject: ${encodedSubject}`,
+    options.inReplyTo ? `In-Reply-To: ${options.inReplyTo}` : '',
     'Content-Type: text/plain; charset=utf-8',
+    'Content-Transfer-Encoding: base64',
     '',
-    options.body
-  ].join('\r\n');
+    Buffer.from(options.body).toString('base64')
+  ].filter(Boolean).join('\r\n');
 
   const raw = Buffer.from(message).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   const res = await gmail.users.messages.send({
@@ -204,4 +208,16 @@ export async function sendEmail(auth: any, options: {
     requestBody: { raw, threadId: options.threadId },
   });
   return res.data;
+}
+
+// Helper to encode UTF-8 subject for email headers (RFC 2047)
+function encodeSubject(subject: string): string {
+  // Check if subject contains non-ASCII characters
+  if (/^[\x00-\x7F]*$/.test(subject)) {
+    return subject; // ASCII only, no encoding needed
+  }
+  
+  // Use RFC 2047 encoding: =?charset?encoding?encoded-text?=
+  const encoded = Buffer.from(subject, 'utf-8').toString('base64');
+  return `=?UTF-8?B?${encoded}?=`;
 }
