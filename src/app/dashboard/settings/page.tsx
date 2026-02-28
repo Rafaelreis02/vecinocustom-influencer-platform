@@ -383,25 +383,29 @@ function GmailIntegration() {
     try {
       setSavingSenderName(true);
       
-      // Save to localStorage
+      // Save to API
+      const res = await fetch('/api/settings/email-sender', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          senderName: senderName.trim(),
+          senderEmail: gmailInfo?.email || 'brand@vecinocustom.com'
+        }),
+      });
+      
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Erro ao guardar');
+      }
+      
+      // Also save to localStorage as backup
       if (typeof window !== 'undefined') {
         localStorage.setItem('emailSenderName', senderName.trim());
       }
       
-      // Also try to save to API (optional)
-      try {
-        await fetch('/api/settings/email-sender', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ senderName: senderName.trim() }),
-        });
-      } catch (e) {
-        // Ignore API errors, localStorage is enough
-      }
-      
       addToast('Nome do sender guardado com sucesso!', 'success');
-    } catch (error) {
-      addToast('Erro ao guardar nome do sender', 'error');
+    } catch (error: any) {
+      addToast(error.message || 'Erro ao guardar nome do sender', 'error');
     } finally {
       setSavingSenderName(false);
     }
