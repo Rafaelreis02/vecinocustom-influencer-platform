@@ -16,7 +16,8 @@ import {
   X,
   ArrowUpDown,
   ArrowDown,
-  ArrowUp
+  ArrowUp,
+  Send
 } from 'lucide-react';
 import { ToastContainer, useToast } from '@/components/ui/Toast';
 import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog';
@@ -86,6 +87,9 @@ function InfluencersContent() {
   const [sortBy, setSortBy] = useState<'date' | 'fitScore'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
+  // Contacting state
+  const [contactingId, setContactingId] = useState<string | null>(null);
+
   useEffect(() => {
     fetchInfluencers();
   }, []);
@@ -125,6 +129,42 @@ function InfluencersContent() {
       addToast('Influencer apagado com sucesso', 'success');
     } catch (error) {
       addToast('Erro ao apagar influencer', 'error');
+    }
+  };
+
+  const handleContact = async (e: React.MouseEvent, influencer: Influencer) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!influencer.email) {
+      addToast('Influencer não tem email definido', 'error');
+      return;
+    }
+
+    try {
+      setContactingId(influencer.id);
+      const res = await fetch(`/api/influencers/${influencer.id}/contact`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Erro ao enviar email');
+      }
+
+      // Update local state
+      setAllInfluencers(prev => prev.map(inf => 
+        inf.id === influencer.id ? { ...inf, status: 'CONTACTED' } : inf
+      ));
+      
+      addToast(`✅ Email enviado para ${influencer.name}`, 'success');
+    } catch (error: any) {
+      console.error('Error sending contact email:', error);
+      addToast(error.message || 'Erro ao enviar email de contacto', 'error');
+    } finally {
+      setContactingId(null);
     }
   };
 
@@ -443,6 +483,23 @@ function InfluencersContent() {
                           </div>
                         );
                       })()}
+
+                      {/* Contact Button - Only for SUGGESTION status */}
+                      {influencer.status === 'SUGGESTION' && (
+                        <button
+                          onClick={(e) => handleContact(e, influencer)}
+                          disabled={contactingId === influencer.id}
+                          className="flex items-center gap-1 px-2 py-1 bg-amber-500 text-white text-xs font-medium rounded-md hover:bg-amber-600 transition-colors disabled:opacity-50"
+                          title="Enviar email de introdução"
+                        >
+                          {contactingId === influencer.id ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Send className="h-3 w-3" />
+                          )}
+                          <span className="hidden sm:inline">Contactar</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 </Link>
