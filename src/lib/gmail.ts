@@ -181,6 +181,46 @@ function extractEmail(emailString: string): string {
   return match ? match[1] : emailString.trim();
 }
 
+// Cache for email sender settings
+let cachedSenderSettings: { senderName: string; senderEmail: string } | null = null;
+let cacheTimestamp = 0;
+const CACHE_TTL = 60000; // 1 minute
+
+async function getSenderSettings(): Promise<{ senderName: string; senderEmail: string }> {
+  // Check cache
+  if (cachedSenderSettings && Date.now() - cacheTimestamp < CACHE_TTL) {
+    return cachedSenderSettings;
+  }
+
+  try {
+    // Try to get from database
+    const settings = await prisma.$queryRaw`
+      SELECT value FROM "app_settings" WHERE key = 'email_sender' LIMIT 1
+    `;
+
+    let senderName = process.env.EMAIL_SENDER_NAME || 'VecinoCustom';
+    let senderEmail = process.env.EMAIL_SENDER_EMAIL || 'brand@vecinocustom.com';
+
+    if (Array.isArray(settings) && settings.length > 0) {
+      const dbValue = settings[0]?.value;
+      if (dbValue) {
+        senderName = dbValue.senderName || senderName;
+        senderEmail = dbValue.senderEmail || senderEmail;
+      }
+    }
+
+    cachedSenderSettings = { senderName, senderEmail };
+    cacheTimestamp = Date.now();
+    return cachedSenderSettings;
+  } catch (error) {
+    logger.error('[GMAIL] Error fetching sender settings, using defaults', { error });
+    return {
+      senderName: process.env.EMAIL_SENDER_NAME || 'VecinoCustom',
+      senderEmail: process.env.EMAIL_SENDER_EMAIL || 'brand@vecinocustom.com',
+    };
+  }
+}
+
 export async function sendEmail(auth: any, options: {
   to: string;
   subject: string;
@@ -191,15 +231,17 @@ export async function sendEmail(auth: any, options: {
 }) {
   const gmail = google.gmail({ version: 'v1', auth });
   
-  // Use custom sender name or default
-  const senderName = options.fromName || process.env.EMAIL_SENDER_NAME || 'VecinoCustom';
-  const senderEmail = process.env.EMAIL_SENDER_EMAIL || 'brand@vecinocustom.com';
+  // Get sender settings from database
+  const senderSettings = await getSenderSettings();
+  
+  // Use custom sender name from options, or from settings, or default
+  const senderName = options.fromName || senderSettings.senderName;
+  const senderEmail = senderSettings.senderEmail;
   
   // Build email content using Gmail API's format
   const utf8Subject = `=?utf-8?B?${Buffer.from(options.subject).toString('base64')}?=`;
   
-  // Simple message structure - Gmail will use the authenticated user's email
-  // but we can try to set a custom From name using the Reply-To or custom headers
+  // Simple message structure
   const messageParts = [
     `From: ${senderName} <${senderEmail}>`,
     `To: ${options.to}`,

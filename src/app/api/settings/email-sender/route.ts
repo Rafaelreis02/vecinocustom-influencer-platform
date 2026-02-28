@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 
 // GET /api/settings/email-sender - Get email sender settings
@@ -11,9 +12,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Return current environment variables
-    const senderName = process.env.EMAIL_SENDER_NAME || 'VecinoCustom';
-    const senderEmail = process.env.EMAIL_SENDER_EMAIL || 'brand@vecinocustom.com';
+    // Try to get from database first
+    const settings = await prisma.$queryRaw`
+      SELECT value FROM "app_settings" WHERE key = 'email_sender' LIMIT 1
+    `;
+
+    let senderName = process.env.EMAIL_SENDER_NAME || 'VecinoCustom';
+    let senderEmail = process.env.EMAIL_SENDER_EMAIL || 'brand@vecinocustom.com';
+
+    // Override with database settings if they exist
+    if (Array.isArray(settings) && settings.length > 0) {
+      const dbValue = settings[0]?.value;
+      if (dbValue) {
+        senderName = dbValue.senderName || senderName;
+        senderEmail = dbValue.senderEmail || senderEmail;
+      }
+    }
 
     return NextResponse.json({
       success: true,
@@ -55,19 +69,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Note: These settings are stored in memory for the current server instance
-    // For persistence, you should set them as environment variables in Vercel:
-    // EMAIL_SENDER_NAME and EMAIL_SENDER_EMAIL
-    
-    logger.info('[API] Email sender settings would need to be set in Vercel dashboard', {
+    // Save to database using raw query
+    await prisma.$executeRaw`
+      INSERT INTO "app_settings" (key, value, "updatedAt")
+      VALUES ('email_sender', ${JSON.stringify({
+        senderName: senderName.trim(),
+        senderEmail: senderEmail.trim(),
+      })}, CURRENT_TIMESTAMP)
+      ON CONFLICT (key) 
+      DO UPDATE SET 
+        value = EXCLUDED.value,
+        "updatedAt" = CURRENT_TIMESTAMP
+    `;
+
+    logger.info('[API] Email sender settings saved', {
       senderName: senderName.trim(),
       senderEmail: senderEmail.trim(),
-      instructions: 'Go to Vercel Dashboard > Project Settings > Environment Variables'
     });
 
     return NextResponse.json({
       success: true,
-      message: 'Para persistir estas alterações, define as variáveis EMAIL_SENDER_NAME e EMAIL_SENDER_EMAIL no dashboard da Vercel',
+      message: 'Configurações guardadas com sucesso',
       data: {
         senderName: senderName.trim(),
         senderEmail: senderEmail.trim(),
