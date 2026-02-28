@@ -12,15 +12,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Try to get from database first
+    // Get from database
     const settings = await prisma.$queryRaw`
       SELECT value FROM "app_settings" WHERE key = 'email_sender' LIMIT 1
     `;
 
-    let senderName = process.env.EMAIL_SENDER_NAME || 'VecinoCustom';
-    let senderEmail = process.env.EMAIL_SENDER_EMAIL || 'brand@vecinocustom.com';
+    let senderName = 'VecinoCustom';
+    let senderEmail = 'brand@vecinocustom.com';
 
-    // Override with database settings if they exist
     if (Array.isArray(settings) && settings.length > 0) {
       const dbValue = settings[0]?.value;
       if (dbValue) {
@@ -62,19 +61,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!senderEmail || !senderEmail.trim()) {
-      return NextResponse.json(
-        { error: 'Email do remetente não pode estar vazio' },
-        { status: 400 }
-      );
-    }
-
-    // Save to database using raw query
+    // Save to database
     await prisma.$executeRaw`
       INSERT INTO "app_settings" (key, value, "updatedAt")
       VALUES ('email_sender', ${JSON.stringify({
         senderName: senderName.trim(),
-        senderEmail: senderEmail.trim(),
+        senderEmail: senderEmail?.trim() || 'brand@vecinocustom.com',
       })}, CURRENT_TIMESTAMP)
       ON CONFLICT (key) 
       DO UPDATE SET 
@@ -84,7 +76,7 @@ export async function POST(request: NextRequest) {
 
     logger.info('[API] Email sender settings saved', {
       senderName: senderName.trim(),
-      senderEmail: senderEmail.trim(),
+      senderEmail: senderEmail?.trim(),
     });
 
     return NextResponse.json({
@@ -92,7 +84,7 @@ export async function POST(request: NextRequest) {
       message: 'Configurações guardadas com sucesso',
       data: {
         senderName: senderName.trim(),
-        senderEmail: senderEmail.trim(),
+        senderEmail: senderEmail?.trim() || 'brand@vecinocustom.com',
       },
     });
   } catch (error) {
