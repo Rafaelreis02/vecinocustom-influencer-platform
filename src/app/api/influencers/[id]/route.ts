@@ -94,6 +94,38 @@ export async function PATCH(
     
     const validated = InfluencerUpdateSchema.parse(body);
 
+    // Verificar se instagramHandle já existe noutro influencer
+    if (validated.instagramHandle) {
+      const existing = await prisma.influencer.findFirst({
+        where: {
+          instagramHandle: validated.instagramHandle,
+          id: { not: id }, // Excluir o próprio influencer
+        },
+      });
+      if (existing) {
+        return NextResponse.json(
+          { error: `O Instagram @${validated.instagramHandle} já está associado a outro influencer (${existing.name})` },
+          { status: 409 }
+        );
+      }
+    }
+
+    // Verificar se tiktokHandle já existe noutro influencer
+    if (validated.tiktokHandle) {
+      const existing = await prisma.influencer.findFirst({
+        where: {
+          tiktokHandle: validated.tiktokHandle,
+          id: { not: id },
+        },
+      });
+      if (existing) {
+        return NextResponse.json(
+          { error: `O TikTok @${validated.tiktokHandle} já está associado a outro influencer (${existing.name})` },
+          { status: 409 }
+        );
+      }
+    }
+
     const influencer = await prisma.influencer.update({
       where: { id },
       data: validated,
@@ -113,6 +145,16 @@ export async function PATCH(
       return NextResponse.json(
         { error: 'Dados inválidos', details },
         { status: 400 }
+      );
+    }
+
+    // Erro de unique constraint do Prisma (P2002)
+    if (error instanceof Error && 'code' in error && error.code === 'P2002') {
+      const meta = (error as any).meta;
+      const field = meta?.target?.[0] || 'campo';
+      return NextResponse.json(
+        { error: `O ${field} já está em uso por outro influencer` },
+        { status: 409 }
       );
     }
     
