@@ -15,6 +15,7 @@ interface EmailTemplate {
 }
 
 const STEP_NAMES: Record<number, string> = {
+  0: 'Prospecção: Contacto Inicial',
   1: 'Step 1: Partnership',
   2: 'Step 2: Shipping',
   3: 'Step 3: Preparing',
@@ -157,7 +158,7 @@ export default function EmailTemplatesPage() {
 
       {/* Templates by Step */}
       <div className="space-y-8">
-        {[1, 2, 3, 4, 5].map(step => {
+        {[0, 1, 2, 3, 4, 5].map(step => {
           const stepTemplates = groupedTemplates[step] || [];
           if (stepTemplates.length === 0) return null;
 
