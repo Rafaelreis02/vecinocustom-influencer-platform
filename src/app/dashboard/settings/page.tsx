@@ -43,6 +43,7 @@ export default function SettingsPage() {
       </div>
 
       <EmailTemplatesSection />
+      <EmailSenderSettings />
       <ShopifyIntegration />
       <GmailIntegration />
       <UsersManagement />
@@ -73,6 +74,130 @@ function EmailTemplatesSection() {
           <ChevronRight className="h-4 w-4" />
         </Link>
       </div>
+    </div>
+  );
+}
+
+function EmailSenderSettings() {
+  const { addToast } = useGlobalToast();
+  const [settings, setSettings] = useState({
+    senderName: 'VecinoCustom',
+    senderEmail: 'brand@vecinocustom.com',
+  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const fetchSettings = async () => {
+    try {
+      const res = await fetch('/api/settings/email-sender');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setSettings(data.data);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching email sender settings:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch('/api/settings/email-sender', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings),
+      });
+
+      if (res.ok) {
+        addToast('Configurações guardadas com sucesso', 'success');
+      } else {
+        throw new Error('Failed to save');
+      }
+    } catch (error) {
+      addToast('Erro ao guardar configurações', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="p-2 bg-blue-100 rounded-lg">
+          <Mail className="h-5 w-5 text-blue-600" />
+        </div>
+        <div>
+          <h2 className="font-semibold text-gray-900">Remetente de Email</h2>
+          <p className="text-sm text-gray-500">
+            Configurar nome e email do remetente
+          </p>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-4">
+          <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Nome do Remetente
+              </label>
+              <input
+                type="text"
+                value={settings.senderName}
+                onChange={(e) => setSettings({ ...settings, senderName: e.target.value })}
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                placeholder="VecinoCustom"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Nome que aparece como remetente nos emails
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Email do Remetente
+              </label>
+              <input
+                type="email"
+                value={settings.senderEmail}
+                onChange={(e) => setSettings({ ...settings, senderEmail: e.target.value })}
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                placeholder="brand@vecinocustom.com"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Email que aparece como remetente (deve estar configurado no Gmail)
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 disabled:opacity-50"
+            >
+              {saving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="h-4 w-4" />
+              )}
+              {saving ? 'A guardar...' : 'Guardar'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

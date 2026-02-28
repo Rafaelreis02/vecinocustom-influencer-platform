@@ -185,13 +185,20 @@ export async function sendEmail(auth: any, options: {
   to: string;
   subject: string;
   body: string;
-  inReplyTo?: string; 
+  inReplyTo?: string;
   threadId?: string;
+  fromName?: string; // Optional custom sender name
 }) {
   // Encode subject for UTF-8 (MIME encoded-word)
   const encodedSubject = encodeSubject(options.subject);
-  
+
+  // Use custom sender name or default
+  const senderName = options.fromName || process.env.EMAIL_SENDER_NAME || 'VecinoCustom';
+  const senderEmail = process.env.EMAIL_SENDER_EMAIL || 'brand@vecinocustom.com';
+  const encodedFrom = encodeSubject(`${senderName} <${senderEmail}>`);
+
   const message = [
+    `From: ${encodedFrom}`,
     `To: ${options.to}`,
     `Subject: ${encodedSubject}`,
     options.inReplyTo ? `In-Reply-To: ${options.inReplyTo}` : '',
