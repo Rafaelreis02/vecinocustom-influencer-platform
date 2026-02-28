@@ -195,10 +195,12 @@ export async function sendEmail(auth: any, options: {
   // Use custom sender name or default
   const senderName = options.fromName || process.env.EMAIL_SENDER_NAME || 'VecinoCustom';
   const senderEmail = process.env.EMAIL_SENDER_EMAIL || 'brand@vecinocustom.com';
-  const encodedFrom = encodeSubject(`${senderName} <${senderEmail}>`);
+  
+  // Format From header properly - encode only the name part if needed
+  const fromHeader = formatFromHeader(senderName, senderEmail);
 
   const message = [
-    `From: ${encodedFrom}`,
+    `From: ${fromHeader}`,
     `To: ${options.to}`,
     `Subject: ${encodedSubject}`,
     options.inReplyTo ? `In-Reply-To: ${options.inReplyTo}` : '',
@@ -215,6 +217,19 @@ export async function sendEmail(auth: any, options: {
     requestBody: { raw, threadId: options.threadId },
   });
   return res.data;
+}
+
+// Helper to format From header with proper encoding
+function formatFromHeader(name: string, email: string): string {
+  // Check if name contains non-ASCII characters
+  if (/^[\x00-\x7F]*$/.test(name)) {
+    // ASCII only - use simple format with quotes
+    return `"${name}" <${email}>`;
+  }
+  
+  // Non-ASCII - encode the name using RFC 2047
+  const encodedName = Buffer.from(name, 'utf-8').toString('base64');
+  return `=?UTF-8?B?${encodedName}?= <${email}>`;
 }
 
 // Helper to encode UTF-8 subject for email headers (RFC 2047)
