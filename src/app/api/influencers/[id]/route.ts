@@ -94,15 +94,34 @@ export async function PATCH(
     
     const validated = InfluencerUpdateSchema.parse(body);
 
+    // Converter strings vazias para null para evitar problemas com unique constraints
+    if (validated.instagramHandle === '') {
+      validated.instagramHandle = null;
+    }
+    if (validated.tiktokHandle === '') {
+      validated.tiktokHandle = null;
+    }
+
+    logger.info('Updating influencer', { 
+      id, 
+      instagramHandle: validated.instagramHandle, 
+      tiktokHandle: validated.tiktokHandle 
+    });
+
     // Verificar se instagramHandle já existe noutro influencer (só se não for null/vazio)
     if (validated.instagramHandle && validated.instagramHandle.trim() !== '') {
       const existing = await prisma.influencer.findFirst({
         where: {
           instagramHandle: validated.instagramHandle.trim(),
-          id: { not: id }, // Excluir o próprio influencer
+          id: { not: id },
         },
       });
       if (existing) {
+        logger.warn('Duplicate instagramHandle detected', { 
+          handle: validated.instagramHandle, 
+          existingId: existing.id,
+          existingName: existing.name 
+        });
         return NextResponse.json(
           { error: `O Instagram @${validated.instagramHandle} já está associado a outro influencer (${existing.name})` },
           { status: 409 }
@@ -119,6 +138,11 @@ export async function PATCH(
         },
       });
       if (existing) {
+        logger.warn('Duplicate tiktokHandle detected', { 
+          handle: validated.tiktokHandle, 
+          existingId: existing.id,
+          existingName: existing.name 
+        });
         return NextResponse.json(
           { error: `O TikTok @${validated.tiktokHandle} já está associado a outro influencer (${existing.name})` },
           { status: 409 }
