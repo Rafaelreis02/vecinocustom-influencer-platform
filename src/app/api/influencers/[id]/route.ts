@@ -94,11 +94,11 @@ export async function PATCH(
     
     const validated = InfluencerUpdateSchema.parse(body);
 
-    // Verificar se instagramHandle já existe noutro influencer
-    if (validated.instagramHandle) {
+    // Verificar se instagramHandle já existe noutro influencer (só se não for null/vazio)
+    if (validated.instagramHandle && validated.instagramHandle.trim() !== '') {
       const existing = await prisma.influencer.findFirst({
         where: {
-          instagramHandle: validated.instagramHandle,
+          instagramHandle: validated.instagramHandle.trim(),
           id: { not: id }, // Excluir o próprio influencer
         },
       });
@@ -110,11 +110,11 @@ export async function PATCH(
       }
     }
 
-    // Verificar se tiktokHandle já existe noutro influencer
-    if (validated.tiktokHandle) {
+    // Verificar se tiktokHandle já existe noutro influencer (só se não for null/vazio)
+    if (validated.tiktokHandle && validated.tiktokHandle.trim() !== '') {
       const existing = await prisma.influencer.findFirst({
         where: {
-          tiktokHandle: validated.tiktokHandle,
+          tiktokHandle: validated.tiktokHandle.trim(),
           id: { not: id },
         },
       });
