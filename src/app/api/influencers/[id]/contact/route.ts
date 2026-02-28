@@ -22,8 +22,18 @@ export async function POST(
     }
 
     const { id } = await context.params;
-    const body = await req.json();
-    const { subject: customSubject, body: customBody } = body;
+    
+    // Parse body if present, otherwise use empty object
+    let body = {};
+    try {
+      const text = await req.text();
+      if (text) {
+        body = JSON.parse(text);
+      }
+    } catch {
+      body = {};
+    }
+    const { subject: customSubject, body: customBody } = body as any;
 
     // Fetch influencer
     const influencer = await prisma.influencer.findUnique({
