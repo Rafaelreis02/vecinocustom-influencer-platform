@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Loader2, Save, Eye, Mail, Check } from 'lucide-react';
+import { Loader2, Save, Eye, Mail, Check, Send } from 'lucide-react';
 
 interface EmailTemplate {
   id: string;
@@ -29,6 +29,10 @@ export default function EmailTemplatesPage() {
   const [saving, setSaving] = useState<string | null>(null);
   const [preview, setPreview] = useState<{ subject: string; body: string } | null>(null);
   const [previewTemplate, setPreviewTemplate] = useState<EmailTemplate | null>(null);
+  const [testEmailModal, setTestEmailModal] = useState(false);
+  const [testEmailAddress, setTestEmailAddress] = useState('');
+  const [sendingTest, setSendingTest] = useState(false);
+  const [testResult, setTestResult] = useState<{success?: boolean; message?: string} | null>(null);
 
   useEffect(() => {
     fetchTemplates();
@@ -96,6 +100,42 @@ export default function EmailTemplatesPage() {
     );
   };
 
+  const handleSendTest = async () => {
+    if (!testEmailAddress || !preview) return;
+    
+    setSendingTest(true);
+    setTestResult(null);
+    
+    try {
+      const res = await fetch('/api/email-templates/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: testEmailAddress,
+          subject: preview.subject,
+          body: preview.body,
+        }),
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok) {
+        setTestResult({ success: true, message: 'Email enviado com sucesso!' });
+        setTimeout(() => {
+          setTestEmailModal(false);
+          setTestResult(null);
+          setTestEmailAddress('');
+        }, 2000);
+      } else {
+        setTestResult({ success: false, message: data.error || 'Erro ao enviar email' });
+      }
+    } catch (error) {
+      setTestResult({ success: false, message: 'Erro ao enviar email de teste' });
+    } finally {
+      setSendingTest(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -145,12 +185,79 @@ export default function EmailTemplatesPage() {
                 </pre>
               </div>
             </div>
-            <div className="p-4 border-t border-gray-200 bg-gray-50">
+            <div className="p-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
               <p className="text-xs text-gray-500">
-                Variáveis disponíveis: {'{{nome}}'}, {'{{valor}}'}, {'{{email}}'}, {'{{instagram}}'}, 
-                {'{{whatsapp}}'}, {'{{morada}}'}, {'{{sugestao1}}'}, {'{{sugestao2}}'}, {'{{sugestao3}}'}, 
+                Variáveis disponíveis: {'{{nome}}'}, {'{{valor}}'}, {'{{email}}'}, {'{{instagram}}'},
+                {'{{whatsapp}}'}, {'{{morada}}'}, {'{{sugestao1}}'}, {'{{sugestao2}}'}, {'{{sugestao3}}'},
                 {'{{url_produto}}'}, {'{{url_contrato}}'}, {'{{tracking_url}}'}, {'{{cupom}}'}
               </p>
+              <button
+                onClick={() => setTestEmailModal(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+              >
+                <Send className="h-4 w-4" />
+                Enviar Teste
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Test Email Modal */}
+      {testEmailModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6">
+            <h3 className="font-semibold text-gray-900 mb-2">Enviar Email de Teste</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              Envia uma pré-visualização deste template para um email de teste.
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email de destino
+                </label>
+                <input
+                  type="email"
+                  value={testEmailAddress}
+                  onChange={(e) => setTestEmailAddress(e.target.value)}
+                  placeholder="exemplo@email.com"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                />
+              </div>
+
+              {testResult && (
+                <div className={`p-3 rounded-lg text-sm ${
+                  testResult.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                }`}>
+                  {testResult.message}
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setTestEmailModal(false);
+                    setTestResult(null);
+                    setTestEmailAddress('');
+                  }}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSendTest}
+                  disabled={!testEmailAddress || sendingTest}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {sendingTest ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                  {sendingTest ? 'A enviar...' : 'Enviar'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

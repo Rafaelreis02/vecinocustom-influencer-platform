@@ -187,59 +187,47 @@ export async function sendEmail(auth: any, options: {
   body: string;
   inReplyTo?: string;
   threadId?: string;
-  fromName?: string; // Optional custom sender name
+  fromName?: string;
 }) {
-  // Encode subject for UTF-8 (MIME encoded-word)
-  const encodedSubject = encodeSubject(options.subject);
-
+  const gmail = google.gmail({ version: 'v1', auth });
+  
   // Use custom sender name or default
   const senderName = options.fromName || process.env.EMAIL_SENDER_NAME || 'VecinoCustom';
   const senderEmail = process.env.EMAIL_SENDER_EMAIL || 'brand@vecinocustom.com';
   
-  // Format From header properly - encode only the name part if needed
-  const fromHeader = formatFromHeader(senderName, senderEmail);
-
-  const message = [
-    `From: ${fromHeader}`,
+  // Build email content using Gmail API's format
+  const utf8Subject = `=?utf-8?B?${Buffer.from(options.subject).toString('base64')}?=`;
+  
+  // Simple message structure - Gmail will use the authenticated user's email
+  // but we can try to set a custom From name using the Reply-To or custom headers
+  const messageParts = [
+    `From: ${senderName} <${senderEmail}>`,
     `To: ${options.to}`,
-    `Subject: ${encodedSubject}`,
+    `Subject: ${utf8Subject}`,
     options.inReplyTo ? `In-Reply-To: ${options.inReplyTo}` : '',
+    'MIME-Version: 1.0',
     'Content-Type: text/plain; charset=utf-8',
-    'Content-Transfer-Encoding: base64',
+    'Content-Transfer-Encoding: quoted-printable',
     '',
-    Buffer.from(options.body).toString('base64')
-  ].filter(Boolean).join('\r\n');
+    options.body
+  ];
 
-  const raw = Buffer.from(message).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const message = messageParts.filter(Boolean).join('\n');
+
+  // Encode to base64url (RFC 4648)
+  const encodedMessage = Buffer.from(message)
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+
   const res = await gmail.users.messages.send({
     userId: 'me',
-    auth,
-    requestBody: { raw, threadId: options.threadId },
+    requestBody: {
+      raw: encodedMessage,
+      threadId: options.threadId,
+    },
   });
+  
   return res.data;
-}
-
-// Helper to format From header with proper encoding
-function formatFromHeader(name: string, email: string): string {
-  // Check if name contains non-ASCII characters
-  if (/^[\x00-\x7F]*$/.test(name)) {
-    // ASCII only - use simple format with quotes
-    return `"${name}" <${email}>`;
-  }
-  
-  // Non-ASCII - encode the name using RFC 2047
-  const encodedName = Buffer.from(name, 'utf-8').toString('base64');
-  return `=?UTF-8?B?${encodedName}?= <${email}>`;
-}
-
-// Helper to encode UTF-8 subject for email headers (RFC 2047)
-function encodeSubject(subject: string): string {
-  // Check if subject contains non-ASCII characters
-  if (/^[\x00-\x7F]*$/.test(subject)) {
-    return subject; // ASCII only, no encoding needed
-  }
-  
-  // Use RFC 2047 encoding: =?charset?encoding?encoded-text?=
-  const encoded = Buffer.from(subject, 'utf-8').toString('base64');
-  return `=?UTF-8?B?${encoded}?=`;
 }
