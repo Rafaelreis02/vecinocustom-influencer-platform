@@ -7,6 +7,26 @@ import { logger } from '@/lib/logger';
 // Default modern email templates
 const DEFAULT_TEMPLATES = [
   {
+    key: 'INITIAL_CONTACT',
+    name: 'Contacto Inicial - Prospecção',
+    subject: 'Colaboração VecinoCustom - Interessado?',
+    body: `Olá {{nome}},
+
+Somos a VecinoCustom, uma marca de joias personalizadas feitas à mão em Portugal.
+
+Gostamos muito do teu conteúdo no Instagram e queríamos saber se terias interesse numa colaboração connosco.
+
+Se sim, responde a este email ou pelo WhatsApp que falamos em mais detalhes.
+
+Cumprimentos,
+Equipa VecinoCustom
+
+---
+www.vecinocustom.com`,
+    step: 0,
+    hasValue: true,
+  },
+  {
     key: 'STEP_1_WITH_VALUE',
     name: 'Step 1: Partnership - Com Valor',
     subject: 'Parceria VecinoCustom - Proposta para ti',

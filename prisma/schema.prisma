@@ -118,10 +118,37 @@ model Influencer {
   files             File[]
   emails            Email[]           @relation("InfluencerEmails")
   partnerships      PartnershipWorkflow[]
+  contacts          InfluencerContact[]  // Contact history for prospecting
   
   @@unique([tiktokHandle], name: "unique_tiktok_handle", map: "unique_tiktok_handle")
   @@unique([instagramHandle], name: "unique_instagram_handle", map: "unique_instagram_handle")
   @@map("influencers")
+}
+
+// Contact History for Influencer Prospecting
+model InfluencerContact {
+  id            String    @id @default(cuid())
+  influencerId  String
+  influencer    Influencer @relation(fields: [influencerId], references: [id], onDelete: Cascade)
+  
+  sentAt        DateTime  @default(now())
+  emailSubject  String
+  emailBody     String    @db.Text
+  
+  // Response tracking
+  response      String?   @db.Text
+  responseAt    DateTime?
+  
+  // Status: PENDING, POSITIVE, NEGATIVE, NO_RESPONSE
+  status        String    @default("PENDING")
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  @@index([influencerId])
+  @@index([status])
+  @@index([sentAt])
+  @@map("influencer_contacts")
 }
 
 enum InfluencerStatus {
@@ -129,6 +156,7 @@ enum InfluencerStatus {
   UNKNOWN            // 🔍 Desconhecido - não tem rede social associada
   SUGGESTION         // 💡 Sugestão - IA sugeriu via scraping
   IMPORT_PENDING     // ⏳ A Importar - a ser analisado pelo agente
+  CONTACTED          // 📧 Contactado - email enviado, aguardando resposta
 
   // Fase 2: A Negociar
   ANALYZING          // 🔎 Em Análise - estamos a analisar proposta do influencer

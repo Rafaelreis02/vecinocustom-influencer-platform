@@ -290,6 +290,49 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
   }
 
   if (!workflow) {
+    // Different message based on influencer status
+    if (localInfluencerStatus === 'SUGGESTION') {
+      return (
+        <div className="bg-amber-50 border-2 border-dashed border-amber-200 rounded-xl p-8 text-center">
+          <h3 className="text-lg font-medium text-amber-900 mb-2">
+            Influencer não contactado
+          </h3>
+          <p className="text-sm text-amber-700 mb-4">
+            Envia um email de introdução antes de iniciar a parceria
+          </p>
+          <p className="text-xs text-amber-600">
+            Vai à página do influencer e clica em "Contactar"
+          </p>
+        </div>
+      );
+    }
+
+    if (localInfluencerStatus === 'CONTACTED') {
+      return (
+        <div className="bg-blue-50 border-2 border-dashed border-blue-200 rounded-xl p-8 text-center">
+          <h3 className="text-lg font-medium text-blue-900 mb-2">
+            Influencer contactado
+          </h3>
+          <p className="text-sm text-blue-700 mb-4">
+            Email enviado. Se o influencer responder positivamente, inicia a parceria.
+          </p>
+          <button
+            onClick={createWorkflow}
+            disabled={isCreating}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
+          >
+            {isCreating ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <CheckCircle2 className="h-4 w-4" />
+            )}
+            Iniciar Parceria
+          </button>
+        </div>
+      );
+    }
+
+    // Default for other statuses
     return (
       <div className="bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl p-8 text-center">
         <h3 className="text-lg font-medium text-gray-900 mb-2">

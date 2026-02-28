@@ -10,7 +10,7 @@ export const PHASES = {
     label: 'Prospeção',
     icon: undefined,
     href: '/dashboard/influencers/prospecting',
-    statuses: ['UNKNOWN', 'SUGGESTION', 'IMPORT_PENDING'],
+    statuses: ['UNKNOWN', 'SUGGESTION', 'IMPORT_PENDING', 'CONTACTED'],
   },
   NEGOTIATING: {
     id: 'negotiating' as const,
@@ -55,6 +55,14 @@ export const INFLUENCER_STATUS_CONFIG = {
     label: 'A Importar',
     color: 'bg-purple-100 text-purple-700 border-purple-300',
     dotColor: 'bg-purple-500',
+    
+    icon: undefined,
+    phase: 'PROSPECTING' as PhaseId,
+  },
+  CONTACTED: {
+    label: 'Contactado',
+    color: 'bg-amber-100 text-amber-700 border-amber-300',
+    dotColor: 'bg-amber-500',
     
     icon: undefined,
     phase: 'PROSPECTING' as PhaseId,

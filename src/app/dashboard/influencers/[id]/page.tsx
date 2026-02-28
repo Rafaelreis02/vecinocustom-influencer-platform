@@ -154,6 +154,7 @@ export default function InfluencerDetailPage() {
   
   // AI Analysis
   const [analyzingAI, setAnalyzingAI] = useState(false);
+  const [contacting, setContacting] = useState(false);
 
   useEffect(() => {
     fetchInfluencer();
@@ -261,6 +262,32 @@ export default function InfluencerDetailPage() {
       );
     } finally {
       setAnalyzingAI(false);
+    }
+  };
+
+  const handleContact = async () => {
+    try {
+      setContacting(true);
+      const res = await fetch(`/api/influencers/${id}/contact`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Erro ao enviar email de contacto');
+      }
+
+      addToast('✅ Email de contacto enviado com sucesso!', 'success');
+      fetchInfluencer(); // Recarregar para atualizar o status
+    } catch (error) {
+      console.error('Error sending contact email:', error);
+      addToast(
+        error instanceof Error ? error.message : 'Erro ao enviar email de contacto',
+        'error'
+      );
+    } finally {
+      setContacting(false);
     }
   };
 
@@ -600,6 +627,21 @@ export default function InfluencerDetailPage() {
             </div>
           </div>
           <div className="flex gap-2 self-end sm:self-auto">
+            {influencer?.status === 'SUGGESTION' && (
+              <button
+                onClick={handleContact}
+                disabled={contacting}
+                className="px-3 py-2 rounded bg-amber-500 text-white text-sm font-medium hover:bg-amber-600 transition active:scale-95 disabled:opacity-50 flex items-center gap-1.5"
+                title="Enviar email de contacto"
+              >
+                {contacting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Mail className="h-4 w-4" />
+                )}
+                Contactar
+              </button>
+            )}
             <button
               onClick={handleSyncVideos}
               disabled={syncingVideos}
