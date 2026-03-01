@@ -255,12 +255,16 @@ export default function CommissionsOverviewPage() {
         start.setDate(start.getDate() - parseInt(activeFilter));
       }
       
-      const res = await fetch(`/api/commissions/overview?start=${start.toISOString()}&end=${end.toISOString()}`);
+      const res = await fetch(`/api/analytics/commissions-real?start=${start.toISOString()}&end=${end.toISOString()}`);
       
       if (!res.ok) throw new Error('Erro ao carregar estatísticas');
       
-      const data = await res.json();
-      setStats(data);
+      const result = await res.json();
+      if (result.success) {
+        setStats(result.data.stats);
+      } else {
+        throw new Error(result.error || 'Erro ao carregar dados');
+      }
 
     } catch (error) {
       console.error('Error loading stats:', error);
