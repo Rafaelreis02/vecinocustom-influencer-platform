@@ -86,9 +86,9 @@ export async function GET(req: NextRequest) {
       // Total pago em comissões
       const totalCommissions = inf.payments.reduce((sum, p) => sum + p.amount, 0);
       
-      // Investimento (valor acordado nas parcerias concluídas ou enviadas)
+      // Investimento (valor acordado nas parcerias concluídas)
       const totalInvestment = inf.partnerships
-        .filter(p => p.status === 'COMPLETED' || p.currentStep >= 5)
+        .filter(p => p.status === 'COMPLETED')
         .reduce((sum, p) => sum + (p.agreedPrice || 0), 0);
       
       // ROI = (Vendas - Investimento - Comissões) / Investimento * 100
