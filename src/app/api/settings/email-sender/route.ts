@@ -61,13 +61,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Save to database
+    // Save to database - cast to jsonb
+    const valueJson = JSON.stringify({
+      senderName: senderName.trim(),
+      senderEmail: senderEmail?.trim() || 'brand@vecinocustom.com',
+    });
+    
     await prisma.$executeRaw`
       INSERT INTO "app_settings" (key, value, "updatedAt")
-      VALUES ('email_sender', ${JSON.stringify({
-        senderName: senderName.trim(),
-        senderEmail: senderEmail?.trim() || 'brand@vecinocustom.com',
-      })}, CURRENT_TIMESTAMP)
+      VALUES ('email_sender', ${valueJson}::jsonb, CURRENT_TIMESTAMP)
       ON CONFLICT (key) 
       DO UPDATE SET 
         value = EXCLUDED.value,
