@@ -8,27 +8,27 @@ import {
   Users,
   Target,
   DollarSign,
-  TrendingUp,
   Settings,
-  FileText,
-  Instagram,
   LogOut,
   X,
   Mail,
+  UserCog,
 } from 'lucide-react';
+import { useRole, UserRole } from '@/hooks/useRole';
 
 interface NavigationItem {
   name: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
+  roles: UserRole[];
 }
 
 const navigation: NavigationItem[] = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Influencers', href: '/dashboard/influencers', icon: Users },
-  { name: 'Campanhas', href: '/dashboard/campaigns', icon: Target },
-  { name: 'Emails', href: '/dashboard/messages', icon: Mail },
-  { name: 'Comissões', href: '/dashboard/commissions', icon: DollarSign },
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['ADMIN', 'ASSISTANT', 'AI_AGENT'] },
+  { name: 'Influencers', href: '/dashboard/influencers', icon: Users, roles: ['ADMIN', 'ASSISTANT'] },
+  { name: 'Campanhas', href: '/dashboard/campaigns', icon: Target, roles: ['ADMIN', 'ASSISTANT'] },
+  { name: 'Emails', href: '/dashboard/messages', icon: Mail, roles: ['ADMIN', 'ASSISTANT'] },
+  { name: 'Comissões', href: '/dashboard/commissions', icon: DollarSign, roles: ['ADMIN', 'ASSISTANT'] },
 ];
 
 interface SidebarProps {
@@ -38,6 +38,13 @@ interface SidebarProps {
 
 export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const { role, isAdmin, isLoading } = useRole();
+
+  // Filter navigation based on user role
+  const filteredNavigation = navigation.filter((item) => {
+    if (isLoading) return true; // Show all while loading to prevent flicker
+    return role ? item.roles.includes(role) : false;
+  });
 
   return (
     <>
@@ -74,7 +81,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
 
         {/* Navigation */}
         <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto" aria-label="Main navigation">
-          {navigation.map((item) => {
+          {filteredNavigation.map((item) => {
             // Dashboard uses exact match, others use startsWith
             const isActive = item.href === '/dashboard' 
               ? pathname === item.href 
@@ -98,11 +105,34 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
           })}
         </nav>
 
+        {/* Admin-only items */}
+        {isAdmin && (
+          <div className="border-t border-gray-800 p-2 space-y-1">
+            <Link
+              href="/dashboard/users"
+              className={clsx(
+                'flex flex-col items-center justify-center px-2 py-3 text-[10px] font-medium rounded-md transition-colors',
+                pathname.startsWith('/dashboard/users')
+                  ? 'bg-white/10 text-white'
+                  : 'text-gray-400 hover:bg-white/5 hover:text-gray-300'
+              )}
+            >
+              <UserCog className="h-5 w-5 mb-1" />
+              <span className="text-center leading-tight">Utilizadores</span>
+            </Link>
+          </div>
+        )}
+
         {/* Bottom */}
         <div className="border-t border-gray-800 p-2 space-y-1">
           <Link
             href="/dashboard/settings"
-            className="flex flex-col items-center justify-center px-2 py-3 text-[10px] font-medium text-gray-500 hover:text-gray-300 hover:bg-white/5 rounded-md transition-colors"
+            className={clsx(
+              'flex flex-col items-center justify-center px-2 py-3 text-[10px] font-medium rounded-md transition-colors',
+              pathname.startsWith('/dashboard/settings')
+                ? 'bg-white/10 text-white'
+                : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+            )}
           >
             <Settings className="h-5 w-5 mb-1" />
             <span className="text-center leading-tight">Definições</span>

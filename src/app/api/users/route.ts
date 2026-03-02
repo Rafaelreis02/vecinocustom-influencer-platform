@@ -11,19 +11,16 @@ import { handleApiError } from '@/lib/api-error';
 import { logger } from '@/lib/logger';
 import { serializeBigInt } from '@/lib/serialize';
 import bcrypt from 'bcryptjs';
-import { getServerSession } from 'next-auth/next';
+import { requireAdmin } from '@/lib/permissions';
+import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
-// GET - Listar utilizadores
+// GET - Listar utilizadores (ADMIN only)
 export async function GET(request: NextRequest) {
   try {
-    // Verificar se é admin
-    const session = await getServerSession(authOptions);
-    if (!session?.user || session.user.role !== 'ADMIN') {
-      return NextResponse.json(
-        { error: 'Acesso negado' },
-        { status: 403 }
-      );
+    const { allowed, error } = await requireAdmin(request);
+    if (!allowed) {
+      return NextResponse.json({ error: error || 'Acesso negado' }, { status: 403 });
     }
 
     const users = await prisma.user.findMany({
@@ -45,16 +42,12 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Criar utilizador
+// POST - Criar utilizador (ADMIN only)
 export async function POST(request: NextRequest) {
   try {
-    // Verificar se é admin
-    const session = await getServerSession(authOptions);
-    if (!session?.user || session.user.role !== 'ADMIN') {
-      return NextResponse.json(
-        { error: 'Acesso negado' },
-        { status: 403 }
-      );
+    const { allowed, error } = await requireAdmin(request);
+    if (!allowed) {
+      return NextResponse.json({ error: error || 'Acesso negado' }, { status: 403 });
     }
 
     const body = await request.json();

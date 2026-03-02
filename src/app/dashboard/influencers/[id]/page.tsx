@@ -5,6 +5,7 @@ import { VideoPreviewList } from '@/components/VideoPreview';
 import { InfluencerDocuments } from '@/components/InfluencerDocuments';
 import { PartnershipWorkflow } from '@/components/partnership/PartnershipWorkflow';
 import { PartnershipHistory } from '@/components/partnership/PartnershipHistory';
+import { useRole } from '@/hooks/useRole';
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -128,6 +129,7 @@ export default function InfluencerDetailPage() {
   const router = useRouter();
   const id = params.id as string;
   const { dialog, confirm: showConfirm } = useConfirm();
+  const { isAdmin, canDelete } = useRole();
 
   const { addToast } = useGlobalToast();
   const [loading, setLoading] = useState(true);
@@ -672,12 +674,15 @@ export default function InfluencerDetailPage() {
             >
               <Edit className="h-4 w-4 text-white" />
             </Link>
-            <button
-              onClick={handleDelete}
-              className="p-2 rounded bg-white/10 border border-white/20 hover:bg-red-900/50 transition active:scale-95"
-            >
-              <Trash2 className="h-4 w-4 text-white" />
-            </button>
+            {canDelete && (
+              <button
+                onClick={handleDelete}
+                className="p-2 rounded bg-white/10 border border-white/20 hover:bg-red-900/50 transition active:scale-95"
+                title="Eliminar influencer"
+              >
+                <Trash2 className="h-4 w-4 text-white" />
+              </button>
+            )}
           </div>
         </div>
 

@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import AddVideoModal from '@/components/AddVideoModal';
 import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog';
+import { useRole } from '@/hooks/useRole';
 
 interface Campaign {
   id: string;
@@ -81,6 +82,7 @@ export default function CampaignDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { dialog, confirm } = useConfirm();
+  const { canDelete } = useRole();
   const { addToast } = useGlobalToast();
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [loading, setLoading] = useState(true);
@@ -327,12 +329,15 @@ export default function CampaignDetailPage() {
             >
               <Edit className="h-4 w-4" />
             </button>
-            <button
-              onClick={handleDelete}
-              className="p-2 rounded-md hover:bg-gray-100 text-gray-600 hover:text-red-600 transition-colors"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
+            {canDelete && (
+              <button
+                onClick={handleDelete}
+                className="p-2 rounded-md hover:bg-gray-100 text-gray-600 hover:text-red-600 transition-colors"
+                title="Eliminar campanha"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
           </div>
         </div>
       </div>

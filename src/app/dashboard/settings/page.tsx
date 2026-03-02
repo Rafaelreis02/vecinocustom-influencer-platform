@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useGlobalToast } from '@/contexts/ToastContext';
+import { useRole } from '@/hooks/useRole';
 
 type UserRole = 'ADMIN' | 'ASSISTANT' | 'AI_AGENT';
 
@@ -33,19 +34,42 @@ interface User {
 }
 
 export default function SettingsPage() {
+  const { isAdmin, isAssistant } = useRole();
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Definições</h1>
         <p className="text-sm text-gray-600 mt-1">
-          Gestão de utilizadores, permissões e integrações
+          {isAdmin 
+            ? 'Gestão de utilizadores, permissões e integrações'
+            : 'Configurações da conta e preferências'
+        }
         </p>
       </div>
 
+      {/* Todos podem ver templates */}
       <EmailTemplatesSection />
-      <ShopifyIntegration />
-      <GmailIntegration />
-      <UsersManagement />
+      
+      {/* Apenas ADMIN pode configurar integrações */}
+      {isAdmin && (
+        <>
+          <ShopifyIntegration />
+          <GmailIntegration />
+          <UsersManagement />
+        </>
+      )}
+
+      {/* ASSISTANT vê mensagem informativa */}
+      {isAssistant && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <p className="text-sm text-blue-700">
+            <strong>Nota:</strong> Como utilizador operacional (ASSISTANT), tens acesso às funcionalidades 
+            de influencers, campanhas e comissões. As configurações de integrações (Shopify, Gmail) e 
+            gestão de utilizadores são geridas pelo administrador.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
