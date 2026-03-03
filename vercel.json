@@ -1,1 +1,8 @@
-{"crons":[{"path":"/api/cron/sync-commissions","schedule":"0 0 * * *"}]}
+{
+  "crons": [
+    {
+      "path": "/api/cron/update-video-metrics?secret=${CRON_SECRET}",
+      "schedule": "0 6 * * *"
+    }
+  ]
+}
