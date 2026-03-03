@@ -41,6 +41,11 @@ export async function POST(
     try {
       apifyVideos = await scrapeHashtagVideos(campaign.hashtag, 30);
       logger.info(`[SYNC] Found ${apifyVideos.length} videos from Apify`);
+      // Debug: log first video's hashtags format for troubleshooting
+      if (apifyVideos.length > 0) {
+        const sample = apifyVideos[0];
+        logger.info(`[SYNC] Sample video hashtags format: ${JSON.stringify(sample.hashtags?.slice(0, 3))}, description preview: ${(sample.description || '').substring(0, 100)}`);
+      }
     } catch (error: any) {
       logger.error('[SYNC] Apify error', error);
       throw new ApiError(500, 'Erro ao obter vídeos do TikTok', error.message);
