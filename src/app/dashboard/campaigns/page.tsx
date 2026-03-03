@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Target,
   Plus,
@@ -47,6 +48,7 @@ const statusConfig = {
 };
 
 export default function CampaignsPage() {
+  const router = useRouter();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -177,15 +179,17 @@ export default function CampaignsPage() {
           const budgetPercent = campaign.budget ? (campaign.spent / campaign.budget) * 100 : 0;
           
           return (
-            <Link
+            <div
               key={campaign.id}
-              href={`/dashboard/campaigns/${campaign.id}`}
-              className="rounded-lg bg-white p-4 sm:p-6 border border-gray-200 hover:border-gray-900 transition-colors block"
+              className="rounded-lg bg-white p-4 sm:p-6 border border-gray-200 hover:border-gray-900 transition-colors"
             >
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-0 mb-4">
-                <div className="flex-1 min-w-0">
+                <div 
+                  className="flex-1 min-w-0 cursor-pointer"
+                  onClick={() => router.push(`/dashboard/campaigns/${campaign.id}`)}
+                >
                   <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-lg font-semibold text-gray-900">
+                    <h3 className="text-lg font-semibold text-gray-900 hover:underline">
                       {campaign.name}
                     </h3>
                     <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border ${statusInfo.color} flex-shrink-0`}>
@@ -217,20 +221,16 @@ export default function CampaignsPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center gap-2 flex-shrink-0">
                   <Link
                     href={`/dashboard/campaigns/${campaign.id}/edit`}
                     className="p-2 rounded-md hover:bg-gray-100 text-gray-600 hover:text-gray-900 transition-colors"
                     title="Editar"
-                    onClick={(e) => e.stopPropagation()}
                   >
                     <Edit className="h-4 w-4" />
                   </Link>
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(campaign.id, campaign.name);
-                    }}
+                    onClick={() => handleDelete(campaign.id, campaign.name)}
                     className="p-2 rounded-md hover:bg-gray-100 text-gray-600 hover:text-red-600 transition-colors"
                     title="Eliminar"
                   >
