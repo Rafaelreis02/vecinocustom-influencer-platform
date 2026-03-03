@@ -47,16 +47,27 @@ export async function POST(
     }
 
     // 3. Filter out vecino.custom brand account
-    const brandAccountsLower = ['vecino.custom'];
-    const filteredVideos = apifyVideos.filter((v: any) => {
-      const authorHandle = v.authorMeta?.name?.toLowerCase() || '';
+    const brandAccountsLower = ['vecino.custom', 'vecinocustom', 'vecino_custom'];
+    const filteredByBrand = apifyVideos.filter((v: any) => {
+      const authorHandle = (v.authorUsername || '').toLowerCase();
       return !brandAccountsLower.includes(authorHandle);
     });
-    const excludedCount = apifyVideos.length - filteredVideos.length;
+    const brandExcludedCount = apifyVideos.length - filteredByBrand.length;
 
-    logger.info(`[SYNC] After filter: ${filteredVideos.length} videos (excluded ${excludedCount})`);
+    // 4. Filter to only include videos that contain the exact campaign hashtag
+    const campaignHashtag = campaign.hashtag.replace('#', '').toLowerCase();
+    const filteredVideos = filteredByBrand.filter((v: any) => {
+      if (!v.hashtags || !Array.isArray(v.hashtags)) return false;
+      return v.hashtags.some((tag: any) => {
+        const tagName = (typeof tag === 'string' ? tag : tag?.name || '').toLowerCase().replace('#', '');
+        return tagName === campaignHashtag;
+      });
+    });
+    const hashtagExcludedCount = filteredByBrand.length - filteredVideos.length;
 
-    // 4. Process each video
+    logger.info(`[SYNC] After filters: ${filteredVideos.length} videos (brand excluded: ${brandExcludedCount}, hashtag mismatch excluded: ${hashtagExcludedCount})`);
+
+    // 5. Process each video
     let createdCount = 0;
     let updatedCount = 0;
 
@@ -136,12 +147,13 @@ export async function POST(
     // 5. Create snapshots for ALL campaign videos
     await createDailySnapshots(id);
 
-    logger.info(`[SYNC] Complete: ${createdCount} created, ${updatedCount} updated, ${excludedCount} excluded`);
+    logger.info(`[SYNC] Complete: ${createdCount} created, ${updatedCount} updated, brand excluded: ${brandExcludedCount}, hashtag mismatch excluded: ${hashtagExcludedCount}`);
 
     return NextResponse.json({
       created: createdCount,
       updated: updatedCount,
-      excluded: excludedCount,
+      brandExcluded: brandExcludedCount,
+      hashtagExcluded: hashtagExcludedCount,
       total: filteredVideos.length,
     });
 
