@@ -1,17 +1,17 @@
-import fs from 'fs';
-import path from 'path';
+import { prisma } from './prisma';
 import { logger } from './logger';
 
-const AVATARS_DIR = path.join(process.cwd(), 'public', 'avatars');
+/**
+ * Storage de imagens usando Base64 na base de dados
+ * Na Vercel não é possível guardar ficheiros localmente (read-only filesystem)
+ * Solução alternativa: Guardar como base64 na DB (similar aos documentos)
+ */
 
-// Ensure avatars directory exists
-if (!fs.existsSync(AVATARS_DIR)) {
-  fs.mkdirSync(AVATARS_DIR, { recursive: true });
-}
+const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB max
 
 /**
- * Download an image from URL and save to local public folder
- * Returns the public URL path
+ * Download an image from URL and store as base64 in database
+ * Returns a data URL that can be used directly in img src
  */
 export async function downloadAndStoreImage(
   imageUrl: string,
@@ -34,73 +34,65 @@ export async function downloadAndStoreImage(
       return null;
     }
     
-    // Get image buffer
+    // Get image data
     const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
     
-    logger.info(`[IMAGE] Downloaded: ${buffer.length} bytes`);
-    
-    // Ensure filename has extension
-    let finalFileName = fileName;
-    if (!finalFileName.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
-      // Try to determine extension from content-type
-      const contentType = response.headers.get('content-type');
-      if (contentType?.includes('png')) {
-        finalFileName += '.png';
-      } else if (contentType?.includes('gif')) {
-        finalFileName += '.gif';
-      } else if (contentType?.includes('webp')) {
-        finalFileName += '.webp';
-      } else {
-        finalFileName += '.jpg';
-      }
+    // Check size
+    if (arrayBuffer.byteLength > MAX_IMAGE_SIZE) {
+      logger.warn(`[IMAGE] Image too large: ${arrayBuffer.byteLength} bytes`);
+      return null;
     }
     
-    // Save to local file system
-    const filePath = path.join(AVATARS_DIR, finalFileName);
-    fs.writeFileSync(filePath, buffer);
+    // Convert to base64
+    const buffer = Buffer.from(arrayBuffer);
+    const base64 = buffer.toString('base64');
     
-    // Return public URL (relative to public folder)
-    const publicUrl = `/avatars/${finalFileName}`;
+    // Determine content type
+    const contentType = response.headers.get('content-type') || 'image/jpeg';
     
-    logger.info(`[IMAGE] Stored locally: ${publicUrl}`);
-    return publicUrl;
+    // Create data URL
+    const dataUrl = `data:${contentType};base64,${base64}`;
+    
+    logger.info(`[IMAGE] Stored as base64: ${dataUrl.length} chars`);
+    return dataUrl;
     
   } catch (error) {
-    logger.error('[IMAGE] Error downloading/storing image:', error);
+    logger.error('[IMAGE] Error downloading image:', error);
     return null;
   }
 }
 
 /**
- * Delete an avatar image from local storage
+ * Store image from buffer (used when we already have the image data)
  */
-export function deleteStoredImage(fileName: string): boolean {
-  try {
-    const filePath = path.join(AVATARS_DIR, fileName);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-      logger.info(`[IMAGE] Deleted: ${fileName}`);
-      return true;
-    }
-    return false;
-  } catch (error) {
-    logger.error('[IMAGE] Error deleting image:', error);
-    return false;
-  }
+export function storeImageFromBuffer(
+  buffer: Buffer,
+  contentType: string = 'image/jpeg'
+): string {
+  const base64 = buffer.toString('base64');
+  return `data:${contentType};base64,${base64}`;
 }
 
 /**
- * List all stored avatars
+ * Get image size in bytes from base64 string
  */
-export function listStoredAvatars(): string[] {
-  try {
-    if (!fs.existsSync(AVATARS_DIR)) {
-      return [];
-    }
-    return fs.readdirSync(AVATARS_DIR);
-  } catch (error) {
-    logger.error('[IMAGE] Error listing avatars:', error);
-    return [];
-  }
+export function getBase64ImageSize(base64String: string): number {
+  // Remove data URL prefix if present
+  const base64 = base64String.replace(/^data:image\/\w+;base64,/, '');
+  // Calculate size (base64 is ~33% larger than binary)
+  return Math.floor((base64.length * 3) / 4);
+}
+
+/**
+ * Check if string is a base64 data URL
+ */
+export function isBase64Image(url: string): boolean {
+  return url.startsWith('data:image/');
+}
+
+/**
+ * Extract base64 data from data URL
+ */
+export function extractBase64FromDataUrl(dataUrl: string): string {
+  return dataUrl.replace(/^data:image\/\w+;base64,/, '');
 }
