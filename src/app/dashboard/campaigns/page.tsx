@@ -273,7 +273,7 @@ export default function CampaignsPage() {
                   </p>
                 </div>
               </div>
-            </Link>
+            </div>
           );
         })}
       </div>
