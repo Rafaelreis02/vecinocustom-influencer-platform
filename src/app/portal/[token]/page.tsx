@@ -426,31 +426,19 @@ function Step1({ data, token, onUpdate, onNext, isReviewMode }: StepProps) {
     setLoading(true);
 
     try {
-      // Map form fields to workflow fields
-      const workflowData = {
+      // Send all data AND advance in a single atomic request
+      const advanceData = {
         contactEmail: formData.email,
         contactInstagram: formData.instagramHandle,
         contactWhatsapp: formData.phone,
         name: formData.name,
         tiktokHandle: formData.tiktokHandle,
       };
-      
-      // Update workflow
-      const res = await fetch(`/api/portal/${token}/workflow`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(workflowData),
-      });
 
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Failed to accept proposal');
-      }
-
-      // Advance step
       const advanceRes = await fetch(`/api/portal/${token}/advance`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(advanceData),
       });
 
       if (!advanceRes.ok) {
@@ -458,14 +446,13 @@ function Step1({ data, token, onUpdate, onNext, isReviewMode }: StepProps) {
         throw new Error(error.error || 'Failed to advance step');
       }
 
-      // Force full page reload to ensure fresh data and correct step
+      // Success! Reload page to show next step with fresh data
       setTimeout(() => {
         window.location.reload();
       }, STEP_TRANSITION_DELAY);
       
     } catch (err: any) {
       alert(err.message);
-    } finally {
       setLoading(false);
     }
   };
@@ -526,30 +513,33 @@ function Step1({ data, token, onUpdate, onNext, isReviewMode }: StepProps) {
     setLoading(true);
     
     try {
-      // Map form fields to workflow fields
-      const workflowData = {
+      // Send all data AND advance in a single atomic request
+      const advanceData = {
         contactEmail: formData.email,
         contactInstagram: formData.instagramHandle,
         contactWhatsapp: formData.phone,
+        name: formData.name,
+        tiktokHandle: formData.tiktokHandle,
       };
-      
-      const res = await fetch(`/api/portal/${token}/workflow`, {
-        method: 'PUT',
+
+      const advanceRes = await fetch(`/api/portal/${token}/advance`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(workflowData),
+        body: JSON.stringify(advanceData),
       });
 
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Failed to save');
+      if (!advanceRes.ok) {
+        const error = await advanceRes.json();
+        throw new Error(error.error || 'Failed to advance step');
       }
 
-      await onUpdate();
-      onNext();
+      // Success! Reload page to show next step
+      setTimeout(() => {
+        window.location.reload();
+      }, STEP_TRANSITION_DELAY);
       
     } catch (err: any) {
       alert(err.message);
-    } finally {
       setLoading(false);
     }
   };
@@ -852,27 +842,18 @@ function Step2({ data, token, onUpdate, onBack, onNext }: StepProps) {
         formData.shippingCountry
       );
 
-      // Update workflow data
-      const res = await fetch(`/api/portal/${token}/workflow`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          shippingAddress,
-          productSuggestion1: formData.productSuggestion1,
-          productSuggestion2: formData.productSuggestion2,
-          productSuggestion3: formData.productSuggestion3,
-        }),
-      });
-      
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Failed to submit');
-      }
-      
-      // Advance to next step via workflow API
+      // Send all data AND advance in a single atomic request
+      const advanceData = {
+        shippingAddress,
+        productSuggestion1: formData.productSuggestion1,
+        productSuggestion2: formData.productSuggestion2,
+        productSuggestion3: formData.productSuggestion3,
+      };
+
       const advanceRes = await fetch(`/api/portal/${token}/advance`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(advanceData),
       });
       
       if (!advanceRes.ok) {
@@ -887,7 +868,6 @@ function Step2({ data, token, onUpdate, onBack, onNext }: StepProps) {
 
     } catch (err: any) {
       alert(err.message);
-    } finally {
       setLoading(false);
     }
   };
