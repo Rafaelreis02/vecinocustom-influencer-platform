@@ -46,17 +46,38 @@ export async function POST(
       throw new ApiError(500, 'Erro ao obter vídeos do TikTok', error.message);
     }
 
-    // 3. Filter out vecino.custom brand account
+    // 3. Filter: brand account + hashtag verification
     const brandAccountsLower = ['vecino.custom'];
+    const targetHashtag = campaign.hashtag.replace('#', '').toLowerCase();
+    
     const filteredVideos = apifyVideos.filter((v: any) => {
+      // Filter 1: Exclude brand accounts
       const authorHandle = v.authorMeta?.name?.toLowerCase() || '';
-      return !brandAccountsLower.includes(authorHandle);
+      if (brandAccountsLower.includes(authorHandle)) {
+        return false;
+      }
+      
+      // Filter 2: MUST contain the exact hashtag in description OR hashtags array
+      const description = (v.text || v.description || '').toLowerCase();
+      const hashtags = (v.hashtags || []).map((h: string) => h.toLowerCase());
+      
+      // Check if hashtag is in description (with #) or in hashtags array (without #)
+      const hasHashtag = description.includes(`#${targetHashtag}`) || 
+                         hashtags.includes(targetHashtag) ||
+                         hashtags.some((h: string) => h === targetHashtag);
+      
+      if (!hasHashtag) {
+        logger.debug(`[SYNC] Excluding video - no hashtag #${targetHashtag}: "${description.substring(0, 50)}..."`);
+      }
+      
+      return hasHashtag;
     });
+    
     const excludedCount = apifyVideos.length - filteredVideos.length;
+    logger.info(`[SYNC] After filters: ${filteredVideos.length} videos (excluded ${excludedCount})`);
 
-    logger.info(`[SYNC] After filter: ${filteredVideos.length} videos (excluded ${excludedCount})`);
-
-    // 4. Process each video
+    // 4. Process each video - SKIP if video doesn't have the hashtag
+    let skippedHashtag = 0;
     let createdCount = 0;
     let updatedCount = 0;
 
@@ -136,13 +157,14 @@ export async function POST(
     // 5. Create snapshots for ALL campaign videos
     await createDailySnapshots(id);
 
-    logger.info(`[SYNC] Complete: ${createdCount} created, ${updatedCount} updated, ${excludedCount} excluded`);
+    logger.info(`[SYNC] Complete: ${createdCount} created, ${updatedCount} updated, ${excludedCount} excluded (hashtag filtered)`);
 
     return NextResponse.json({
       created: createdCount,
       updated: updatedCount,
       excluded: excludedCount,
       total: filteredVideos.length,
+      message: `${createdCount} novos, ${updatedCount} atualizados, ${excludedCount} excluídos (sem hashtag)`,
     });
 
   } catch (error) {
