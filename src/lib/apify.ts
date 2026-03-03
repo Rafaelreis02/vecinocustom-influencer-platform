@@ -2,7 +2,7 @@ import { ApifyClient } from 'apify-client';
 
 // Initialize Apify client
 const client = new ApifyClient({
-  token: process.env.APIFY_TOKEN,
+  token: process.env.APIFY_TOKEN?.trim(),
 });
 
 // ============================================
