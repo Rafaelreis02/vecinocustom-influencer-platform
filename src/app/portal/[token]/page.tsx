@@ -32,7 +32,7 @@ interface InfluencerData {
 interface StepProps {
   data: InfluencerData;
   token: string;
-  onUpdate: () => Promise<void>;
+  onUpdate: (showLoading?: boolean) => Promise<void>;
   onNext: () => void;
   onBack?: () => void;
   isReviewMode?: boolean;
@@ -158,9 +158,9 @@ export default function PortalPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  const fetchInfluencerData = async () => {
+  const fetchInfluencerData = async (showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       // Use workflow API instead of direct influencer API
       const res = await fetch(`/api/portal/${token}/workflow`);
       
@@ -446,10 +446,9 @@ function Step1({ data, token, onUpdate, onNext, isReviewMode }: StepProps) {
         throw new Error(error.error || 'Failed to advance step');
       }
 
-      // Success! Reload page to show next step with fresh data
-      setTimeout(() => {
-        window.location.reload();
-      }, STEP_TRANSITION_DELAY);
+      // Refresh data from API without showing loading spinner, then advance step
+      await onUpdate(false);
+      onNext();
       
     } catch (err: any) {
       alert(err.message);
@@ -533,10 +532,9 @@ function Step1({ data, token, onUpdate, onNext, isReviewMode }: StepProps) {
         throw new Error(error.error || 'Failed to advance step');
       }
 
-      // Success! Reload page to show next step
-      setTimeout(() => {
-        window.location.reload();
-      }, STEP_TRANSITION_DELAY);
+      // Refresh data from API without showing loading spinner, then advance step
+      await onUpdate(false);
+      onNext();
       
     } catch (err: any) {
       alert(err.message);
@@ -861,10 +859,13 @@ function Step2({ data, token, onUpdate, onBack, onNext }: StepProps) {
         throw new Error(error.error || 'Failed to advance step');
       }
 
-      // Force full page reload to ensure fresh data and correct step
-      setTimeout(() => {
-        window.location.reload();
-      }, STEP_TRANSITION_DELAY);
+      const result = await advanceRes.json();
+
+      // Refresh data from API without showing loading spinner, then advance step
+      if (result.success) {
+        await onUpdate(false);
+        onNext();
+      }
 
     } catch (err: any) {
       alert(err.message);
