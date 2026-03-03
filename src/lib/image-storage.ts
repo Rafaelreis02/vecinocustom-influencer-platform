@@ -1,8 +1,17 @@
-import { put } from '@vercel/blob';
+import fs from 'fs';
+import path from 'path';
+import { logger } from './logger';
+
+const AVATARS_DIR = path.join(process.cwd(), 'public', 'avatars');
+
+// Ensure avatars directory exists
+if (!fs.existsSync(AVATARS_DIR)) {
+  fs.mkdirSync(AVATARS_DIR, { recursive: true });
+}
 
 /**
- * Download an image from URL and upload to Vercel Blob
- * Returns the permanent URL
+ * Download an image from URL and save to local public folder
+ * Returns the public URL path
  */
 export async function downloadAndStoreImage(
   imageUrl: string,
@@ -11,7 +20,7 @@ export async function downloadAndStoreImage(
   try {
     if (!imageUrl) return null;
     
-    console.log(`[IMAGE] Downloading: ${imageUrl}`);
+    logger.info(`[IMAGE] Downloading: ${imageUrl}`);
     
     // Fetch image from source
     const response = await fetch(imageUrl, {
@@ -21,25 +30,77 @@ export async function downloadAndStoreImage(
     });
     
     if (!response.ok) {
-      console.error(`[IMAGE] Failed to download: ${response.status}`);
+      logger.error(`[IMAGE] Failed to download: ${response.status}`);
       return null;
     }
     
     // Get image buffer
-    const blob = await response.blob();
-    console.log(`[IMAGE] Downloaded: ${blob.size} bytes`);
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
     
-    // Upload to Vercel Blob
-    const { url } = await put(fileName, blob, {
-      access: 'public',
-      contentType: blob.type || 'image/jpeg',
-    });
+    logger.info(`[IMAGE] Downloaded: ${buffer.length} bytes`);
     
-    console.log(`[IMAGE] Stored: ${url}`);
-    return url;
+    // Ensure filename has extension
+    let finalFileName = fileName;
+    if (!finalFileName.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+      // Try to determine extension from content-type
+      const contentType = response.headers.get('content-type');
+      if (contentType?.includes('png')) {
+        finalFileName += '.png';
+      } else if (contentType?.includes('gif')) {
+        finalFileName += '.gif';
+      } else if (contentType?.includes('webp')) {
+        finalFileName += '.webp';
+      } else {
+        finalFileName += '.jpg';
+      }
+    }
+    
+    // Save to local file system
+    const filePath = path.join(AVATARS_DIR, finalFileName);
+    fs.writeFileSync(filePath, buffer);
+    
+    // Return public URL (relative to public folder)
+    const publicUrl = `/avatars/${finalFileName}`;
+    
+    logger.info(`[IMAGE] Stored locally: ${publicUrl}`);
+    return publicUrl;
     
   } catch (error) {
-    console.error('[IMAGE] Error:', error);
+    logger.error('[IMAGE] Error downloading/storing image:', error);
     return null;
+  }
+}
+
+/**
+ * Delete an avatar image from local storage
+ */
+export function deleteStoredImage(fileName: string): boolean {
+  try {
+    const filePath = path.join(AVATARS_DIR, fileName);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+      logger.info(`[IMAGE] Deleted: ${fileName}`);
+      return true;
+    }
+    return false;
+  } catch (error) {
+    logger.error('[IMAGE] Error deleting image:', error);
+    return false;
+  }
+}
+
+/**
+ * List all stored avatars
+ */
+export function listStoredAvatars(): string[] {
+  try {
+    if (!fs.existsSync(AVATARS_DIR)) {
+      return [];
+    }
+    return fs.readdirSync(AVATARS_DIR);
+  } catch (error) {
+    logger.error('[IMAGE] Error listing avatars:', error);
+    return [];
   }
 }
