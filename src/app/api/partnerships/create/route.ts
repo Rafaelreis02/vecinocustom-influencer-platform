@@ -12,11 +12,27 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { influencerId } = body;
+    const { influencerId, agreedPrice } = body;
 
     if (!influencerId) {
       return NextResponse.json(
         { error: 'influencerId is required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate agreedPrice is required (can be 0 for commission-only partnerships)
+    if (agreedPrice === undefined || agreedPrice === null || agreedPrice === '') {
+      return NextResponse.json(
+        { error: 'agreedPrice is required (can be 0 for commission-only partnerships)' },
+        { status: 400 }
+      );
+    }
+
+    const parsedPrice = parseFloat(agreedPrice);
+    if (isNaN(parsedPrice) || parsedPrice < 0) {
+      return NextResponse.json(
+        { error: 'agreedPrice must be a valid number >= 0' },
         { status: 400 }
       );
     }
@@ -40,6 +56,7 @@ export async function POST(req: NextRequest) {
         influencerId,
         currentStep: 1,
         status: 'ACTIVE',
+        agreedPrice: parsedPrice,
         // Pre-fill contact data from influencer if available
         contactEmail: influencer.email || null,
         contactInstagram: influencer.instagramHandle || null,

@@ -63,6 +63,8 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
   const [isSendingCounter, setIsSendingCounter] = useState(false);
   const [showCounterModal, setShowCounterModal] = useState(false);
   const [counterPrice, setCounterPrice] = useState('');
+  const [showPriceModal, setShowPriceModal] = useState(false);
+  const [partnershipPrice, setPartnershipPrice] = useState('');
   const [localInfluencerStatus, setLocalInfluencerStatus] = useState(influencerStatus);
 
   // Update local status when prop changes
@@ -92,13 +94,13 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
     fetchWorkflow();
   }, [influencerId]);
 
-  const createWorkflow = async () => {
+  const createWorkflow = async (agreedPrice: number) => {
     try {
       setIsCreating(true);
       const res = await fetch('/api/partnerships/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ influencerId }),
+        body: JSON.stringify({ influencerId, agreedPrice }),
       });
       
       const data = await res.json();
@@ -317,7 +319,7 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
             Email enviado. Se o influencer responder positivamente, inicia a parceria.
           </p>
           <button
-            onClick={createWorkflow}
+            onClick={() => setShowPriceModal(true)}
             disabled={isCreating}
             className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
           >
@@ -342,7 +344,7 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
           Inicia uma nova parceria com {influencerName}
         </p>
         <button
-          onClick={createWorkflow}
+          onClick={() => setShowPriceModal(true)}
           disabled={isCreating}
           className="inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg font-medium hover:bg-gray-800 transition-colors disabled:opacity-50"
         >
@@ -520,6 +522,75 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
           })}
         </div>
       </div>
+
+      {/* Price Modal - shown when starting a new partnership */}
+      {showPriceModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Valor da Parceria
+              </h3>
+              <button
+                onClick={() => { setShowPriceModal(false); setPartnershipPrice(''); }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              Insira o valor acordado para esta parceria.
+            </p>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Valor (€)
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  value={partnershipPrice}
+                  onChange={(e) => setPartnershipPrice(e.target.value)}
+                  placeholder="0.00"
+                  min="0"
+                  step="0.01"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">
+                  €
+                </span>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Pode ser 0€ para parcerias apenas com comissão
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setShowPriceModal(false); setPartnershipPrice(''); }}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  const parsed = parseFloat(partnershipPrice);
+                  if (isNaN(parsed) || parsed < 0) return;
+                  setShowPriceModal(false);
+                  setPartnershipPrice('');
+                  createWorkflow(parsed);
+                }}
+                disabled={partnershipPrice === '' || isCreating}
+                className="flex-1 px-4 py-2 bg-black text-white font-medium rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isCreating ? (
+                  <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                ) : (
+                  'Confirmar e Iniciar Parceria'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Counterproposal Modal */}
       {showCounterModal && (
