@@ -57,7 +57,7 @@ export const InfluencerUpdateSchema = InfluencerCreateSchema.partial();
 export const CampaignCreateSchema = z.object({
   name: z.string().min(1, 'Nome obrigatório'),
   description: z.string().optional().nullable(),
-  hashtag: z.string().optional().nullable(),
+  hashtag: z.string().optional().nullable(), // Kept for backwards compatibility, but no longer required
   platform: z.nativeEnum(Platform).optional().nullable(),
   startDate: z.coerce.date().optional().nullable(),
   endDate: z.coerce.date().optional().nullable(),

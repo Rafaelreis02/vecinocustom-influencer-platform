@@ -11,7 +11,6 @@ import {
   Target,
   Calendar,
   DollarSign,
-  Hash,
   AlertCircle,
   PlayCircle,
 } from 'lucide-react';
@@ -40,8 +39,7 @@ export default function EditCampaignPage() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    platform: 'TIKTOK',
-    hashtag: '',
+    platform: '',
     startDate: '',
     endDate: '',
     budget: '',
@@ -68,8 +66,7 @@ export default function EditCampaignPage() {
       setFormData({
         name: campaign.name,
         description: campaign.description || '',
-        platform: campaign.platform || 'TIKTOK',
-        hashtag: campaign.hashtag || '',
+        platform: campaign.platform || '',
         startDate: campaign.startDate ? campaign.startDate.split('T')[0] : '',
         endDate: campaign.endDate ? campaign.endDate.split('T')[0] : '',
         budget: campaign.budget?.toString() || '',
@@ -188,46 +185,23 @@ export default function EditCampaignPage() {
             {/* Platform */}
             <div>
               <label htmlFor="platform" className="block text-sm font-medium text-gray-700 mb-1">
-                Plataforma *
+                Plataforma
               </label>
               <select
                 id="platform"
                 name="platform"
-                required
                 value={formData.platform}
                 onChange={handleChange}
                 className="w-full rounded-md border border-gray-200 bg-white py-2 px-4 text-sm focus:border-purple-600 focus:outline-none transition-colors"
               >
+                <option value="">Selecionar...</option>
                 <option value="TIKTOK">TikTok</option>
                 <option value="INSTAGRAM">Instagram</option>
                 <option value="YOUTUBE">YouTube</option>
                 <option value="OTHER">Outro</option>
               </select>
               <p className="mt-1 text-xs text-gray-500">
-                Plataforma onde os vídeos serão publicados
-              </p>
-            </div>
-
-            {/* Hashtag */}
-            <div>
-              <label htmlFor="hashtag" className="block text-sm font-medium text-gray-700 mb-1">
-                Hashtag de Tracking *
-              </label>
-              <div className="relative">
-                <Hash className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  id="hashtag"
-                  name="hashtag"
-                  required
-                  value={formData.hashtag}
-                  onChange={handleChange}
-                  placeholder="vecinodiadosnamorados"
-                  className="w-full rounded-md border border-gray-200 bg-white py-2 pl-10 pr-4 text-sm focus:border-purple-600 focus:outline-none transition-colors"
-                />
-              </div>
-              <p className="mt-1 text-xs text-gray-500">
-                Todos os vídeos com esta hashtag aparecerão automaticamente nesta campanha
+                Plataforma principal da campanha (opcional)
               </p>
             </div>
 
