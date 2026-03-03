@@ -458,11 +458,9 @@ function Step1({ data, token, onUpdate, onNext, isReviewMode }: StepProps) {
         throw new Error(error.error || 'Failed to advance step');
       }
 
-      await onUpdate();
-      
-      // Wait 1.5s then advance to next step
+      // Force full page reload to ensure fresh data and correct step
       setTimeout(() => {
-        onNext();
+        window.location.reload();
       }, STEP_TRANSITION_DELAY);
       
     } catch (err: any) {
@@ -882,11 +880,10 @@ function Step2({ data, token, onUpdate, onBack, onNext }: StepProps) {
         throw new Error(error.error || 'Failed to advance step');
       }
 
-      // Refresh data before navigating
-      await onUpdate();
-      
-      // Navigate immediately (no delay needed since data is already saved)
-      onNext();
+      // Force full page reload to ensure fresh data and correct step
+      setTimeout(() => {
+        window.location.reload();
+      }, STEP_TRANSITION_DELAY);
 
     } catch (err: any) {
       alert(err.message);
