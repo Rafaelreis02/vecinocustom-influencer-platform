@@ -34,17 +34,16 @@ export async function POST(
       );
     }
 
-    // Find workflows and filter for active one (avoid enum comparison issues)
-    const workflows = await prisma.partnershipWorkflow.findMany({
-      where: {
-        influencerId: influencer.id,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+    // Find active workflow using raw query to get fresh data and avoid enum issues
+    const workflows = await prisma.$queryRaw`
+      SELECT * FROM "partnership_workflows" 
+      WHERE "influencerId" = ${influencer.id} 
+      AND status = 'ACTIVE'
+      ORDER BY "createdAt" DESC
+      LIMIT 1
+    ` as any[];
 
-    const workflow = workflows.find(w => w.status === 'ACTIVE' || (w.status as any) === 'ACTIVE');
+    const workflow = workflows.length > 0 ? workflows[0] : null;
 
     if (!workflow) {
       return NextResponse.json(
@@ -63,17 +62,18 @@ export async function POST(
       );
     }
 
-    // Check required fields
+    // Check required fields using fresh data from the raw query
     const requiredFields = STEP_REQUIREMENTS[currentStep];
     const missing: string[] = [];
     
     for (const field of requiredFields) {
-      const value = workflow[field as keyof typeof workflow];
-      if (value === null || value === undefined || value === '') {
-        missing.push(field);
-      }
-      // Special check for contractSigned
-      if (field === 'contractSigned' && value !== true) {
+      const value = workflow[field];
+      if (field === 'contractSigned') {
+        // Special check for contractSigned boolean
+        if (value !== true) {
+          missing.push(field);
+        }
+      } else if (value === null || value === undefined || value === '') {
         missing.push(field);
       }
     }
@@ -114,12 +114,17 @@ export async function POST(
       portalToken: token,
     };
 
-    await sendWorkflowEmail(
-      workflow.id,
-      currentStep,
-      variables,
-      'system'
-    );
+    // Try to send email but don't block advancement if it fails
+    try {
+      await sendWorkflowEmail(
+        workflow.id,
+        currentStep,
+        variables,
+        'system'
+      );
+    } catch (emailError) {
+      logger.error('Failed to send workflow email during advance, continuing anyway', emailError);
+    }
 
     // Update workflow
     const updatedWorkflow = await prisma.partnershipWorkflow.update({

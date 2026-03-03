@@ -506,6 +506,26 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
               </p>
             </div>
 
+            {/* Sugestão 2 */}
+            {workflow.productSuggestion2 && (
+              <div className="p-2 bg-white rounded border border-gray-100">
+                <span className="text-gray-500 text-xs">Sugestão de Produto 2:</span>
+                <p className="font-medium text-slate-900 truncate">
+                  {workflow.productSuggestion2}
+                </p>
+              </div>
+            )}
+
+            {/* Sugestão 3 */}
+            {workflow.productSuggestion3 && (
+              <div className="p-2 bg-white rounded border border-gray-100">
+                <span className="text-gray-500 text-xs">Sugestão de Produto 3:</span>
+                <p className="font-medium text-slate-900 truncate">
+                  {workflow.productSuggestion3}
+                </p>
+              </div>
+            )}
+
             {/* Step 3 - Preparing */}
             <div className="p-2 bg-white rounded border border-gray-100">
               <span className="text-gray-500 text-xs">Produto Selecionado:</span>
