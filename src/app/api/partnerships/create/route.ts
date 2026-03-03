@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const parsedPrice = parseFloat(agreedPrice);
+    const parsedPrice = typeof agreedPrice === 'number' ? agreedPrice : parseFloat(agreedPrice);
     if (isNaN(parsedPrice) || parsedPrice < 0) {
       return NextResponse.json(
         { error: 'agreedPrice must be a valid number >= 0' },
