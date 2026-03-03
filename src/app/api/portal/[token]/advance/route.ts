@@ -21,6 +21,14 @@ export async function POST(
   try {
     const { token } = await params;
 
+    // Parse body - may contain data to save before advancing
+    let body: Record<string, any> = {};
+    try {
+      body = await req.json();
+    } catch {
+      // No body is fine - just advance without saving data first
+    }
+
     // Find influencer by portal token
     const influencer = await prisma.influencer.findUnique({
       where: { portalToken: token },
@@ -34,17 +42,16 @@ export async function POST(
       );
     }
 
-    // Find workflows and filter for active one (avoid enum comparison issues)
-    const workflows = await prisma.partnershipWorkflow.findMany({
-      where: {
-        influencerId: influencer.id,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+    // Find active workflow using raw query to get fresh data and avoid enum issues
+    const workflows = await prisma.$queryRaw`
+      SELECT * FROM "partnership_workflows" 
+      WHERE "influencerId" = ${influencer.id} 
+      AND status = 'ACTIVE'
+      ORDER BY "createdAt" DESC
+      LIMIT 1
+    ` as any[];
 
-    const workflow = workflows.find(w => w.status === 'ACTIVE' || (w.status as any) === 'ACTIVE');
+    const workflow = workflows.length > 0 ? workflows[0] : null;
 
     if (!workflow) {
       return NextResponse.json(
@@ -63,17 +70,60 @@ export async function POST(
       );
     }
 
-    // Check required fields
+    // If body contains data, save it to the workflow first (atomic operation)
+    const dataFields: Record<number, string[]> = {
+      1: ['contactEmail', 'contactInstagram', 'contactWhatsapp'],
+      2: ['shippingAddress', 'productSuggestion1', 'productSuggestion2', 'productSuggestion3'],
+      4: ['contractSigned'],
+    };
+
+    const allowedFields = dataFields[currentStep] || [];
+    const saveData: Record<string, any> = {};
+
+    for (const field of allowedFields) {
+      if (body[field] !== undefined) {
+        saveData[field] = body[field];
+      }
+    }
+
+    if (Object.keys(saveData).length > 0) {
+      await prisma.partnershipWorkflow.update({
+        where: { id: workflow.id },
+        data: saveData,
+      });
+    }
+
+    // Also update profile fields if provided
+    const profileData: Record<string, any> = {};
+    if (body.name && body.name !== '') profileData.name = body.name;
+    if (Object.keys(profileData).length > 0) {
+      await prisma.influencer.update({
+        where: { id: influencer.id },
+        data: profileData,
+      });
+    }
+
+    // Re-read the workflow to get fresh data after the save
+    const freshWorkflows = await prisma.$queryRaw`
+      SELECT * FROM "partnership_workflows" 
+      WHERE id = ${workflow.id}
+      LIMIT 1
+    ` as any[];
+
+    const freshWorkflow = freshWorkflows.length > 0 ? freshWorkflows[0] : workflow;
+
+    // Check required fields using FRESH data
     const requiredFields = STEP_REQUIREMENTS[currentStep];
     const missing: string[] = [];
     
     for (const field of requiredFields) {
-      const value = workflow[field as keyof typeof workflow];
-      if (value === null || value === undefined || value === '') {
-        missing.push(field);
-      }
-      // Special check for contractSigned
-      if (field === 'contractSigned' && value !== true) {
+      const value = freshWorkflow[field];
+      if (field === 'contractSigned') {
+        // Special check for contractSigned boolean
+        if (value !== true) {
+          missing.push(field);
+        }
+      } else if (value === null || value === undefined || value === '') {
         missing.push(field);
       }
     }
@@ -103,26 +153,31 @@ export async function POST(
     // Send email notification before advancing
     const variables = {
       nome: influencer.name,
-      valor: workflow.agreedPrice?.toString() || '0',
-      email: workflow.contactEmail || influencer.email || undefined,
-      instagram: workflow.contactInstagram || undefined,
-      whatsapp: workflow.contactWhatsapp || undefined,
-      morada: workflow.shippingAddress || undefined,
-      sugestao1: workflow.productSuggestion1 || undefined,
-      sugestao2: workflow.productSuggestion2 || undefined,
-      sugestao3: workflow.productSuggestion3 || undefined,
+      valor: freshWorkflow.agreedPrice?.toString() || '0',
+      email: freshWorkflow.contactEmail || influencer.email || undefined,
+      instagram: freshWorkflow.contactInstagram || undefined,
+      whatsapp: freshWorkflow.contactWhatsapp || undefined,
+      morada: freshWorkflow.shippingAddress || undefined,
+      sugestao1: freshWorkflow.productSuggestion1 || undefined,
+      sugestao2: freshWorkflow.productSuggestion2 || undefined,
+      sugestao3: freshWorkflow.productSuggestion3 || undefined,
       portalToken: token,
     };
 
-    await sendWorkflowEmail(
-      workflow.id,
-      currentStep,
-      variables,
-      'system'
-    );
+    // Try to send email but don't block advancement if it fails
+    try {
+      await sendWorkflowEmail(
+        workflow.id,
+        currentStep,
+        variables,
+        'system'
+      );
+    } catch (emailError) {
+      logger.error('Failed to send workflow email during advance, continuing anyway', emailError);
+    }
 
-    // Update workflow
-    const updatedWorkflow = await prisma.partnershipWorkflow.update({
+    // Update workflow - advance step
+    await prisma.partnershipWorkflow.update({
       where: { id: workflow.id },
       data: {
         currentStep: next.step,

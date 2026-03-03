@@ -32,7 +32,7 @@ interface InfluencerData {
 interface StepProps {
   data: InfluencerData;
   token: string;
-  onUpdate: () => Promise<void>;
+  onUpdate: (showLoading?: boolean) => Promise<void>;
   onNext: () => void;
   onBack?: () => void;
   isReviewMode?: boolean;
@@ -158,9 +158,9 @@ export default function PortalPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  const fetchInfluencerData = async () => {
+  const fetchInfluencerData = async (showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       // Use workflow API instead of direct influencer API
       const res = await fetch(`/api/portal/${token}/workflow`);
       
@@ -426,31 +426,19 @@ function Step1({ data, token, onUpdate, onNext, isReviewMode }: StepProps) {
     setLoading(true);
 
     try {
-      // Map form fields to workflow fields
-      const workflowData = {
+      // Send all data AND advance in a single atomic request
+      const advanceData = {
         contactEmail: formData.email,
         contactInstagram: formData.instagramHandle,
         contactWhatsapp: formData.phone,
         name: formData.name,
         tiktokHandle: formData.tiktokHandle,
       };
-      
-      // Update workflow
-      const res = await fetch(`/api/portal/${token}/workflow`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(workflowData),
-      });
 
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Failed to accept proposal');
-      }
-
-      // Advance step
       const advanceRes = await fetch(`/api/portal/${token}/advance`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(advanceData),
       });
 
       if (!advanceRes.ok) {
@@ -458,16 +446,12 @@ function Step1({ data, token, onUpdate, onNext, isReviewMode }: StepProps) {
         throw new Error(error.error || 'Failed to advance step');
       }
 
-      await onUpdate();
-      
-      // Wait 1.5s then advance to next step
-      setTimeout(() => {
-        onNext();
-      }, STEP_TRANSITION_DELAY);
+      // Refresh data from API without showing loading spinner, then advance step
+      await onUpdate(false);
+      onNext();
       
     } catch (err: any) {
       alert(err.message);
-    } finally {
       setLoading(false);
     }
   };
@@ -528,30 +512,32 @@ function Step1({ data, token, onUpdate, onNext, isReviewMode }: StepProps) {
     setLoading(true);
     
     try {
-      // Map form fields to workflow fields
-      const workflowData = {
+      // Send all data AND advance in a single atomic request
+      const advanceData = {
         contactEmail: formData.email,
         contactInstagram: formData.instagramHandle,
         contactWhatsapp: formData.phone,
+        name: formData.name,
+        tiktokHandle: formData.tiktokHandle,
       };
-      
-      const res = await fetch(`/api/portal/${token}/workflow`, {
-        method: 'PUT',
+
+      const advanceRes = await fetch(`/api/portal/${token}/advance`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(workflowData),
+        body: JSON.stringify(advanceData),
       });
 
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Failed to save');
+      if (!advanceRes.ok) {
+        const error = await advanceRes.json();
+        throw new Error(error.error || 'Failed to advance step');
       }
 
-      await onUpdate();
+      // Refresh data from API without showing loading spinner, then advance step
+      await onUpdate(false);
       onNext();
       
     } catch (err: any) {
       alert(err.message);
-    } finally {
       setLoading(false);
     }
   };
@@ -854,27 +840,18 @@ function Step2({ data, token, onUpdate, onBack, onNext }: StepProps) {
         formData.shippingCountry
       );
 
-      // Update workflow data
-      const res = await fetch(`/api/portal/${token}/workflow`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          shippingAddress,
-          productSuggestion1: formData.productSuggestion1,
-          productSuggestion2: formData.productSuggestion2,
-          productSuggestion3: formData.productSuggestion3,
-        }),
-      });
-      
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Failed to submit');
-      }
-      
-      // Advance to next step via workflow API
+      // Send all data AND advance in a single atomic request
+      const advanceData = {
+        shippingAddress,
+        productSuggestion1: formData.productSuggestion1,
+        productSuggestion2: formData.productSuggestion2,
+        productSuggestion3: formData.productSuggestion3,
+      };
+
       const advanceRes = await fetch(`/api/portal/${token}/advance`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(advanceData),
       });
       
       if (!advanceRes.ok) {
@@ -882,15 +859,16 @@ function Step2({ data, token, onUpdate, onBack, onNext }: StepProps) {
         throw new Error(error.error || 'Failed to advance step');
       }
 
-      // Refresh data before navigating
-      await onUpdate();
-      
-      // Navigate immediately (no delay needed since data is already saved)
-      onNext();
+      const result = await advanceRes.json();
+
+      // Refresh data from API without showing loading spinner, then advance step
+      if (result.success) {
+        await onUpdate(false);
+        onNext();
+      }
 
     } catch (err: any) {
       alert(err.message);
-    } finally {
       setLoading(false);
     }
   };

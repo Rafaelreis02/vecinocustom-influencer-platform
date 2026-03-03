@@ -63,6 +63,8 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
   const [isSendingCounter, setIsSendingCounter] = useState(false);
   const [showCounterModal, setShowCounterModal] = useState(false);
   const [counterPrice, setCounterPrice] = useState('');
+  const [initialPrice, setInitialPrice] = useState('');
+  const [priceError, setPriceError] = useState<string | null>(null);
   const [localInfluencerStatus, setLocalInfluencerStatus] = useState(influencerStatus);
 
   // Update local status when prop changes
@@ -93,17 +95,30 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
   }, [influencerId]);
 
   const createWorkflow = async () => {
+    // Validate price before creating
+    if (initialPrice === '') {
+      setPriceError('O valor é obrigatório (pode ser 0€ para comissão apenas)');
+      return;
+    }
+    const price = parseFloat(initialPrice);
+    if (isNaN(price) || price < 0) {
+      setPriceError('Insira um valor válido (≥ 0)');
+      return;
+    }
+    setPriceError(null);
+
     try {
       setIsCreating(true);
       const res = await fetch('/api/partnerships/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ influencerId }),
+        body: JSON.stringify({ influencerId, agreedPrice: price }),
       });
       
       const data = await res.json();
       if (data.success) {
         setWorkflow(data.data);
+        setInitialPrice(''); // Reset
       } else {
         setError(data.error);
       }
@@ -316,6 +331,30 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
           <p className="text-sm text-blue-700 mb-4">
             Email enviado. Se o influencer responder positivamente, inicia a parceria.
           </p>
+
+          {/* Price input inline */}
+          <div className="max-w-xs mx-auto mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1 text-left">
+              Valor da Proposta (€) <span className="text-red-500">*</span>
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">€</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={initialPrice}
+                onChange={(e) => { setInitialPrice(e.target.value); setPriceError(null); }}
+                placeholder="0.00"
+                className={`w-full pl-8 pr-4 py-2 border ${priceError ? 'border-red-300' : 'border-gray-300'} rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+              />
+            </div>
+            <p className="text-xs text-gray-500 mt-1 text-left">Pode ser 0€ para parcerias apenas com comissão</p>
+            {priceError && (
+              <p className="text-xs text-red-600 mt-1 text-left">{priceError}</p>
+            )}
+          </div>
+
           <button
             onClick={createWorkflow}
             disabled={isCreating}
@@ -341,6 +380,30 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
         <p className="text-sm text-gray-500 mb-4">
           Inicia uma nova parceria com {influencerName}
         </p>
+
+        {/* Price input inline */}
+        <div className="max-w-xs mx-auto mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1 text-left">
+            Valor da Proposta (€) <span className="text-red-500">*</span>
+          </label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">€</span>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={initialPrice}
+              onChange={(e) => { setInitialPrice(e.target.value); setPriceError(null); }}
+              placeholder="0.00"
+              className={`w-full pl-8 pr-4 py-2 border ${priceError ? 'border-red-300' : 'border-gray-300'} rounded-lg text-sm focus:ring-2 focus:ring-black focus:border-black`}
+            />
+          </div>
+          <p className="text-xs text-gray-500 mt-1 text-left">Pode ser 0€ para parcerias apenas com comissão</p>
+          {priceError && (
+            <p className="text-xs text-red-600 mt-1 text-left">{priceError}</p>
+          )}
+        </div>
+
         <button
           onClick={createWorkflow}
           disabled={isCreating}
@@ -442,6 +505,26 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
                 {workflow.productSuggestion1 || 'Em falta'}
               </p>
             </div>
+
+            {/* Sugestão 2 */}
+            {workflow.productSuggestion2 && (
+              <div className="p-2 bg-white rounded border border-gray-100">
+                <span className="text-gray-500 text-xs">Sugestão de Produto 2:</span>
+                <p className="font-medium text-slate-900 truncate">
+                  {workflow.productSuggestion2}
+                </p>
+              </div>
+            )}
+
+            {/* Sugestão 3 */}
+            {workflow.productSuggestion3 && (
+              <div className="p-2 bg-white rounded border border-gray-100">
+                <span className="text-gray-500 text-xs">Sugestão de Produto 3:</span>
+                <p className="font-medium text-slate-900 truncate">
+                  {workflow.productSuggestion3}
+                </p>
+              </div>
+            )}
 
             {/* Step 3 - Preparing */}
             <div className="p-2 bg-white rounded border border-gray-100">
