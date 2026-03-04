@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 
-// POST /api/partnerships/[id]/restart - Restart partnership (create new workflow)
+// POST /api/partnerships/[id]/restart - Restart a completed partnership
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -16,6 +17,7 @@ export async function POST(
 
     const { id } = await params;
 
+    // Find the workflow
     const workflow = await prisma.partnershipWorkflow.findUnique({
       where: { id },
       include: {
@@ -27,75 +29,60 @@ export async function POST(
       return NextResponse.json({ error: 'Workflow not found' }, { status: 404 });
     }
 
-    // Can only restart from step 5 or completed workflows
-    if (workflow.currentStep < 5 && workflow.status !== 'COMPLETED') {
+    // Only allow restart if status is COMPLETED or CANCELLED
+    if (workflow.status !== 'COMPLETED' && workflow.status !== 'CANCELLED') {
       return NextResponse.json(
-        { error: 'Can only restart from step 5 or completed partnerships' },
+        { error: 'Can only restart completed or cancelled partnerships' },
         { status: 400 }
       );
     }
 
-    // Mark current workflow as restarted
+    // Mark current workflow as RESTARTED
     await prisma.partnershipWorkflow.update({
       where: { id },
-      data: { status: 'RESTARTED' },
+      data: {
+        status: 'RESTARTED',
+        isRestarted: true,
+      },
     });
 
-    // Create new workflow with copied contact info from step 1
+    // Create new workflow starting from step 1
     const newWorkflow = await prisma.partnershipWorkflow.create({
       data: {
         influencerId: workflow.influencerId,
         currentStep: 1,
         status: 'ACTIVE',
-        isRestarted: true,
-        previousWorkflowId: workflow.id,
-        // Copy contact info from previous workflow
+        agreedPrice: workflow.agreedPrice, // Keep the agreed price
         contactEmail: workflow.contactEmail,
         contactInstagram: workflow.contactInstagram,
         contactWhatsapp: workflow.contactWhatsapp,
-        // Reset all other fields
-        agreedPrice: null,
-        shippingAddress: null,
-        productSuggestion1: null,
-        productSuggestion2: null,
-        productSuggestion3: null,
-        selectedProductUrl: null,
-        designProofUrl: null,
-        designNotes: null,
-        contractSigned: false,
-        contractUrl: null,
-        trackingUrl: null,
-        couponCode: null,
-      },
-      include: {
-        influencer: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            instagramHandle: true,
-            avatarUrl: true,
-          },
-        },
+        isRestarted: false,
+        previousWorkflowId: workflow.id,
       },
     });
 
-    // Reset influencer status to ANALYZING
+    // Update influencer status back to ANALYZING
     await prisma.influencer.update({
       where: { id: workflow.influencerId },
       data: { status: 'ANALYZING' },
+    });
+
+    logger.info('[PARTNERSHIP] Restarted workflow', {
+      oldWorkflowId: id,
+      newWorkflowId: newWorkflow.id,
+      influencerId: workflow.influencerId,
     });
 
     return NextResponse.json({
       success: true,
       message: 'Partnership restarted successfully',
       data: newWorkflow,
-      previousWorkflowId: workflow.id,
     });
+
   } catch (error) {
-    console.error('Error restarting workflow:', error);
+    logger.error('[PARTNERSHIP] Error restarting workflow', error);
     return NextResponse.json(
-      { error: 'Failed to restart workflow' },
+      { error: 'Failed to restart partnership' },
       { status: 500 }
     );
   }

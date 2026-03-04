@@ -433,14 +433,15 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
             Progresso da Parceria
           </h3>
           <div className="flex gap-2">
-            {currentStep === 5 && !isCompleted && !isCancelled && (
+            {/* Restart button - available at step 5 or when completed/cancelled */}
+            {(currentStep === 5 || isCompleted || isCancelled) && (
               <button
                 onClick={restartWorkflow}
                 disabled={isRestarting}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50"
               >
                 <RefreshCcw className="h-3.5 w-3.5" />
-                {isRestarting ? 'A recomeçar...' : 'Recomeçar'}
+                {isRestarting ? 'A recomeçar...' : 'Reiniciar Parceria'}
               </button>
             )}
             {!isCancelled && (

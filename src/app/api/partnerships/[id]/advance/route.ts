@@ -184,6 +184,19 @@ export async function POST(
       });
     }
 
+    // Get product name from URL for step 3 email
+    let productName = '';
+    if (currentStep === 3 && workflow.selectedProductUrl) {
+      try {
+        // Extract product name from URL or fetch from Shopify
+        const urlParts = workflow.selectedProductUrl.split('/');
+        const lastPart = urlParts[urlParts.length - 1] || urlParts[urlParts.length - 2];
+        productName = lastPart?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '';
+      } catch (e) {
+        productName = 'Produto Selecionado';
+      }
+    }
+
     // Send email for current step
     const variables: Record<string, any> = {
       nome: workflow.influencer.name,
@@ -196,6 +209,7 @@ export async function POST(
       sugestao2: workflow.productSuggestion2,
       sugestao3: workflow.productSuggestion3,
       url_produto: workflow.selectedProductUrl,
+      nome_produto: productName,
       url_contrato: workflow.contractUrl,
       tracking_url: workflow.trackingUrl,
       cupom: workflow.couponCode,

@@ -210,7 +210,8 @@ export default function PortalPage() {
       case 'CONTRACT_PENDING':
         return 4;
       case 'SHIPPED':
-        return 5;
+      case 'COMPLETED':
+        return 5; // Show step 5 for both SHIPPED and COMPLETED
       default:
         return 1;
     }
