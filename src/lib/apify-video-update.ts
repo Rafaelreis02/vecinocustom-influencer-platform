@@ -96,7 +96,7 @@ async function scrapeInstagramVideo(videoUrl: string): Promise<VideoMetrics | nu
 
 /**
  * Batch update videos with rate limiting
- * Process max 50 videos per run to avoid rate limits
+ * Process max 15 videos per run to avoid rate limits
  */
 export async function batchUpdateVideoMetrics(videoUrls: string[]): Promise<Map<string, VideoMetrics>> {
   const results = new Map<string, VideoMetrics>();

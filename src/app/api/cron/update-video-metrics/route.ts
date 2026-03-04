@@ -35,12 +35,12 @@ export async function GET(request: Request) {
         campaignId: true,
       },
       orderBy: {
-        updatedAt: 'asc', // Update least recently updated first
+        createdAt: 'desc', // Most recent videos first
       },
-      take: 50, // Max 50 per run to avoid rate limits
+      take: 15, // Max 15 per run
     });
 
-    logger.info(`[CRON] Found ${videos.length} videos to update`);
+    logger.info(`[CRON] Found ${videos.length} videos to update (max 15, most recent first)`);
 
     if (videos.length === 0) {
       return NextResponse.json({ 
