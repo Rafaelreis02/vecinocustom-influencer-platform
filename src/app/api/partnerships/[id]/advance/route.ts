@@ -211,24 +211,67 @@ export async function POST(
         }
       }
 
-      // Prepare variables for email
+      // Prepare variables for email - different for each step
       const variables: Record<string, any> = {
         nome: workflow.influencer.name,
         valor: workflow.agreedPrice?.toString() || '0',
         email: workflow.contactEmail,
         instagram: workflow.contactInstagram,
         whatsapp: workflow.contactWhatsapp,
-        morada: workflow.shippingAddress,
-        sugestao1: workflow.productSuggestion1,
-        sugestao2: workflow.productSuggestion2,
-        sugestao3: workflow.productSuggestion3,
-        url_produto: workflow.selectedProductUrl,
-        nome_produto: productName,
-        url_contrato: workflow.contractUrl,
-        tracking_url: workflow.trackingUrl,
-        cupom: workflow.couponCode,
         portalToken: workflow.influencer.portalToken,
       };
+
+      // Step-specific variables
+      if (currentStep === 1) {
+        // Step 1: Initial proposal - NO coupon code yet, just mention benefits
+        variables.cupom = ''; // No coupon code in step 1
+        variables.morada = '';
+        variables.url_produto = '';
+        variables.nome_produto = '';
+        variables.url_contrato = '';
+        variables.tracking_url = '';
+      } else if (currentStep === 2) {
+        // Step 2: Agreement made - still no coupon, asks for shipping info
+        variables.cupom = ''; // No coupon code yet
+        variables.morada = workflow.shippingAddress || '';
+        variables.sugestao1 = workflow.productSuggestion1 || '';
+        variables.sugestao2 = workflow.productSuggestion2 || '';
+        variables.sugestao3 = workflow.productSuggestion3 || '';
+        variables.url_produto = '';
+        variables.nome_produto = '';
+        variables.url_contrato = '';
+        variables.tracking_url = '';
+      } else if (currentStep === 3) {
+        // Step 3: Product selected
+        variables.cupom = workflow.couponCode || '';
+        variables.morada = workflow.shippingAddress || '';
+        variables.url_produto = workflow.selectedProductUrl || '';
+        variables.nome_produto = productName;
+        variables.sugestao1 = workflow.productSuggestion1 || '';
+        variables.sugestao2 = workflow.productSuggestion2 || '';
+        variables.sugestao3 = workflow.productSuggestion3 || '';
+        variables.url_contrato = '';
+        variables.tracking_url = '';
+      } else if (currentStep === 4) {
+        // Step 4: Contract pending
+        variables.cupom = workflow.couponCode || '';
+        variables.morada = workflow.shippingAddress || '';
+        variables.url_produto = workflow.selectedProductUrl || '';
+        variables.nome_produto = productName;
+        variables.url_contrato = workflow.contractUrl || '';
+        variables.tracking_url = '';
+      } else if (currentStep === 6) {
+        // Step 6: DELIVERED - ALL INFO including tracking
+        variables.cupom = workflow.couponCode || '';
+        variables.morada = workflow.shippingAddress || '';
+        variables.url_produto = workflow.selectedProductUrl || '';
+        variables.nome_produto = productName;
+        variables.url_contrato = workflow.contractUrl || '';
+        variables.tracking_url = workflow.trackingUrl || '';
+        variables.sugestao1 = workflow.productSuggestion1 || '';
+        variables.sugestao2 = workflow.productSuggestion2 || '';
+        variables.sugestao3 = workflow.productSuggestion3 || '';
+      }
 
       emailResult = await sendWorkflowEmail(
         id,
