@@ -273,12 +273,20 @@ export async function POST(
         variables.sugestao3 = workflow.productSuggestion3 || '';
       }
 
+      // Log which template will be used
+      const hasValue = (workflow.agreedPrice || 0) > 0;
+      logger.info(`[WORKFLOW] Step ${currentStep} - hasValue=${hasValue}, agreedPrice=${workflow.agreedPrice}`);
+
       emailResult = await sendWorkflowEmail(
         id,
         currentStep,
         variables,
         session.user.id || 'system'
       );
+
+      if (!emailResult.success) {
+        logger.error(`[WORKFLOW] Email failed for step ${currentStep}:`, emailResult.error);
+      }
     }
 
     // Advance to next step

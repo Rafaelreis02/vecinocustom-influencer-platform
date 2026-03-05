@@ -108,30 +108,48 @@ export async function sendWorkflowEmail(
 
 /**
  * Get email template for a specific step
+ * Prioritizes WITH_VALUE/NO_VALUE templates based on agreedPrice
  */
-async function getEmailTemplate(step: number, hasValue: boolean) {
+async function getEmailTemplate(step: number, hasValue: boolean): Promise<any> {
   // Try specific template first (with/without value)
   const specificKey = hasValue
     ? `STEP_${step}_WITH_VALUE`
     : `STEP_${step}_NO_VALUE`;
 
+  logger.info(`[EMAIL] Looking for template: ${specificKey} (step=${step}, hasValue=${hasValue})`);
+
   let template = await prisma.emailTemplate.findUnique({
     where: { key: specificKey },
   });
 
-  // Fallback to generic template
-  if (!template) {
-    const genericKey = `STEP_${step}`;
-    template = await prisma.emailTemplate.findUnique({
-      where: { key: genericKey },
-    });
+  if (template) {
+    logger.info(`[EMAIL] Found specific template: ${specificKey}`);
+    return template;
   }
 
-  // Fallback to any template for this step
-  if (!template) {
-    template = await prisma.emailTemplate.findFirst({
-      where: { step, isActive: true },
-    });
+  // Fallback to generic template (for backwards compatibility)
+  const genericKey = `STEP_${step}`;
+  logger.info(`[EMAIL] Specific template not found, trying: ${genericKey}`);
+  
+  template = await prisma.emailTemplate.findUnique({
+    where: { key: genericKey },
+  });
+
+  if (template) {
+    logger.info(`[EMAIL] Found generic template: ${genericKey}`);
+    return template;
+  }
+
+  // Last resort: any active template for this step
+  logger.warn(`[EMAIL] No specific template found, searching any for step ${step}`);
+  template = await prisma.emailTemplate.findFirst({
+    where: { step, isActive: true },
+  });
+
+  if (template) {
+    logger.info(`[EMAIL] Found fallback template: ${template.key}`);
+  } else {
+    logger.error(`[EMAIL] NO TEMPLATE FOUND for step ${step}`);
   }
 
   return template;
