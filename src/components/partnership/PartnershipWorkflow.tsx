@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Loader2, CheckCircle2, Circle, Lock, ChevronRight, RefreshCcw, X, Check, Send } from 'lucide-react';
+import { Loader2, CheckCircle2, Circle, Lock, ChevronRight, RefreshCcw, X, Check, Send, Eye } from 'lucide-react';
 import { PartnershipStep1 } from './PartnershipStep1';
 import { PartnershipStep2 } from './PartnershipStep2';
 import { PartnershipStep3 } from './PartnershipStep3';
@@ -66,6 +66,11 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
   const [counterPrice, setCounterPrice] = useState('');
   const [initialPrice, setInitialPrice] = useState('');
   const [priceError, setPriceError] = useState<string | null>(null);
+  
+  // Email preview states
+  const [showEmailPreview, setShowEmailPreview] = useState(false);
+  const [emailPreview, setEmailPreview] = useState<any>(null);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [localInfluencerStatus, setLocalInfluencerStatus] = useState(influencerStatus);
 
   // Update local status when prop changes
@@ -130,6 +135,29 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
     }
   };
 
+  const loadEmailPreview = async () => {
+    if (!workflow) return;
+    
+    try {
+      setIsLoadingPreview(true);
+      const res = await fetch(`/api/partnerships/${workflow.id}/preview-email`, {
+        method: 'POST',
+      });
+      
+      const data = await res.json();
+      if (data.success) {
+        setEmailPreview(data.data);
+        setShowEmailPreview(true);
+      } else {
+        setError(data.error || 'Failed to load email preview');
+      }
+    } catch (err) {
+      setError('Failed to load email preview');
+    } finally {
+      setIsLoadingPreview(false);
+    }
+  };
+
   const advanceStep = async () => {
     if (!workflow) return;
     
@@ -144,6 +172,8 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
       const data = await res.json();
       if (data.success) {
         setWorkflow(data.data);
+        setShowEmailPreview(false);
+        setEmailPreview(null);
       } else {
         setAdvanceError(data.error || data.missing?.join(', '));
       }
@@ -751,9 +781,26 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
           />
         )}
 
-        {/* Advance Button - Only for steps 3 and 5 where admin can advance */}
-        {!isCompleted && !isCancelled && (currentStep === 3 || currentStep === 5) && (
-          <div className="mt-6 flex justify-end">
+        {/* Preview & Advance Buttons - Only for steps 3, 5, 6 where admin can advance */}
+        {!isCompleted && !isCancelled && (currentStep === 3 || currentStep === 5 || currentStep === 6) && (
+          <div className="mt-6 flex justify-end gap-3">
+            <button
+              onClick={loadEmailPreview}
+              disabled={isAdvancing || isLoadingPreview}
+              className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
+              {isLoadingPreview ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  A carregar...
+                </>
+              ) : (
+                <>
+                  <Eye className="h-4 w-4" />
+                  Ver Email
+                </>
+              )}
+            </button>
             <button
               onClick={advanceStep}
               disabled={isAdvancing}
@@ -763,6 +810,11 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
                   A processar...
+                </>
+              ) : currentStep === 6 ? (
+                <>
+                  <CheckCircle2 className="h-4 w-4" />
+                  Completar Parceria
                 </>
               ) : currentStep === 5 ? (
                 <>
@@ -780,7 +832,7 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
         )}
 
         {/* Info message for steps where admin cannot advance */}
-        {!isCompleted && !isCancelled && currentStep !== 3 && currentStep !== 5 && (
+        {!isCompleted && !isCancelled && currentStep !== 3 && currentStep !== 5 && currentStep !== 6 && (
           <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="text-sm text-blue-700">
               <span className="font-medium">ℹ️ Aguardando influencer:</span> Este step só pode ser avançado pelo influencer através do portal de parceria.
@@ -788,6 +840,84 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
           </div>
         )}
       </div>
+
+      {/* Email Preview Modal */}
+      {showEmailPreview && emailPreview && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
+              <div>
+                <h3 className="font-semibold text-gray-900">Preview do Email</h3>
+                <p className="text-xs text-gray-500">
+                  Step {emailPreview.step}: {emailPreview.stepName} • {' '}
+                  {emailPreview.hasValue ? 'Com valor fixo' : 'Apenas comissão'} • {' '}
+                  Template: {emailPreview.templateKey}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowEmailPreview(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="p-4 overflow-y-auto flex-1">
+              <div className="mb-4">
+                <label className="text-xs font-semibold text-gray-500 uppercase">Assunto</label>
+                <p className="text-sm font-medium text-gray-900 bg-gray-50 p-2 rounded mt-1">
+                  {emailPreview.subject}
+                </p>
+              </div>
+              
+              <div>
+                <label className="text-xs font-semibold text-gray-500 uppercase">Corpo do Email</label>
+                <div className="mt-1 p-4 bg-white border border-gray-200 rounded text-sm text-gray-800 whitespace-pre-wrap font-mono">
+                  {emailPreview.body}
+                </div>
+              </div>
+
+              {/* Variables used */}
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                <label className="text-xs font-semibold text-blue-700 uppercase">Variáveis Usadas</label>
+                <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                  {Object.entries(emailPreview.variables).map(([key, value]) => (
+                    <div key={key} className="flex gap-2">
+                      <span className="text-blue-600 font-mono">{{key}}:</span>
+                      <span className="text-blue-800 truncate" title={String(value)}>
+                        {String(value) || '(vazio)'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
+              <button
+                onClick={() => setShowEmailPreview(false)}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-100"
+              >
+                Fechar
+              </button>
+              <button
+                onClick={advanceStep}
+                disabled={isAdvancing}
+                className="px-4 py-2 bg-black text-white rounded-lg font-medium hover:bg-gray-800 disabled:opacity-50"
+              >
+                {isAdvancing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
+                    A enviar...
+                  </>
+                ) : (
+                  'Enviar Email e Avançar'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
