@@ -197,7 +197,14 @@ export default function PortalPage() {
     }
   };
 
-  const getStepFromStatus = (status: string): number => {
+  // Get current step from influencer status
+  // Note: We need to check the workflow currentStep for steps 5 and 6
+  const getStepFromStatus = (status: string, workflowStep?: number): number => {
+    // If we have workflow step info, use it for steps 5+
+    if (workflowStep && workflowStep >= 5) {
+      return workflowStep;
+    }
+    
     switch (status) {
       case 'UNKNOWN':
       case 'COUNTER_PROPOSAL':
@@ -210,8 +217,9 @@ export default function PortalPage() {
       case 'CONTRACT_PENDING':
         return 4;
       case 'SHIPPED':
+        return 5; // Step 5: Preparing Shipment (informational)
       case 'COMPLETED':
-        return 5; // Show step 5 for both SHIPPED and COMPLETED
+        return 6; // Step 6: Delivered (all info shown)
       default:
         return 1;
     }
@@ -301,7 +309,8 @@ export default function PortalPage() {
               onNext={() => setCurrentStep(5)}
             />
           )}
-          {currentStep === 5 && <Step5 data={influencerData} />}
+          {currentStep === 5 && <Step5 />}
+          {currentStep === 6 && <Step6 data={influencerData} />}
         </div>
 
         {/* Exit Portal Link */}
@@ -1145,13 +1154,39 @@ function Step4({ data, token, onNext }: StepProps) {
   );
 }
 
-function Step5({ data }: { data: InfluencerData }) {
+// Step 5: Preparing Shipment (Informational only)
+function Step5() {
   return (
     <div>
-      <h2 className="text-xl font-bold text-[#0E1E37] mb-6 uppercase">Shipped</h2>
+      <h2 className="text-xl font-bold text-[#0E1E37] mb-6 uppercase">Preparing Shipment</h2>
       
-      <div className="border-l-4 border-[#0E1E37] bg-white rounded-lg p-6 shadow-sm">
-        <h3 className="text-lg font-bold text-[#0E1E37] mb-2">On its way</h3>
+      <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-6 text-center">
+        <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+          </svg>
+        </div>
+        <h3 className="text-lg font-bold text-blue-900 mb-3">Preparing Your Order</h3>
+        <p className="text-sm text-blue-700 mb-4">
+          We're preparing your personalized piece for shipment. 
+          As soon as it's ready and shipped, we'll update you with the tracking information.
+        </p>
+        <div className="text-xs text-blue-600 bg-blue-100 rounded-lg p-3">
+          You'll receive an email notification when your order is on its way!
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Step 6: Delivered (All information shown)
+function Step6({ data }: { data: InfluencerData }) {
+  return (
+    <div>
+      <h2 className="text-xl font-bold text-[#0E1E37] mb-6 uppercase">Delivered</h2>
+      
+      <div className="border-l-4 border-green-500 bg-white rounded-lg p-6 shadow-sm">
+        <h3 className="text-lg font-bold text-green-700 mb-2">On its way!</h3>
         <p className="text-sm text-gray-600 mb-6">
           Your order has been shipped and will be with you shortly.
         </p>
@@ -1161,8 +1196,9 @@ function Step5({ data }: { data: InfluencerData }) {
           {data.couponCode && (
             <div>
               <p className="text-xs font-semibold text-gray-600 mb-2 uppercase">Your Coupon Code</p>
-              <div className="p-3 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 text-center">
-                <p className="text-lg font-mono font-bold text-[#0E1E37]">{data.couponCode}</p>
+              <div className="p-3 border-2 border-dashed border-green-300 rounded-lg bg-green-50 text-center">
+                <p className="text-lg font-mono font-bold text-green-700">{data.couponCode}</p>
+                <p className="text-xs text-green-600 mt-1">10% off for your followers + 20% commission for you</p>
               </div>
             </div>
           )}
@@ -1178,7 +1214,7 @@ function Step5({ data }: { data: InfluencerData }) {
           {/* Product Link */}
           {data.chosenProduct && (
             <div>
-              <p className="text-xs font-semibold text-gray-600 mb-2 uppercase">Product</p>
+              <p className="text-xs font-semibold text-gray-600 mb-2 uppercase">Your Product</p>
               <a
                 href={data.chosenProduct}
                 target="_blank"
@@ -1197,7 +1233,7 @@ function Step5({ data }: { data: InfluencerData }) {
                 href={data.trackingUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block w-full py-4 bg-[#0E1E37] text-white text-center font-bold rounded-lg hover:bg-[#1a2f4f] transition uppercase"
+                className="block w-full py-4 bg-green-600 text-white text-center font-bold rounded-lg hover:bg-green-700 transition uppercase"
               >
                 Track Order
               </a>

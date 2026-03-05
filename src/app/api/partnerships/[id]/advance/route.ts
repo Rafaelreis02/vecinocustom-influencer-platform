@@ -53,13 +53,22 @@ const STEP_CONFIG: Record<number, {
     canAdminAdvance: false, // Influencer avança via portal
   },
   5: {
-    name: 'Shipped',
+    name: 'Preparing Shipment',
+    status: 'SHIPPED',
+    requiredFields: [],
+    adminRequiredFields: [], // Step 5 é informativo apenas
+    nextStep: 6,
+    nextStatus: 'SHIPPED', // Mantém status SHIPPED
+    canAdminAdvance: true, // NÓS avançamos quando temos tracking
+  },
+  6: {
+    name: 'Delivered',
     status: 'SHIPPED',
     requiredFields: ['trackingUrl', 'couponCode'],
     adminRequiredFields: ['trackingUrl', 'couponCode'], // Nós inserimos tracking + cupom
     nextStep: null,
     nextStatus: 'COMPLETED',
-    canAdminAdvance: true, // NÓS avançamos para completar
+    canAdminAdvance: true, // NÓS avançamos para reiniciar
   },
 };
 
@@ -184,44 +193,50 @@ export async function POST(
       });
     }
 
-    // Get product name from URL for step 3 email
-    let productName = '';
-    if (currentStep === 3 && workflow.selectedProductUrl) {
-      try {
-        // Extract product name from URL or fetch from Shopify
-        const urlParts = workflow.selectedProductUrl.split('/');
-        const lastPart = urlParts[urlParts.length - 1] || urlParts[urlParts.length - 2];
-        productName = lastPart?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '';
-      } catch (e) {
-        productName = 'Produto Selecionado';
+    // Send email only for steps that need it
+    // Step 5 is informational only - no email sent
+    let emailResult = { success: true, error: undefined };
+    
+    if (currentStep !== 5) {
+      // Get product name from URL for step 3 or 6 email
+      let productName = '';
+      if ((currentStep === 3 || currentStep === 6) && workflow.selectedProductUrl) {
+        try {
+          // Extract product name from URL or fetch from Shopify
+          const urlParts = workflow.selectedProductUrl.split('/');
+          const lastPart = urlParts[urlParts.length - 1] || urlParts[urlParts.length - 2];
+          productName = lastPart?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '';
+        } catch (e) {
+          productName = 'Produto Selecionado';
+        }
       }
+
+      // Prepare variables for email
+      const variables: Record<string, any> = {
+        nome: workflow.influencer.name,
+        valor: workflow.agreedPrice?.toString() || '0',
+        email: workflow.contactEmail,
+        instagram: workflow.contactInstagram,
+        whatsapp: workflow.contactWhatsapp,
+        morada: workflow.shippingAddress,
+        sugestao1: workflow.productSuggestion1,
+        sugestao2: workflow.productSuggestion2,
+        sugestao3: workflow.productSuggestion3,
+        url_produto: workflow.selectedProductUrl,
+        nome_produto: productName,
+        url_contrato: workflow.contractUrl,
+        tracking_url: workflow.trackingUrl,
+        cupom: workflow.couponCode,
+        portalToken: workflow.influencer.portalToken,
+      };
+
+      emailResult = await sendWorkflowEmail(
+        id,
+        currentStep,
+        variables,
+        session.user.id || 'system'
+      );
     }
-
-    // Send email for current step
-    const variables: Record<string, any> = {
-      nome: workflow.influencer.name,
-      valor: workflow.agreedPrice?.toString() || '0',
-      email: workflow.contactEmail,
-      instagram: workflow.contactInstagram,
-      whatsapp: workflow.contactWhatsapp,
-      morada: workflow.shippingAddress,
-      sugestao1: workflow.productSuggestion1,
-      sugestao2: workflow.productSuggestion2,
-      sugestao3: workflow.productSuggestion3,
-      url_produto: workflow.selectedProductUrl,
-      nome_produto: productName,
-      url_contrato: workflow.contractUrl,
-      tracking_url: workflow.trackingUrl,
-      cupom: workflow.couponCode,
-      portalToken: workflow.influencer.portalToken,
-    };
-
-    const emailResult = await sendWorkflowEmail(
-      id,
-      currentStep,
-      variables,
-      session.user.id || 'system'
-    );
 
     // Advance to next step
     const now = new Date();

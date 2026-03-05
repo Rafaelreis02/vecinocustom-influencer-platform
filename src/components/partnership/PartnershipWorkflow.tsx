@@ -47,7 +47,8 @@ const STEPS = [
   { number: 2, name: 'Shipping', status: 'AGREED' },
   { number: 3, name: 'Preparing', status: 'PRODUCT_SELECTION' },
   { number: 4, name: 'Contract', status: 'CONTRACT_PENDING' },
-  { number: 5, name: 'Shipped', status: 'SHIPPED' },
+  { number: 5, name: 'Preparing Shipment', status: 'SHIPPED' },
+  { number: 6, name: 'Delivered', status: 'SHIPPED' },
 ];
 
 export function PartnershipWorkflow({ influencerId, influencerName, influencerHandle, influencerStatus, portalUrl }: PartnershipWorkflowProps) {
@@ -433,8 +434,8 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
             Progresso da Parceria
           </h3>
           <div className="flex gap-2">
-            {/* Restart button - available at step 5 or when completed/cancelled */}
-            {(currentStep === 5 || isCompleted || isCancelled) && (
+            {/* Restart button - available at step 6 (delivered) or when completed/cancelled */}
+            {(currentStep === 6 || isCompleted || isCancelled) && (
               <button
                 onClick={restartWorkflow}
                 disabled={isRestarting}
@@ -444,7 +445,8 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
                 {isRestarting ? 'A recomeçar...' : 'Reiniciar Parceria'}
               </button>
             )}
-            {!isCancelled && (
+            {/* Advance button - only show if not at step 6 and not completed/cancelled */}
+            {currentStep < 6 && !isCompleted && !isCancelled && (
               <button
                 onClick={cancelWorkflow}
                 disabled={isCancelling}
@@ -466,7 +468,7 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
           }`}>
             {isCompleted ? 'Concluída' :
              isCancelled ? 'Cancelada' :
-             `Step ${currentStep} de 5: ${STEPS[currentStep - 1]?.name}`}
+             `Step ${currentStep} de 6: ${STEPS[currentStep - 1]?.name || 'Delivered'}`}
           </span>
         </div>
 

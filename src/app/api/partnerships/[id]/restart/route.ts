@@ -46,13 +46,14 @@ export async function POST(
       },
     });
 
-    // Create new workflow starting from step 1
+    // Create new workflow starting from step 1 with COUNTER_PROPOSAL status
+    // agreedPrice is null to force new price negotiation
     const newWorkflow = await prisma.partnershipWorkflow.create({
       data: {
         influencerId: workflow.influencerId,
         currentStep: 1,
         status: 'ACTIVE',
-        agreedPrice: workflow.agreedPrice, // Keep the agreed price
+        agreedPrice: null, // NULL - needs new price input
         contactEmail: workflow.contactEmail,
         contactInstagram: workflow.contactInstagram,
         contactWhatsapp: workflow.contactWhatsapp,
@@ -61,10 +62,10 @@ export async function POST(
       },
     });
 
-    // Update influencer status back to ANALYZING
+    // Update influencer status to COUNTER_PROPOSAL for new negotiation
     await prisma.influencer.update({
       where: { id: workflow.influencerId },
-      data: { status: 'ANALYZING' },
+      data: { status: 'COUNTER_PROPOSAL' },
     });
 
     logger.info('[PARTNERSHIP] Restarted workflow', {
