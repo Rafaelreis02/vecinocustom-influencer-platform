@@ -41,35 +41,53 @@ const STEP_CONFIG: Record<number, {
     requiredFields: ['selectedProductUrl'],
     adminRequiredFields: ['selectedProductUrl'], // Nós inserimos produto
     nextStep: 4,
-    nextStatus: 'CONTRACT_PENDING',
-    canAdminAdvance: true, // NÓS avançamos
+    nextStatus: 'DESIGN_REVIEW', // NOVO status
+    canAdminAdvance: true, // NÓS avançamos (enviamos email pedindo foto)
   },
   4: {
+    name: 'Design Review', // NOVO STEP - Aprovar Design
+    status: 'DESIGN_REVIEW',
+    requiredFields: ['designApproved'],
+    adminRequiredFields: [], // Nada obrigatório - aguardamos aprovação do influencer
+    nextStep: 5,
+    nextStatus: 'CONTRACT_PENDING',
+    canAdminAdvance: false, // Influencer avança quando aprova (ou pede revisão)
+  },
+  5: {
     name: 'Contract',
     status: 'CONTRACT_PENDING',
     requiredFields: ['contractSigned'],
     adminRequiredFields: [], // Nada obrigatório por nós
-    nextStep: 5,
+    nextStep: 6,
     nextStatus: 'SHIPPED',
-    canAdminAdvance: false, // Influencer avança via portal
+    canAdminAdvance: false, // Influencer avança via portal (aceita contrato)
   },
-  5: {
+  6: {
     name: 'Preparing Shipment',
     status: 'SHIPPED',
     requiredFields: [],
-    adminRequiredFields: [], // Step 5 é informativo apenas
-    nextStep: 6,
+    adminRequiredFields: [], // Step 6 é informativo apenas
+    nextStep: 7,
     nextStatus: 'SHIPPED', // Mantém status SHIPPED
     canAdminAdvance: true, // NÓS avançamos quando temos tracking
   },
-  6: {
+  7: {
     name: 'Delivered',
     status: 'SHIPPED',
     requiredFields: ['trackingUrl', 'couponCode'],
     adminRequiredFields: ['trackingUrl', 'couponCode'], // Nós inserimos tracking + cupom
-    nextStep: null,
+    nextStep: 8,
     nextStatus: 'COMPLETED',
-    canAdminAdvance: true, // NÓS avançamos para reiniciar
+    canAdminAdvance: true, // NÓS avançamos (completa parceria)
+  },
+  8: {
+    name: 'Completed',
+    status: 'COMPLETED',
+    requiredFields: [],
+    adminRequiredFields: [],
+    nextStep: null,
+    nextStatus: null,
+    canAdminAdvance: true, // NÓS podemos reiniciar
   },
 };
 

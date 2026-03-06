@@ -597,53 +597,60 @@ model PartnershipWorkflow {
   id              String   @id @default(cuid())
   influencerId    String
   influencer      Influencer @relation(fields: [influencerId], references: [id])
-  
-  // Steps (1-5)
-  currentStep     Int      @default(1) // 1=Partnership, 2=Shipping, 3=Preparing, 4=Contract, 5=Shipped
-  
+
+  // Steps (1-8) - NOVO: Step 4 = Design Review, Steps renumbered
+  currentStep     Int      @default(1) // 1=Partnership, 2=Shipping, 3=Preparing, 4=Design Review, 5=Contract, 6=Preparing Shipment, 7=Delivered, 8=Completed
+
   // Step 1: Partnership (ANALYZING/COUNTER_PROPOSAL)
   agreedPrice        Float?
   contactEmail       String?
   contactInstagram   String?
   contactWhatsapp    String?
   step1CompletedAt   DateTime?
-  
+
   // Step 2: Shipping (AGREED)
   shippingAddress    String?
   productSuggestion1 String?
   productSuggestion2 String?
   productSuggestion3 String?
   step2CompletedAt   DateTime?
-  
+
   // Step 3: Preparing (PRODUCT_SELECTION)
   selectedProductUrl String?
-  designProofUrl     String?
-  designNotes        String?
   step3CompletedAt   DateTime?
-  
-  // Step 4: Contract (CONTRACT_PENDING)
+
+  // Step 4: Design Review (NOVO - Aprovar Design)
+  designApproved     Boolean  @default(false)
+  designRevisionCount Int     @default(0)
+  step4CompletedAt   DateTime?
+
+  // Step 5: Contract (CONTRACT_PENDING) - antigo Step 4
   contractSigned     Boolean  @default(false)
   contractUrl        String?
-  step4CompletedAt   DateTime?
-  
-  // Step 5: Shipped (SHIPPED)
+  step5CompletedAt   DateTime?
+
+  // Step 6: Preparing Shipment (SHIPPED) - antigo Step 5
   trackingUrl        String?
   couponCode         String?
-  step5CompletedAt   DateTime?
-  
+  step6CompletedAt   DateTime?
+
+  // Step 7: Delivered (COMPLETED) - antigo Step 6
+  step7CompletedAt   DateTime?
+
   // Status
   status             PartnershipStatus @default(ACTIVE)
   isRestarted        Boolean  @default(false)
   previousWorkflowId String?
-  
+
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
-  
+
   // Relations
   emails             PartnershipEmail[]
+  designMessages     DesignMessage[]
   previousWorkflow   PartnershipWorkflow? @relation("WorkflowRestart", fields: [previousWorkflowId], references: [id])
   restartedWorkflows PartnershipWorkflow[] @relation("WorkflowRestart")
-  
+
   @@index([influencerId])
   @@index([status])
   @@index([currentStep])
@@ -655,6 +662,39 @@ enum PartnershipStatus {
   COMPLETED
   CANCELLED
   RESTARTED
+}
+
+// ============================================
+// DESIGN MESSAGES - Chat para aprovação de design (NOVO)
+// ============================================
+
+model DesignMessage {
+  id              String   @id @default(cuid())
+
+  // Relations
+  workflowId      String
+  workflow        PartnershipWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  // Message content
+  content         String   @db.Text
+  imageUrl        String?  // URL da imagem/mockup
+
+  // Sender
+  senderType      SenderType // ADMIN ou INFLUENCER
+
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Index for fast lookup
+  @@index([workflowId])
+  @@index([createdAt])
+  @@map("design_messages")
+}
+
+enum SenderType {
+  ADMIN
+  INFLUENCER
 }
 
 model PartnershipEmail {
