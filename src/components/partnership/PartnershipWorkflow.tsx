@@ -822,15 +822,15 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
                 ) : currentStep === 5 ? (
                   <>
                     <CheckCircle2 className="h-4 w-4" />
-                  Finalizar Parceria
-                </>
-              ) : (
-                <>
-                  Avançar para {STEPS[currentStep]?.name}
-                  <ChevronRight className="h-4 w-4" />
-                </>
-              )}
-            </button>
+                    Finalizar Parceria
+                  </>
+                ) : (
+                  <>
+                    Avançar para {STEPS[currentStep]?.name}
+                    <ChevronRight className="h-4 w-4" />
+                  </>
+                )}
+              </button>
           </div>
         )}
 
