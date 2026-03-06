@@ -47,29 +47,45 @@ export async function POST(
       }
     }
 
-    // Determine which template will be used
-    // Each step has specific naming pattern
-    let specificKey: string;
+    // Get template using same logic as sendWorkflowEmail
+    let template = null;
+    
+    // Step 1: Partnership
     if (currentStep === 1) {
-      specificKey = hasValue ? 'STEP_1_PARTNERSHIP_WITH_VALUE' : 'STEP_1_PARTNERSHIP_NO_VALUE';
-    } else if (currentStep === 2) {
-      specificKey = hasValue ? 'STEP_2_SHIPPING_WITH_VALUE' : 'STEP_2_SHIPPING_NO_VALUE';
-    } else if (currentStep === 3) {
-      specificKey = hasValue ? 'STEP_3_PREPARING_WITH_VALUE' : 'STEP_3_PREPARING_NO_VALUE';
-    } else if (currentStep === 6) {
-      specificKey = hasValue ? 'STEP_6_DELIVERED_WITH_VALUE' : 'STEP_6_DELIVERED_NO_VALUE';
-    } else {
-      specificKey = hasValue ? `STEP_${currentStep}_WITH_VALUE` : `STEP_${currentStep}_NO_VALUE`;
+      const key = hasValue ? 'STEP_1_PARTNERSHIP_WITH_VALUE' : 'STEP_1_PARTNERSHIP_NO_VALUE';
+      template = await prisma.emailTemplate.findUnique({ where: { key } });
     }
-
-    let template = await prisma.emailTemplate.findUnique({
-      where: { key: specificKey },
-    });
-
-    // Fallback to generic
+    // Step 2: Shipping
+    else if (currentStep === 2) {
+      const key = hasValue ? 'STEP_2_SHIPPING_WITH_VALUE' : 'STEP_2_SHIPPING_NO_VALUE';
+      template = await prisma.emailTemplate.findUnique({ where: { key } });
+    }
+    // Step 3: Preparing - try specific, then generic
+    else if (currentStep === 3) {
+      const specificKey = hasValue ? 'STEP_3_PREPARING_WITH_VALUE' : 'STEP_3_PREPARING_NO_VALUE';
+      template = await prisma.emailTemplate.findUnique({ where: { key: specificKey } });
+      if (!template) {
+        template = await prisma.emailTemplate.findUnique({ where: { key: 'STEP_3_PREPARING' } });
+      }
+    }
+    // Step 4: Contract - only generic exists
+    else if (currentStep === 4) {
+      template = await prisma.emailTemplate.findUnique({ where: { key: 'STEP_4_CONTRACT' } });
+    }
+    // Step 5: Shipped - only generic exists
+    else if (currentStep === 5) {
+      template = await prisma.emailTemplate.findUnique({ where: { key: 'STEP_5_SHIPPED' } });
+    }
+    // Step 6: Delivered
+    else if (currentStep === 6) {
+      const key = hasValue ? 'STEP_6_DELIVERED_WITH_VALUE' : 'STEP_6_DELIVERED_NO_VALUE';
+      template = await prisma.emailTemplate.findUnique({ where: { key } });
+    }
+    
+    // Final fallback: any active template for this step
     if (!template) {
-      template = await prisma.emailTemplate.findUnique({
-        where: { key: `STEP_${currentStep}` },
+      template = await prisma.emailTemplate.findFirst({
+        where: { step: currentStep, isActive: true },
       });
     }
 
