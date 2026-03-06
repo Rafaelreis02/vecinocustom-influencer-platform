@@ -13,15 +13,27 @@ export async function GET(
     // Get influencer by token
     const influencer = await prisma.influencer.findUnique({
       where: { portalToken: token },
-      include: { workflow: true },
     });
 
-    if (!influencer || !influencer.workflow) {
-      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    if (!influencer) {
+      return NextResponse.json({ error: 'Influencer not found' }, { status: 404 });
+    }
+
+    // Get active workflow for this influencer
+    const workflow = await prisma.partnershipWorkflow.findFirst({
+      where: { 
+        influencerId: influencer.id,
+        status: 'ACTIVE'
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!workflow) {
+      return NextResponse.json({ error: 'No active workflow found' }, { status: 404 });
     }
 
     const messages = await prisma.designMessage.findMany({
-      where: { workflowId: influencer.workflow.id },
+      where: { workflowId: workflow.id },
       orderBy: { createdAt: 'asc' },
     });
 
