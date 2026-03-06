@@ -111,12 +111,16 @@ export async function sendWorkflowEmail(
  * Prioritizes WITH_VALUE/NO_VALUE templates based on agreedPrice
  */
 async function getEmailTemplate(step: number, hasValue: boolean): Promise<any> {
-  // Steps 1 and 2 have specific naming: STEP_1_PARTNERSHIP_WITH_VALUE
+  // Each step has specific naming pattern
   let specificKey: string;
   if (step === 1) {
     specificKey = hasValue ? 'STEP_1_PARTNERSHIP_WITH_VALUE' : 'STEP_1_PARTNERSHIP_NO_VALUE';
   } else if (step === 2) {
     specificKey = hasValue ? 'STEP_2_SHIPPING_WITH_VALUE' : 'STEP_2_SHIPPING_NO_VALUE';
+  } else if (step === 3) {
+    specificKey = hasValue ? 'STEP_3_PREPARING_WITH_VALUE' : 'STEP_3_PREPARING_NO_VALUE';
+  } else if (step === 6) {
+    specificKey = hasValue ? 'STEP_6_DELIVERED_WITH_VALUE' : 'STEP_6_DELIVERED_NO_VALUE';
   } else {
     specificKey = hasValue ? `STEP_${step}_WITH_VALUE` : `STEP_${step}_NO_VALUE`;
   }

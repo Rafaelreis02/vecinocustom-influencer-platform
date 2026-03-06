@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { serializeBigInt } from '@/lib/serialize';
 import { handleApiError } from '@/lib/api-error';
 import { logger } from '@/lib/logger';
+import { sendWorkflowEmail } from '@/lib/partnership-email';
 
 // GET /api/portal/[token] - Fetch influencer data by portalToken
 export async function GET(
@@ -158,11 +159,61 @@ export async function PUT(
       }
     });
 
+    // Get current influencer data before update (to check status change)
+    const currentInfluencer = await prisma.influencer.findUnique({
+      where: { portalToken: token },
+      include: { workflow: true }
+    });
+    
+    if (!currentInfluencer) {
+      return NextResponse.json({ error: 'Influencer not found' }, { status: 404 });
+    }
+    
+    const oldStatus = currentInfluencer.status;
+
     // Update the influencer
     const updatedInfluencer = await prisma.influencer.update({
       where: { portalToken: token },
       data: updateData,
     });
+    
+    const newStatus = updatedInfluencer.status;
+
+    // Send email when influencer advances to certain steps
+    if (currentInfluencer.workflow && oldStatus !== newStatus) {
+      try {
+        // Step 1 -> Step 2 (ANALYZING -> AGREED): Send Step 2 email
+        if (oldStatus === 'ANALYZING' && newStatus === 'AGREED') {
+          await sendWorkflowEmail(
+            currentInfluencer.workflow.id,
+            2, // Step 2
+            {
+              nome: updatedInfluencer.name,
+              valor: String(updatedInfluencer.agreedPrice || 0),
+              email: updatedInfluencer.email,
+              instagram: updatedInfluencer.instagramHandle || '',
+              whatsapp: updatedInfluencer.phone || '',
+              portalToken: token,
+              morada: updatedInfluencer.shippingAddress || '',
+              sugestao1: updatedInfluencer.productSuggestion1 || '',
+              sugestao2: updatedInfluencer.productSuggestion2 || '',
+              sugestao3: updatedInfluencer.productSuggestion3 || '',
+            },
+            'system'
+          );
+          logger.info(`[PORTAL] Step 2 email sent for workflow ${currentInfluencer.workflow.id}`);
+        }
+        
+        // Step 4 -> Step 5 (CONTRACT_PENDING -> SHIPPED): Send Step 5 email (informational)
+        if (oldStatus === 'CONTRACT_PENDING' && newStatus === 'SHIPPED') {
+          // Step 5 is informational, no email sent
+          logger.info(`[PORTAL] Step 5 reached (no email sent, informational)`);
+        }
+      } catch (emailError) {
+        logger.error('[PORTAL] Failed to send email:', emailError);
+        // Don't fail the request if email fails
+      }
+    }
 
     return NextResponse.json(
       serializeBigInt({

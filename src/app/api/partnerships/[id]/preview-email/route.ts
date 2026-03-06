@@ -48,12 +48,16 @@ export async function POST(
     }
 
     // Determine which template will be used
-    // Steps 1 and 2 have specific naming: STEP_1_PARTNERSHIP_WITH_VALUE
+    // Each step has specific naming pattern
     let specificKey: string;
     if (currentStep === 1) {
       specificKey = hasValue ? 'STEP_1_PARTNERSHIP_WITH_VALUE' : 'STEP_1_PARTNERSHIP_NO_VALUE';
     } else if (currentStep === 2) {
       specificKey = hasValue ? 'STEP_2_SHIPPING_WITH_VALUE' : 'STEP_2_SHIPPING_NO_VALUE';
+    } else if (currentStep === 3) {
+      specificKey = hasValue ? 'STEP_3_PREPARING_WITH_VALUE' : 'STEP_3_PREPARING_NO_VALUE';
+    } else if (currentStep === 6) {
+      specificKey = hasValue ? 'STEP_6_DELIVERED_WITH_VALUE' : 'STEP_6_DELIVERED_NO_VALUE';
     } else {
       specificKey = hasValue ? `STEP_${currentStep}_WITH_VALUE` : `STEP_${currentStep}_NO_VALUE`;
     }
