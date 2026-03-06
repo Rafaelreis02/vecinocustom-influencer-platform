@@ -1,0 +1,80 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
+
+// GET /api/partnerships/[id]/design-messages - List all messages for a workflow
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { id } = await params;
+
+    const messages = await prisma.designMessage.findMany({
+      where: { workflowId: id },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    return NextResponse.json({ success: true, data: messages });
+  } catch (error: any) {
+    logger.error('[DESIGN_MESSAGES] Error listing messages:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+// POST /api/partnerships/[id]/design-messages - Send a new message
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { id } = await params;
+    const body = await req.json();
+    const { content, imageUrl } = body;
+
+    if (!content && !imageUrl) {
+      return NextResponse.json({ error: 'Content or imageUrl required' }, { status: 400 });
+    }
+
+    // Verify workflow exists and is at step 4
+    const workflow = await prisma.partnershipWorkflow.findUnique({
+      where: { id },
+    });
+
+    if (!workflow) {
+      return NextResponse.json({ error: 'Workflow not found' }, { status: 404 });
+    }
+
+    if (workflow.currentStep !== 4) {
+      return NextResponse.json({ error: 'Design review only available at step 4' }, { status: 400 });
+    }
+
+    const message = await prisma.designMessage.create({
+      data: {
+        workflowId: id,
+        content: content || '',
+        imageUrl,
+        senderType: 'ADMIN',
+      },
+    });
+
+    logger.info('[DESIGN_MESSAGES] Admin sent message:', { workflowId: id, messageId: message.id });
+
+    return NextResponse.json({ success: true, data: message });
+  } catch (error: any) {
+    logger.error('[DESIGN_MESSAGES] Error sending message:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}

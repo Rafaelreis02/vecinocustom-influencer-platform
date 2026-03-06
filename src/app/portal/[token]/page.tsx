@@ -200,11 +200,12 @@ export default function PortalPage() {
   // Get current step from influencer status
   // Note: We need to check the workflow currentStep for steps 5 and 6
   const getStepFromStatus = (status: string, workflowStep?: number): number => {
-    // If we have workflow step info, use it for steps 5+
-    if (workflowStep && workflowStep >= 5) {
+    // Use workflow step if available (now 8 steps)
+    if (workflowStep) {
       return workflowStep;
     }
     
+    // Fallback for old workflows
     switch (status) {
       case 'UNKNOWN':
       case 'COUNTER_PROPOSAL':
@@ -214,12 +215,14 @@ export default function PortalPage() {
         return 2;
       case 'PRODUCT_SELECTION':
         return 3;
-      case 'CONTRACT_PENDING':
+      case 'DESIGN_REVIEW':
         return 4;
+      case 'CONTRACT_PENDING':
+        return 5;
       case 'SHIPPED':
-        return 5; // Step 5: Preparing Shipment (informational)
+        return 6;
       case 'COMPLETED':
-        return 6; // Step 6: Delivered (all info shown)
+        return 7;
       default:
         return 1;
     }
@@ -302,15 +305,21 @@ export default function PortalPage() {
           )}
           {currentStep === 3 && <Step3 />}
           {currentStep === 4 && (
-            <Step4
+            <Step4DesignReview
+              token={token}
+              onApprove={() => setCurrentStep(5)}
+            />
+          )}
+          {currentStep === 5 && (
+            <Step5Contract
               data={influencerData}
               token={token}
               onUpdate={fetchInfluencerData}
-              onNext={() => setCurrentStep(5)}
+              onNext={() => setCurrentStep(6)}
             />
           )}
-          {currentStep === 5 && <Step5 />}
-          {currentStep === 6 && <Step6 data={influencerData} />}
+          {currentStep === 6 && <Step6 />}
+          {currentStep === 7 && <Step7 data={influencerData} />}
         </div>
 
         {/* Exit Portal Link */}
