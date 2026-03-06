@@ -48,9 +48,15 @@ export async function POST(
     }
 
     // Determine which template will be used
-    const specificKey = hasValue
-      ? `STEP_${currentStep}_WITH_VALUE`
-      : `STEP_${currentStep}_NO_VALUE`;
+    // Steps 1 and 2 have specific naming: STEP_1_PARTNERSHIP_WITH_VALUE
+    let specificKey: string;
+    if (currentStep === 1) {
+      specificKey = hasValue ? 'STEP_1_PARTNERSHIP_WITH_VALUE' : 'STEP_1_PARTNERSHIP_NO_VALUE';
+    } else if (currentStep === 2) {
+      specificKey = hasValue ? 'STEP_2_SHIPPING_WITH_VALUE' : 'STEP_2_SHIPPING_NO_VALUE';
+    } else {
+      specificKey = hasValue ? `STEP_${currentStep}_WITH_VALUE` : `STEP_${currentStep}_NO_VALUE`;
+    }
 
     let template = await prisma.emailTemplate.findUnique({
       where: { key: specificKey },
