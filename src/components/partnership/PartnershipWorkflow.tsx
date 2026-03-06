@@ -781,66 +781,68 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
           />
         )}
 
-        {/* Preview Button - Available for all steps to see what email will be/was sent */}
+        {/* Action buttons based on step type */}
         {!isCompleted && !isCancelled && (
-          <div className="mt-6 flex justify-end gap-3">
-            <button
-              onClick={loadEmailPreview}
-              disabled={isAdvancing || isLoadingPreview}
-              className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
-            >
-              {isLoadingPreview ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  A carregar...
-                </>
-              ) : (
-                <>
-                  <Eye className="h-4 w-4" />
-                  Ver Email
-                </>
-              )}
-            </button>
-            
-            {/* Advance Button - Only for steps 3, 5, 6 where admin can advance */}
+          <div className="mt-6">
+            {/* Steps 3, 5, 6: Admin advances and sends email */}
             {(currentStep === 3 || currentStep === 5 || currentStep === 6) && (
-              <button
-                onClick={advanceStep}
-                disabled={isAdvancing}
-                className="inline-flex items-center gap-2 px-6 py-2.5 bg-black text-white rounded-lg font-medium hover:bg-gray-800 transition-colors disabled:opacity-50"
-              >
-                {isAdvancing ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    A processar...
-                  </>
-                ) : currentStep === 6 ? (
-                  <>
-                    <CheckCircle2 className="h-4 w-4" />
-                    Completar Parceria
-                  </>
-                ) : currentStep === 5 ? (
-                  <>
-                    <CheckCircle2 className="h-4 w-4" />
-                    Finalizar Parceria
-                  </>
-                ) : (
-                  <>
-                    Avançar para {STEPS[currentStep]?.name}
-                    <ChevronRight className="h-4 w-4" />
-                  </>
-                )}
-              </button>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={loadEmailPreview}
+                  disabled={isAdvancing || isLoadingPreview}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  {isLoadingPreview ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      A carregar...
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="h-4 w-4" />
+                      Ver Email
+                    </>
+                  )}
+                </button>
+                
+                <button
+                  onClick={advanceStep}
+                  disabled={isAdvancing}
+                  className="inline-flex items-center gap-2 px-6 py-2.5 bg-black text-white rounded-lg font-medium hover:bg-gray-800 transition-colors disabled:opacity-50"
+                >
+                  {isAdvancing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      A processar...
+                    </>
+                  ) : currentStep === 6 ? (
+                    <>
+                      <CheckCircle2 className="h-4 w-4" />
+                      Completar Parceria
+                    </>
+                  ) : currentStep === 5 ? (
+                    <>
+                      <CheckCircle2 className="h-4 w-4" />
+                      Finalizar Parceria
+                    </>
+                  ) : (
+                    <>
+                      Avançar para {STEPS[currentStep]?.name}
+                      <ChevronRight className="h-4 w-4" />
+                    </>
+                  )}
+                </button>
+              </div>
             )}
-          </div>
-        )}
-
-        {/* Info message for steps where admin cannot advance */}
-        {!isCompleted && !isCancelled && currentStep !== 3 && currentStep !== 5 && currentStep !== 6 && (
-          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-sm text-blue-700">
-              <span className="font-medium">ℹ️ Aguardando influencer:</span> Este step só pode ser avançado pelo influencer através do portal de parceria. Clica em "Ver Email" para ver qual email ele vai receber.
-            </p>
+            
+            {/* Steps 1, 2, 4: Automatic - no email sent by system */}
+            {(currentStep === 1 || currentStep === 2 || currentStep === 4) && (
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <p className="text-sm text-amber-800">
+                  <span className="font-medium">📧 Email manual:</span> Neste step não é enviado email automático. Quando o influencer avançar, deves enviar email manualmente através do teu Gmail se necessário.
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -922,10 +924,8 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
                   )}
                 </button>
               ) : (
-                <div className="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm">
-                  {currentStep === 1 
-                    ? 'Email será enviado quando criares a parceria'
-                    : 'Email será enviado quando o influencer avançar no portal'}
+                <div className="px-4 py-2 bg-amber-50 text-amber-700 rounded-lg text-sm">
+                  Este step é automático - não é enviado email pelo sistema. Envia manualmente se necessário.
                 </div>
               )}
             </div>
