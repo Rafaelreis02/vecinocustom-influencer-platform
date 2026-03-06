@@ -46,8 +46,11 @@ const STEPS = [
   { number: 1, name: 'Partnership', status: 'ANALYZING' },
   { number: 2, name: 'Shipping', status: 'AGREED' },
   { number: 3, name: 'Preparing', status: 'PRODUCT_SELECTION' },
-  { number: 4, name: 'Contract', status: 'CONTRACT_PENDING' },
-  { number: 5, name: 'Preparing Shipment', status: 'SHIPPED' },
+  { number: 4, name: 'Design Review', status: 'DESIGN_REVIEW' },
+  { number: 5, name: 'Contract', status: 'CONTRACT_PENDING' },
+  { number: 6, name: 'Preparing Shipment', status: 'SHIPPED' },
+  { number: 7, name: 'Delivered', status: 'DELIVERED' },
+  { number: 8, name: 'Completed', status: 'COMPLETED' },
   { number: 6, name: 'Delivered', status: 'SHIPPED' },
 ];
 
@@ -498,7 +501,7 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
           }`}>
             {isCompleted ? 'Concluída' :
              isCancelled ? 'Cancelada' :
-             `Step ${currentStep} de 6: ${STEPS[currentStep - 1]?.name || 'Delivered'}`}
+             `Step ${currentStep} de 8: ${STEPS[currentStep - 1]?.name || 'Completed'}`}
           </span>
         </div>
 
