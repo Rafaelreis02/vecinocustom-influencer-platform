@@ -887,7 +887,7 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
                 <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
                   {Object.entries(emailPreview.variables).map(([key, value]) => (
                     <div key={key} className="flex gap-2">
-                      <span className="text-blue-600 font-mono">{{key}}:</span>
+                      <span className="text-blue-600 font-mono">{`{{${key}}}`}:</span>
                       <span className="text-blue-800 truncate" title={String(value)}>
                         {String(value) || '(vazio)'}
                       </span>
