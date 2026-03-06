@@ -196,7 +196,7 @@ export async function POST(
 
     // Send email only for steps that need it
     // Step 5 is informational only - no email sent
-    let emailResult = { success: true, error: undefined };
+    let emailResult: { success: boolean; emailId?: string; error?: string } = { success: true };
     
     if (currentStep !== 5) {
       // Get product name from URL for step 3 or 6 email
