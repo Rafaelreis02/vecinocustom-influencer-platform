@@ -831,6 +831,7 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
                   </>
                 )}
               </button>
+            )}
           </div>
         )}
 
