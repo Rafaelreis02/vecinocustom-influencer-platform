@@ -1,4 +1,14 @@
 {
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next",
+      "config": {
+        "maxLambdaSize": "50mb"
+      }
+    }
+  ],
   "crons": [
     {
       "path": "/api/cron/update-video-metrics?secret=${CRON_SECRET}",
