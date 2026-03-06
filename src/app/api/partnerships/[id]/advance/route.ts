@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { sendWorkflowEmail } from '@/lib/partnership-email';
+import { logger } from '@/lib/logger';
 
 // Step configuration with validation rules and status mapping
 // canAdminAdvance: true = nós podemos avançar este step
