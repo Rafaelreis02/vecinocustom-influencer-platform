@@ -736,7 +736,11 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
         {advanceError && (
           <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3">
             <p className="text-sm text-red-600">
-              <span className="font-medium">Campos obrigatórios em falta:</span> {advanceError}
+              {advanceError.includes('influencer') || advanceError.includes('portal') ? (
+                <span className="font-medium">⚠️ {advanceError}</span>
+              ) : (
+                <><span className="font-medium">Campos obrigatórios em falta:</span> {advanceError}</>
+              )}
             </p>
           </div>
         )}
