@@ -154,12 +154,16 @@ export async function POST(
 
     // Check if admin can advance this step
     const validation = validateAdminStep(workflow, currentStep);
+    
+    logger.info(`[ADVANCE] Step ${currentStep} (${config.name}): canAdminAdvance=${config.canAdminAdvance}, canAdvance=${validation.canAdvance}, valid=${validation.valid}, missing=${validation.missing.join(',')}`);
+    
     if (!validation.canAdvance) {
       return NextResponse.json(
         {
           error: 'Este step só pode ser avançado pelo influencer através do portal',
           step: currentStep,
           stepName: config.name,
+          canAdminAdvance: config.canAdminAdvance,
         },
         { status: 403 }
       );
