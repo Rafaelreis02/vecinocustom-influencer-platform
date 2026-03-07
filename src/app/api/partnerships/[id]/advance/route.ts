@@ -36,13 +36,13 @@ const STEP_CONFIG: Record<number, {
     canAdminAdvance: false, // Influencer avança via portal
   },
   3: {
-    name: 'Preparing',
+    name: 'Preparing/Product Selection',
     status: 'PRODUCT_SELECTION',
     requiredFields: ['selectedProductUrl'],
     adminRequiredFields: ['selectedProductUrl'], // Nós inserimos produto
     nextStep: 4,
     nextStatus: 'DESIGN_REVIEW', // NOVO status
-    canAdminAdvance: true, // NÓS avançamos (enviamos email pedindo foto)
+    canAdminAdvance: true, // ADMIN avança (envia mockup/design)
   },
   4: {
     name: 'Design Review', // NOVO STEP - Aprovar Design
