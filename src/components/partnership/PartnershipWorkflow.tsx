@@ -29,6 +29,8 @@ interface Workflow {
   productSuggestion2: string | null;
   productSuggestion3: string | null;
   selectedProductUrl: string | null;
+  designApproved: boolean;
+  designRevisionCount: number;
   contractSigned: boolean;
   contractUrl: string | null;
   trackingUrl: string | null;
@@ -51,7 +53,6 @@ const STEPS = [
   { number: 6, name: 'Preparing Shipment', status: 'SHIPPED' },
   { number: 7, name: 'Delivered', status: 'DELIVERED' },
   { number: 8, name: 'Completed', status: 'COMPLETED' },
-  { number: 6, name: 'Delivered', status: 'SHIPPED' },
 ];
 
 export function PartnershipWorkflow({ influencerId, influencerName, influencerHandle, influencerStatus, portalUrl }: PartnershipWorkflowProps) {

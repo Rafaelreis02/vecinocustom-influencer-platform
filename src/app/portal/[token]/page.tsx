@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Loader2, XCircle, CheckCircle, FileText } from 'lucide-react';
 import { ProductSearchInput } from './components/ProductSearchInput';
+import { Step4DesignReview } from './Step4DesignReview';
 
 // Constants
 const VALIDATION_ERROR_DISPLAY_DURATION = 4000; // 4 seconds
@@ -318,7 +319,7 @@ export default function PortalPage() {
               onNext={() => setCurrentStep(6)}
             />
           )}
-          {currentStep === 6 && <Step6 />}
+          {currentStep === 6 && <Step6 data={influencerData} />}
           {currentStep === 7 && <Step7 data={influencerData} />}
         </div>
 
@@ -1164,7 +1165,7 @@ function Step4({ data, token, onNext }: StepProps) {
 }
 
 // Step 5: Preparing Shipment (Informational only)
-function Step5() {
+function Step5Contract({ data, token, onUpdate, onNext }: StepProps & { token: string }) {
   return (
     <div>
       <h2 className="text-xl font-bold text-[#0E1E37] mb-6 uppercase">Preparing Shipment</h2>
@@ -1238,6 +1239,49 @@ function Step6({ data }: { data: InfluencerData }) {
           {/* Track Order Button */}
           {data.trackingUrl && (
             <div className="mt-6">
+              <a
+                href={data.trackingUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full py-4 bg-green-600 text-white text-center font-bold rounded-lg hover:bg-green-700 transition uppercase"
+              >
+                Track Order
+              </a>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Step 7: Completed
+function Step7({ data }: { data: InfluencerData }) {
+  return (
+    <div>
+      <h2 className="text-xl font-bold text-[#0E1E37] mb-6 uppercase">Completed</h2>
+      
+      <div className="border-l-4 border-green-500 bg-white rounded-lg p-6 shadow-sm">
+        <h3 className="text-lg font-bold text-green-700 mb-2">Partnership Complete!</h3>
+        <p className="text-sm text-gray-600 mb-6">
+          Thank you for collaborating with Vecino Custom. We hope you love your personalized piece!
+        </p>
+
+        <div className="space-y-4">
+          {/* Coupon Code */}
+          {data.couponCode && (
+            <div>
+              <p className="text-xs font-semibold text-gray-600 mb-2 uppercase">Your Coupon Code</p>
+              <div className="p-3 border-2 border-dashed border-green-300 rounded-lg bg-green-50 text-center">
+                <p className="text-lg font-mono font-bold text-green-700">{data.couponCode}</p>
+                <p className="text-xs text-green-600 mt-1">10% off for your followers + 20% commission for you</p>
+              </div>
+            </div>
+          )}
+
+          {/* Tracking */}
+          {data.trackingUrl && (
+            <div>
               <a
                 href={data.trackingUrl}
                 target="_blank"
