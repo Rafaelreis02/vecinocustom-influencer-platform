@@ -52,6 +52,15 @@ export async function POST(
       );
     }
 
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(influencer.email.trim())) {
+      return NextResponse.json(
+        { error: 'Invalid email address format' },
+        { status: 400 }
+      );
+    }
+
     // Get or create email template for initial contact
     let template = await prisma.emailTemplate.findUnique({
       where: { key: 'INITIAL_CONTACT' },
@@ -95,7 +104,7 @@ www.vecinocustom.com`,
 
     // Send email via Gmail
     const auth = getAuthClient();
-    const targetEmail = influencer.email;
+    const targetEmail = influencer.email.trim();
 
     await sendEmail(auth, {
       to: targetEmail,
