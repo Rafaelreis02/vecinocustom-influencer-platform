@@ -169,6 +169,17 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
       setIsAdvancing(true);
       setAdvanceError(null);
       
+      // First, refresh workflow data to ensure we have the latest state
+      const refreshRes = await fetch(`/api/partnerships/${workflow.id}`);
+      const refreshData = await refreshRes.json();
+      
+      if (refreshData.success) {
+        setWorkflow(refreshData.data);
+      }
+      
+      // Small delay to ensure state is updated
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       const res = await fetch(`/api/partnerships/${workflow.id}/advance`, {
         method: 'POST',
       });
@@ -843,11 +854,20 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
               </div>
             )}
             
-            {/* Steps 1, 2, 4: Automatic - no email sent by system */}
-            {(currentStep === 1 || currentStep === 2 || currentStep === 4) && (
+            {/* Steps 1, 2: Automatic - no email sent by system */}
+            {(currentStep === 1 || currentStep === 2) && (
               <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
                 <p className="text-sm text-amber-800">
                   <span className="font-medium">📧 Email manual:</span> Neste step não é enviado email automático. Quando o influencer avançar, deves enviar email manualmente através do teu Gmail se necessário.
+                </p>
+              </div>
+            )}
+            
+            {/* Step 4: Design Review - Admin sends design, no email template needed */}
+            {currentStep === 4 && (
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <span className="font-medium">💬 Chat ativo:</span> Use o chat acima para comunicar com o influencer sobre o design. O email não é necessário neste step.
                 </p>
               </div>
             )}

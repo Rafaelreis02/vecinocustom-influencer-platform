@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Loader2, Send, Image as ImageIcon, CheckCircle, RefreshCw } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Loader2, Send, Image as ImageIcon, CheckCircle, X } from 'lucide-react';
 
 interface DesignMessage {
   id: string;
@@ -22,12 +22,17 @@ interface PartnershipStep4Props {
   isLocked: boolean;
 }
 
+// Max file size: 5MB
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+
 export function PartnershipStep4({ workflow, isLocked }: PartnershipStep4Props) {
   const [messages, setMessages] = useState<DesignMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchMessages();
@@ -47,20 +52,72 @@ export function PartnershipStep4({ workflow, isLocked }: PartnershipStep4Props) 
     }
   };
 
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    setUploadError(null);
+    
+    if (!file) return;
+
+    // Validate file size
+    if (file.size > MAX_FILE_SIZE) {
+      setUploadError('A imagem deve ter menos de 5MB');
+      return;
+    }
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setUploadError('O ficheiro deve ser uma imagem');
+      return;
+    }
+
+    // Convert to base64 for preview and upload
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = reader.result as string;
+      setUploadedImage(base64);
+      setImageUrl(base64); // Use base64 as imageUrl
+    };
+    reader.readAsDataURL(file);
+  }, []);
+
+  const clearImage = () => {
+    setUploadedImage(null);
+    setImageUrl('');
+    setUploadError(null);
+  };
+
   const sendMessage = async () => {
     if (!newMessage.trim() && !imageUrl) return;
 
     try {
       setIsSending(true);
+      
+      // If we have a base64 image, upload it first
+      let finalImageUrl = imageUrl;
+      if (uploadedImage && uploadedImage.startsWith('data:')) {
+        // Upload to server
+        const uploadRes = await fetch('/api/upload/design-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: uploadedImage }),
+        });
+        
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          finalImageUrl = uploadData.url;
+        }
+      }
+      
       const res = await fetch(`/api/partnerships/${workflow.id}/design-messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: newMessage, imageUrl }),
+        body: JSON.stringify({ content: newMessage, imageUrl: finalImageUrl }),
       });
 
       if (res.ok) {
         setNewMessage('');
         setImageUrl('');
+        setUploadedImage(null);
         await fetchMessages();
       }
     } catch (err) {
@@ -121,11 +178,13 @@ export function PartnershipStep4({ workflow, isLocked }: PartnershipStep4Props) 
                 }`}
               >
                 {msg.imageUrl && (
-                  <img
-                    src={msg.imageUrl}
-                    alt="Design"
-                    className="rounded-lg mb-2 max-w-full max-h-40 object-cover"
-                  />
+                  <a href={msg.imageUrl} target="_blank" rel="noopener noreferrer">
+                    <img
+                      src={msg.imageUrl}
+                      alt="Design"
+                      className="rounded-lg mb-2 max-w-full max-h-40 object-cover hover:opacity-90 transition-opacity cursor-pointer"
+                    />
+                  </a>
                 )}
                 <p className="text-sm">{msg.content}</p>
                 <p className="text-xs opacity-60 mt-1">
@@ -140,18 +199,70 @@ export function PartnershipStep4({ workflow, isLocked }: PartnershipStep4Props) 
       {/* Send Message Form */}
       {!isLocked && !workflow.designApproved && (
         <div className="space-y-3">
+          {/* Image Upload */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              URL da Imagem (mockup)
+              Imagem do Design
             </label>
-            <input
-              type="text"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-              placeholder="https://..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-black focus:border-black"
-            />
+            
+            {uploadedImage ? (
+              <div className="relative">
+                <img
+                  src={uploadedImage}
+                  alt="Preview"
+                  className="w-full h-40 object-contain rounded-lg border border-gray-200 bg-gray-50"
+                />
+                <button
+                  onClick={clearImage}
+                  className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <label className="flex-1">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                    <div className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 hover:bg-gray-50 cursor-pointer transition-colors">
+                      <ImageIcon className="h-5 w-5 text-gray-400" />
+                      <span className="text-sm text-gray-600">Carregar imagem</span>
+                    </div>
+                  </label>
+                </div>
+                
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-200" />
+                  </div>
+                  <div className="relative flex justify-center text-xs">
+                    <span className="px-2 bg-white text-gray-400">ou</span>
+                  </div>
+                </div>
+                
+                <input
+                  type="text"
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  placeholder="Cole o link da imagem (URL)..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-black focus:border-black"
+                />
+              </div>
+            )}
+            
+            {uploadError && (
+              <p className="text-sm text-red-600 mt-1">{uploadError}</p>
+            )}
+            <p className="text-xs text-gray-400 mt-1">
+              Máximo 5MB. Formatos: JPG, PNG, GIF
+            </p>
           </div>
+          
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Mensagem
@@ -166,7 +277,7 @@ export function PartnershipStep4({ workflow, isLocked }: PartnershipStep4Props) 
           </div>
           <button
             onClick={sendMessage}
-            disabled={isSending || (!newMessage.trim() && !imageUrl)}
+            disabled={isSending || (!newMessage.trim() && !imageUrl) || !!uploadError}
             className="w-full py-2.5 bg-black text-white rounded-lg font-medium hover:bg-gray-800 disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {isSending ? (
