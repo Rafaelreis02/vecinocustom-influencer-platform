@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
-import { sendWorkflowEmail } from '@/lib/partnership-email';
+import { getAuthClient, sendEmail } from '@/lib/gmail';
 
 // GET /api/partnerships/[id]/design-messages - List all messages for a workflow
 export async function GET(
@@ -81,18 +81,19 @@ export async function POST(
       });
 
       if (workflowWithInfluencer?.influencer?.email) {
-        await sendWorkflowEmail({
-          to: workflowWithInfluencer.influencer.email,
-          subject: '🎨 Novo Design da VecinoCustom - Aguarda a tua aprovação',
-          body: `Olá ${workflowWithInfluencer.influencer.name || ''},
+        const auth = getAuthClient();
+        const emailBody = `Olá ${workflowWithInfluencer.influencer.name || ''},
 
-Temos um novo design/mockup pronto para ti! 
+Temos um novo design/mockup pronto para ti!
 
 ${content ? `Mensagem da equipa:\n${content}\n\n` : ''}Por favor acede ao teu portal para ver e aprovar o design:\n${process.env.NEXT_PUBLIC_APP_URL || 'https://vecinocustom.com'}/portal/${workflowWithInfluencer.influencer.portalToken}
 
-Cumprimentos,\nEquipa VecinoCustom`,
-          workflowId: id,
-          step: 4,
+Cumprimentos,\nEquipa VecinoCustom`;
+
+        await sendEmail(auth, {
+          to: workflowWithInfluencer.influencer.email,
+          subject: '🎨 Novo Design da VecinoCustom - Aguarda a tua aprovação',
+          body: emailBody,
         });
         logger.info('[DESIGN_MESSAGES] Email notification sent to influencer:', { 
           email: workflowWithInfluencer.influencer.email 
