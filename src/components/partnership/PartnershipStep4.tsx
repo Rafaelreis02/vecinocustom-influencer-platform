@@ -26,6 +26,7 @@ interface PartnershipStep4Props {
 // Max file size: 5MB
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
+// Componente atualizado v2 - Chat moderno
 export function PartnershipStep4({ workflow, isLocked, onAdvance }: PartnershipStep4Props) {
   const [messages, setMessages] = useState<DesignMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
