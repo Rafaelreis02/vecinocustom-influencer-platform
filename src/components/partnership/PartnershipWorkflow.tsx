@@ -790,6 +790,7 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
           <PartnershipStep4
             workflow={workflow}
             isLocked={isCompleted || isCancelled}
+            onAdvance={workflow.designApproved ? advanceStep : undefined}
           />
         )}
         {currentStep === 5 && (
@@ -863,12 +864,34 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
               </div>
             )}
             
-            {/* Step 4: Design Review - Admin sends design, no email template needed */}
+            {/* Step 4: Design Review - Show advance button when approved */}
             {currentStep === 4 && (
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm text-blue-800">
-                  <span className="font-medium">💬 Chat ativo:</span> Use o chat acima para comunicar com o influencer sobre o design. O email não é necessário neste step.
-                </p>
+              <div className="flex justify-end">
+                {workflow.designApproved ? (
+                  <button
+                    onClick={advanceStep}
+                    disabled={isAdvancing}
+                    className="inline-flex items-center gap-2 px-6 py-2.5 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
+                  >
+                    {isAdvancing ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        A processar...
+                      </>
+                    ) : (
+                      <>
+                        Avançar para Contrato
+                        <ChevronRight className="h-4 w-4" />
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                    <p className="text-sm text-amber-800">
+                      <span className="font-medium">⏳ Aguardando aprovação:</span> O influencer precisa de aprovar o design no portal antes de avançares.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>

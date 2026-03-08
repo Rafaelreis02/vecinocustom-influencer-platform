@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { Loader2, Send, Image as ImageIcon, CheckCircle, X } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Loader2, Send, Image as ImageIcon, CheckCircle, X, ChevronRight } from 'lucide-react';
 
 interface DesignMessage {
   id: string;
@@ -20,12 +20,13 @@ interface Workflow {
 interface PartnershipStep4Props {
   workflow: Workflow;
   isLocked: boolean;
+  onAdvance?: () => void;
 }
 
 // Max file size: 5MB
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
-export function PartnershipStep4({ workflow, isLocked }: PartnershipStep4Props) {
+export function PartnershipStep4({ workflow, isLocked, onAdvance }: PartnershipStep4Props) {
   const [messages, setMessages] = useState<DesignMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [imageUrl, setImageUrl] = useState('');
@@ -33,9 +34,22 @@ export function PartnershipStep4({ workflow, isLocked }: PartnershipStep4Props) 
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom when new messages arrive
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   useEffect(() => {
     fetchMessages();
+    // Poll for new messages every 10 seconds
+    const interval = setInterval(fetchMessages, 10000);
+    return () => clearInterval(interval);
   }, [workflow.id]);
 
   const fetchMessages = async () => {
@@ -58,24 +72,21 @@ export function PartnershipStep4({ workflow, isLocked }: PartnershipStep4Props) 
     
     if (!file) return;
 
-    // Validate file size
     if (file.size > MAX_FILE_SIZE) {
       setUploadError('A imagem deve ter menos de 5MB');
       return;
     }
 
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       setUploadError('O ficheiro deve ser uma imagem');
       return;
     }
 
-    // Convert to base64 for preview and upload
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64 = reader.result as string;
       setUploadedImage(base64);
-      setImageUrl(base64); // Use base64 as imageUrl
+      setImageUrl(base64);
     };
     reader.readAsDataURL(file);
   }, []);
@@ -92,10 +103,8 @@ export function PartnershipStep4({ workflow, isLocked }: PartnershipStep4Props) 
     try {
       setIsSending(true);
       
-      // If we have a base64 image, upload it first
       let finalImageUrl = imageUrl;
       if (uploadedImage && uploadedImage.startsWith('data:')) {
-        // Upload to server
         const uploadRes = await fetch('/api/upload/design-image', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -127,6 +136,34 @@ export function PartnershipStep4({ workflow, isLocked }: PartnershipStep4Props) 
     }
   };
 
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    if (date.toDateString() === today.toDateString()) {
+      return 'Hoje';
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return 'Ontem';
+    } else {
+      return date.toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' });
+    }
+  };
+
+  // Group messages by date
+  const groupedMessages = messages.reduce((groups: Record<string, DesignMessage[]>, msg) => {
+    const date = new Date(msg.createdAt).toDateString();
+    if (!groups[date]) groups[date] = [];
+    groups[date].push(msg);
+    return groups;
+  }, {});
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -136,167 +173,207 @@ export function PartnershipStep4({ workflow, isLocked }: PartnershipStep4Props) 
   }
 
   return (
-    <div>
-      <h3 className="text-lg font-semibold text-gray-900 mb-2">
-        Step 4: Design Review
-      </h3>
-      <p className="text-sm text-gray-600 mb-4">
-        Envie o mockup/design para o influencer aprovar. Aguarde a aprovação dele antes de avançar.
-      </p>
-
-      {/* Status */}
-      <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-blue-800">
-            <span className="font-medium">Status:</span>{' '}
-            {workflow.designApproved
-              ? '✅ Design Aprovado'
-              : `⏳ Aguardando aprovação (Revisões: ${workflow.designRevisionCount})`}
-          </span>
+    <div className="flex flex-col h-[600px]">
+      {/* Header */}
+      <div className="flex items-center justify-between pb-4 border-b border-gray-200">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">
+            💬 Chat de Design
+          </h3>
+          <p className="text-sm text-gray-500">
+            Comunica com o influencer sobre o design/mockup
+          </p>
+        </div>
+        <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+          workflow.designApproved 
+            ? 'bg-green-100 text-green-700' 
+            : 'bg-amber-100 text-amber-700'
+        }`}>
+          {workflow.designApproved ? '✅ Aprovado' : `⏳ Em revisão (${workflow.designRevisionCount})`}
         </div>
       </div>
 
       {/* Chat Messages */}
-      <div className="border border-gray-200 rounded-lg p-4 mb-4 h-[300px] overflow-y-auto space-y-4 bg-gray-50">
+      <div className="flex-1 overflow-y-auto py-4 space-y-6">
         {messages.length === 0 ? (
-          <div className="text-center text-gray-500 py-8">
-            <ImageIcon className="h-12 w-12 mx-auto mb-2 text-gray-300" />
-            <p>Nenhuma mensagem ainda.</p>
-            <p className="text-sm">Envie o mockup do design para o influencer.</p>
+          <div className="flex flex-col items-center justify-center h-full text-gray-400">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+              <ImageIcon className="h-8 w-8" />
+            </div>
+            <p className="text-sm">Nenhuma mensagem ainda</p>
+            <p className="text-xs">Envia o mockup do design para começar</p>
           </div>
         ) : (
-          messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`flex ${msg.senderType === 'ADMIN' ? 'justify-end' : 'justify-start'}`}
-            >
-              <div
-                className={`max-w-[80%] rounded-lg p-3 ${
-                  msg.senderType === 'ADMIN'
-                    ? 'bg-black text-white'
-                    : 'bg-white border border-gray-200 text-gray-800'
-                }`}
-              >
-                {msg.imageUrl && (
-                  <a href={msg.imageUrl} target="_blank" rel="noopener noreferrer">
-                    <img
-                      src={msg.imageUrl}
-                      alt="Design"
-                      className="rounded-lg mb-2 max-w-full max-h-40 object-cover hover:opacity-90 transition-opacity cursor-pointer"
-                    />
-                  </a>
-                )}
-                <p className="text-sm">{msg.content}</p>
-                <p className="text-xs opacity-60 mt-1">
-                  {new Date(msg.createdAt).toLocaleString()}
-                </p>
+          Object.entries(groupedMessages).map(([date, dateMessages]) => (
+            <div key={date} className="space-y-3">
+              {/* Date separator */}
+              <div className="flex items-center justify-center">
+                <span className="text-xs text-gray-400 bg-gray-100 px-3 py-1 rounded-full">
+                  {formatDate(dateMessages[0].createdAt)}
+                </span>
               </div>
+              
+              {dateMessages.map((msg) => (
+                <div
+                  key={msg.id}
+                  className={`flex ${msg.senderType === 'ADMIN' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div className={`flex items-end gap-2 max-w-[85%] ${
+                    msg.senderType === 'ADMIN' ? 'flex-row-reverse' : ''
+                  }`}>
+                    {/* Avatar */}
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                      msg.senderType === 'ADMIN' 
+                        ? 'bg-black text-white' 
+                        : 'bg-purple-100 text-purple-700'
+                    }`}>
+                      {msg.senderType === 'ADMIN' ? 'VC' : 'IN'}
+                    </div>
+                    
+                    {/* Message bubble */}
+                    <div className={`rounded-2xl px-4 py-2.5 ${
+                      msg.senderType === 'ADMIN'
+                        ? 'bg-black text-white rounded-br-md'
+                        : 'bg-gray-100 text-gray-800 rounded-bl-md border border-gray-200'
+                    }`}>
+                      {msg.imageUrl && (
+                        <a 
+                          href={msg.imageUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="block mb-2"
+                        >
+                          <img
+                            src={msg.imageUrl}
+                            alt="Design"
+                            className="rounded-lg max-w-[250px] max-h-[200px] object-cover hover:opacity-90 transition-opacity"
+                          />
+                        </a>
+                      )}
+                      {msg.content && (
+                        <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                      )}
+                      <span className={`text-xs mt-1 block ${
+                        msg.senderType === 'ADMIN' ? 'text-gray-400' : 'text-gray-400'
+                      }`}>
+                        {formatTime(msg.createdAt)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           ))
         )}
+        <div ref={messagesEndRef} />
       </div>
 
-      {/* Send Message Form */}
-      {!isLocked && !workflow.designApproved && (
-        <div className="space-y-3">
-          {/* Image Upload */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Imagem do Design
-            </label>
-            
-            {uploadedImage ? (
-              <div className="relative">
-                <img
-                  src={uploadedImage}
-                  alt="Preview"
-                  className="w-full h-40 object-contain rounded-lg border border-gray-200 bg-gray-50"
-                />
-                <button
-                  onClick={clearImage}
-                  className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <div className="flex gap-2">
-                  <label className="flex-1">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileChange}
-                      className="hidden"
-                    />
-                    <div className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 hover:bg-gray-50 cursor-pointer transition-colors">
-                      <ImageIcon className="h-5 w-5 text-gray-400" />
-                      <span className="text-sm text-gray-600">Carregar imagem</span>
-                    </div>
-                  </label>
-                </div>
-                
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-200" />
-                  </div>
-                  <div className="relative flex justify-center text-xs">
-                    <span className="px-2 bg-white text-gray-400">ou</span>
-                  </div>
-                </div>
-                
-                <input
-                  type="text"
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  placeholder="Cole o link da imagem (URL)..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-black focus:border-black"
-                />
-              </div>
+      {/* Approved State */}
+      {workflow.designApproved && (
+        <div className="p-4 bg-green-50 border border-green-200 rounded-xl mb-4">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+            </div>
+            <div className="flex-1">
+              <p className="font-medium text-green-900">Design aprovado!</p>
+              <p className="text-sm text-green-700">
+                O influencer já aprovou o design. Podes avançar para o contrato.
+              </p>
+            </div>
+            {onAdvance && !isLocked && (
+              <button
+                onClick={onAdvance}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
+              >
+                Avançar
+                <ChevronRight className="h-4 w-4" />
+              </button>
             )}
-            
-            {uploadError && (
-              <p className="text-sm text-red-600 mt-1">{uploadError}</p>
-            )}
-            <p className="text-xs text-gray-400 mt-1">
-              Máximo 5MB. Formatos: JPG, PNG, GIF
-            </p>
           </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Mensagem
-            </label>
-            <textarea
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Descreva o design..."
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-black focus:border-black resize-none"
-            />
-          </div>
-          <button
-            onClick={sendMessage}
-            disabled={isSending || (!newMessage.trim() && !imageUrl) || !!uploadError}
-            className="w-full py-2.5 bg-black text-white rounded-lg font-medium hover:bg-gray-800 disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {isSending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <>
-                <Send className="h-4 w-4" />
-                Enviar Design
-              </>
-            )}
-          </button>
         </div>
       )}
 
-      {workflow.designApproved && (
-        <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-          <p className="text-sm text-green-800">
-            <CheckCircle className="h-4 w-4 inline mr-1" />
-            <span className="font-medium">Design aprovado!</span> O influencer já aprovou o design. Podes avançar para o contrato.
+      {/* Input Area */}
+      {!isLocked && !workflow.designApproved && (
+        <div className="border-t border-gray-200 pt-4">
+          {/* Image Preview */}
+          {uploadedImage && (
+            <div className="relative mb-3 inline-block">
+              <img
+                src={uploadedImage}
+                alt="Preview"
+                className="h-20 w-20 object-cover rounded-lg border border-gray-200"
+              />
+              <button
+                onClick={clearImage}
+                className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 shadow-sm"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          )}
+          
+          <div className="flex items-end gap-2">
+            {/* Image Upload Button */}
+            <label className="flex-shrink-0">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              <button
+                type="button"
+                className="p-3 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+                onClick={() => {}}
+              >
+                <ImageIcon className="h-5 w-5" />
+              </button>
+            </label>
+            
+            {/* Text Input */}
+            <div className="flex-1 relative">
+              <textarea
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                placeholder="Escreve uma mensagem..."
+                rows={1}
+                className="w-full px-4 py-3 bg-gray-100 border-0 rounded-2xl text-sm focus:ring-2 focus:ring-black focus:bg-white resize-none min-h-[48px] max-h-[120px]"
+                style={{ height: 'auto' }}
+                onInput={(e) => {
+                  const target = e.target as HTMLTextAreaElement;
+                  target.style.height = 'auto';
+                  target.style.height = target.scrollHeight + 'px';
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                  }
+                }}
+              />
+            </div>
+            
+            {/* Send Button */}
+            <button
+              onClick={sendMessage}
+              disabled={isSending || (!newMessage.trim() && !imageUrl) || !!uploadError}
+              className="flex-shrink-0 p-3 bg-black text-white rounded-full hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {isSending ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Send className="h-5 w-5" />
+              )}
+            </button>
+          </div>
+          
+          {uploadError && (
+            <p className="text-xs text-red-600 mt-2 ml-12">{uploadError}</p>
+          )}
+          <p className="text-xs text-gray-400 mt-2 ml-12">
+            Pressiona Enter para enviar • Máx. 5MB
           </p>
         </div>
       )}

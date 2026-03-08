@@ -38,8 +38,8 @@ const STEP_CONFIG: Record<number, {
   3: {
     name: 'Preparing/Product Selection',
     status: 'PRODUCT_SELECTION',
-    requiredFields: ['selectedProductUrl'],
-    adminRequiredFields: ['selectedProductUrl'], // Nós inserimos produto
+    requiredFields: ['selectedProductUrl', 'couponCode'],
+    adminRequiredFields: ['selectedProductUrl', 'couponCode'], // Nós inserimos produto E cupom
     nextStep: 4,
     nextStatus: 'DESIGN_REVIEW', // NOVO status
     canAdminAdvance: true, // ADMIN avança (envia mockup/design)
