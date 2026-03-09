@@ -322,20 +322,16 @@ export function PartnershipStep4({ workflow, isLocked, onAdvance }: PartnershipS
           
           <div className="flex items-end gap-2">
             {/* Image Upload Button */}
-            <label className="flex-shrink-0">
+            <label className="flex-shrink-0 cursor-pointer">
               <input
                 type="file"
                 accept="image/*"
                 onChange={handleFileChange}
-                className="hidden"
+                className="sr-only"
               />
-              <button
-                type="button"
-                className="p-3 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
-                onClick={() => {}}
-              >
+              <div className="p-3 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors">
                 <ImageIcon className="h-5 w-5" />
-              </button>
+              </div>
             </label>
             
             {/* Text Input */}

@@ -59,14 +59,12 @@ export async function POST(
       },
     });
 
-    // Add message from influencer
-    await prisma.designMessage.create({
-      data: {
-        workflowId: workflow.id,
-        content: message || 'Solicitação de alterações',
-        senderType: 'INFLUENCER',
-      },
-    });
+    // Add message from influencer using raw query
+    const messageId = crypto.randomUUID();
+    await prisma.$executeRaw`
+      INSERT INTO "DesignMessage" ("id", "workflowId", "content", "imageUrl", "senderType", "createdAt", "updatedAt")
+      VALUES (${messageId}, ${workflow.id}, ${message || 'Solicitação de alterações'}, null, 'INFLUENCER', NOW(), NOW())
+    `;
 
     logger.info('[PORTAL_DESIGN] Revision requested:', { workflowId: workflow.id, revisionCount: newRevisionCount });
 

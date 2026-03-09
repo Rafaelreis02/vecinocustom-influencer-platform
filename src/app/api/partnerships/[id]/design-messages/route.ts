@@ -18,10 +18,12 @@ export async function GET(
 
     const { id } = await params;
 
-    const messages = await prisma.designMessage.findMany({
-      where: { workflowId: id },
-      orderBy: { createdAt: 'asc' },
-    });
+    // Use raw query to avoid table name mismatch
+    const messages = await prisma.$queryRaw`
+      SELECT * FROM "DesignMessage" 
+      WHERE "workflowId" = ${id} 
+      ORDER BY "createdAt" ASC
+    `;
 
     return NextResponse.json({ success: true, data: messages });
   } catch (error: any) {
@@ -62,22 +64,26 @@ export async function POST(
       return NextResponse.json({ error: 'Design review only available at step 4' }, { status: 400 });
     }
 
-    const message = await prisma.designMessage.create({
-      data: {
-        workflowId: id,
-        content: content || '',
-        imageUrl,
-        senderType: 'ADMIN',
-      },
-    });
+    // Create message using raw query
+    const messageId = crypto.randomUUID();
+    await prisma.$executeRaw`
+      INSERT INTO "DesignMessage" ("id", "workflowId", "content", "imageUrl", "senderType", "createdAt", "updatedAt")
+      VALUES (${messageId}, ${id}, ${content || ''}, ${imageUrl || null}, 'ADMIN', NOW(), NOW())
+    `;
 
-    logger.info('[DESIGN_MESSAGES] Admin sent message:', { workflowId: id, messageId: message.id });
+    // Fetch the created message
+    const [message] = await prisma.$queryRaw`
+      SELECT * FROM "DesignMessage" WHERE "id" = ${messageId}
+    ` as any[];
+
+    logger.info('[DESIGN_MESSAGES] Admin sent message:', { workflowId: id, messageId });
 
     // Check if this is the first message or a revision
-    const previousMessages = await prisma.designMessage.count({
-      where: { workflowId: id, senderType: 'ADMIN' },
-    });
-    const isFirstDesign = previousMessages === 1; // Only this message exists
+    const countResult = await prisma.$queryRaw`
+      SELECT COUNT(*) as count FROM "DesignMessage" WHERE "workflowId" = ${id} AND "senderType" = 'ADMIN'
+    ` as any[];
+    const previousMessages = Number(countResult[0]?.count || 0);
+    const isFirstDesign = previousMessages === 1;
 
     // Get email template based on whether it's first design or revision
     const templateKey = isFirstDesign ? 'DESIGN_REVIEW_FIRST' : 'DESIGN_REVIEW_REVISION';
@@ -94,7 +100,7 @@ export async function POST(
       });
 
       const influencer = workflowWithInfluencer?.influencer;
-    if (influencer?.email) {
+      if (influencer?.email) {
         const auth = getAuthClient();
         
         // Build email using template or fallback

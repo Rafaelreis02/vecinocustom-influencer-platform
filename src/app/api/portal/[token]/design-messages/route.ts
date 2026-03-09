@@ -32,10 +32,12 @@ export async function GET(
       return NextResponse.json({ error: 'No active workflow found' }, { status: 404 });
     }
 
-    const messages = await prisma.designMessage.findMany({
-      where: { workflowId: workflow.id },
-      orderBy: { createdAt: 'asc' },
-    });
+    // Use raw query to avoid table name mismatch
+    const messages = await prisma.$queryRaw`
+      SELECT * FROM "DesignMessage" 
+      WHERE "workflowId" = ${workflow.id} 
+      ORDER BY "createdAt" ASC
+    `;
 
     return NextResponse.json({ success: true, data: messages });
   } catch (error: any) {
