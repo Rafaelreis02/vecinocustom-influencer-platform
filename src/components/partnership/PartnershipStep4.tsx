@@ -129,9 +129,14 @@ export function PartnershipStep4({ workflow, isLocked, onAdvance }: PartnershipS
         setImageUrl('');
         setUploadedImage(null);
         await fetchMessages();
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        console.error('Server error:', errorData);
+        setUploadError(errorData.error || 'Erro ao enviar mensagem');
       }
     } catch (err) {
       console.error('Error sending message:', err);
+      setUploadError('Erro de rede ao enviar mensagem');
     } finally {
       setIsSending(false);
     }
