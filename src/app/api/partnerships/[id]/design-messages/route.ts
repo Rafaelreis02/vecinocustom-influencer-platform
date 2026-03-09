@@ -93,9 +93,9 @@ export async function POST(
         include: { influencer: true },
       });
 
-      if (workflowWithInfluencer?.influencer?.email) {
+      const influencer = workflowWithInfluencer?.influencer;
+    if (influencer?.email) {
         const auth = getAuthClient();
-        const influencer = workflowWithInfluencer.influencer;
         
         // Build email using template or fallback
         let emailSubject: string;
