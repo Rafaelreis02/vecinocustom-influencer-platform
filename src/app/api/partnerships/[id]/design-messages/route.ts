@@ -73,6 +73,19 @@ export async function POST(
 
     logger.info('[DESIGN_MESSAGES] Admin sent message:', { workflowId: id, messageId: message.id });
 
+    // Check if this is the first message or a revision
+    const previousMessages = await prisma.designMessage.count({
+      where: { workflowId: id, senderType: 'ADMIN' },
+    });
+    const isFirstDesign = previousMessages === 1; // Only this message exists
+
+    // Get email template based on whether it's first design or revision
+    const templateKey = isFirstDesign ? 'DESIGN_REVIEW_FIRST' : 'DESIGN_REVIEW_REVISION';
+    
+    const template = await prisma.emailTemplate.findUnique({
+      where: { key: templateKey },
+    });
+
     // Send email notification to influencer
     try {
       const workflowWithInfluencer = await prisma.partnershipWorkflow.findUnique({
@@ -82,21 +95,45 @@ export async function POST(
 
       if (workflowWithInfluencer?.influencer?.email) {
         const auth = getAuthClient();
-        const emailBody = `Olá ${workflowWithInfluencer.influencer.name || ''},
+        const influencer = workflowWithInfluencer.influencer;
+        
+        // Build email using template or fallback
+        let emailSubject: string;
+        let emailBody: string;
+        
+        if (template) {
+          emailSubject = template.subject;
+          emailBody = template.body
+            .replace(/{{nome}}/g, influencer.name || '')
+            .replace(/{{portalUrl}}/g, `${process.env.NEXT_PUBLIC_APP_URL || 'https://vecinocustom.com'}/portal/${influencer.portalToken}`)
+            .replace(/{{mensagem}}/g, content || '');
+        } else {
+          // Fallback if template not found
+          emailSubject = isFirstDesign 
+            ? '🎨 O teu design está pronto!'
+            : '🎨 Revisão do teu design - Verifica as alterações';
+          emailBody = `Olá ${influencer.name || ''},
 
-Temos um novo design/mockup pronto para ti!
+${isFirstDesign 
+  ? 'Temos uma excelente notícia! O design da tua peça personalizada está pronto. 🎉'
+  : 'Fizemos as alterações solicitadas ao teu design! 🎨'}
 
-${content ? `Mensagem da equipa:\n${content}\n\n` : ''}Por favor acede ao teu portal para ver e aprovar o design:\n${process.env.NEXT_PUBLIC_APP_URL || 'https://vecinocustom.com'}/portal/${workflowWithInfluencer.influencer.portalToken}
+Podes ver ${isFirstDesign ? 'o mockup' : 'a nova versão'} e aprovar através do teu portal:
+${process.env.NEXT_PUBLIC_APP_URL || 'https://vecinocustom.com'}/portal/${influencer.portalToken}
 
-Cumprimentos,\nEquipa VecinoCustom`;
+${content ? `Mensagem da equipa:\n${content}\n\n` : ''}Cumprimentos,\nEquipa VecinoCustom`;
+        }
 
         await sendEmail(auth, {
-          to: workflowWithInfluencer.influencer.email,
-          subject: '🎨 Novo Design da VecinoCustom - Aguarda a tua aprovação',
+          to: influencer.email,
+          subject: emailSubject,
           body: emailBody,
         });
+        
         logger.info('[DESIGN_MESSAGES] Email notification sent to influencer:', { 
-          email: workflowWithInfluencer.influencer.email 
+          email: influencer.email,
+          template: templateKey,
+          isFirstDesign 
         });
       }
     } catch (emailError) {

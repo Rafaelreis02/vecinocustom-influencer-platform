@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
+import { InfluencerStatus } from '@prisma/client';
 
 // POST /api/portal/[token]/request-revision - Influencer requests revision
 export async function POST(
@@ -42,11 +43,19 @@ export async function POST(
     // Increment revision count
     const newRevisionCount = (workflow.designRevisionCount || 0) + 1;
 
-    // Update workflow
+    // Update workflow and influencer status
     await prisma.partnershipWorkflow.update({
       where: { id: workflow.id },
       data: {
         designRevisionCount: newRevisionCount,
+      },
+    });
+
+    // Update influencer status to ALTERATIONS_REQUESTED
+    await prisma.influencer.update({
+      where: { id: influencer.id },
+      data: {
+        status: InfluencerStatus.ALTERATIONS_REQUESTED,
       },
     });
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
+import { InfluencerStatus } from '@prisma/client';
 
 // POST /api/portal/[token]/approve-design - Influencer approves design
 export async function POST(
@@ -50,7 +51,7 @@ export async function POST(
     // Update influencer status
     await prisma.influencer.update({
       where: { id: influencer.id },
-      data: { status: 'CONTRACT_PENDING' },
+      data: { status: InfluencerStatus.CONTRACT_PENDING },
     });
 
     logger.info('[PORTAL_DESIGN] Design approved by influencer:', { workflowId: workflow.id });

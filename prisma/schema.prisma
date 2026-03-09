@@ -165,6 +165,8 @@ enum InfluencerStatus {
   // Fase 3: Em Curso
   AGREED             // 🤝 Acordado - valores acordados, falta sugerir produtos + morada
   PRODUCT_SELECTION  // 🎁 Seleção Produto - produto escolhido, aguardar confirmação design
+  DESIGN_REVIEW      // 🎨 Design Review - aguardar aprovação do design pelo influencer
+  ALTERATIONS_REQUESTED // 📝 Alterações Solicitadas - influencer pediu alterações ao design
   CONTRACT_PENDING   // 📝 Contrato Pendente - design escolhido, falta assinar contrato
   SHIPPED            // 📦 Enviado - encomenda enviada, falta entregar conteúdo
   COMPLETED          // ✅ Concluído - conteúdo entregue e aprovado
