@@ -68,9 +68,18 @@ export async function POST(
         template = await prisma.emailTemplate.findUnique({ where: { key: 'STEP_3_PREPARING' } });
       }
     }
-    // Step 4: Contract - only generic exists
+    // Step 4: Design Review - check if first design or revision
     else if (currentStep === 4) {
-      template = await prisma.emailTemplate.findUnique({ where: { key: 'STEP_4_CONTRACT' } });
+      const messageCount = await prisma.designMessage.count({
+        where: { workflowId: id, senderType: 'ADMIN' },
+      });
+      const isFirstDesign = messageCount === 0;
+      const key = isFirstDesign ? 'DESIGN_REVIEW_FIRST' : 'DESIGN_REVIEW_REVISION';
+      template = await prisma.emailTemplate.findUnique({ where: { key } });
+      // Fallback to old template if new ones don't exist
+      if (!template) {
+        template = await prisma.emailTemplate.findUnique({ where: { key: 'STEP_4_CONTRACT' } });
+      }
     }
     // Step 5: Shipped - only generic exists
     else if (currentStep === 5) {
@@ -104,6 +113,7 @@ export async function POST(
       instagram: workflow.contactInstagram,
       whatsapp: workflow.contactWhatsapp,
       portalToken: workflow.influencer.portalToken,
+      portalUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://vecinocustom.com'}/portal/${workflow.influencer.portalToken}`,
     };
 
     // Step-specific variables
