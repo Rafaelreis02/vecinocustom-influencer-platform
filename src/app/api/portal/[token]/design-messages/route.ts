@@ -33,11 +33,13 @@ export async function GET(
     }
 
     // Use raw query to avoid table name mismatch
+    logger.info('[PORTAL_DESIGN] Fetching messages for workflow:', workflow.id);
     const messages = await prisma.$queryRaw`
       SELECT * FROM "DesignMessage" 
       WHERE "workflowId" = ${workflow.id} 
       ORDER BY "createdAt" ASC
     `;
+    logger.info('[PORTAL_DESIGN] Found messages:', { count: (messages as any[]).length });
 
     return NextResponse.json({ success: true, data: messages });
   } catch (error: any) {

@@ -100,7 +100,14 @@ export async function POST(
       });
 
       const influencer = workflowWithInfluencer?.influencer;
+      logger.info('[DESIGN_MESSAGES] Checking influencer email:', { 
+        hasInfluencer: !!influencer, 
+        hasEmail: !!influencer?.email,
+        email: influencer?.email 
+      });
+      
       if (influencer?.email) {
+        logger.info('[DESIGN_MESSAGES] Getting auth client...');
         const auth = getAuthClient();
         
         // Build email using template or fallback
@@ -130,17 +137,20 @@ ${process.env.NEXT_PUBLIC_APP_URL || 'https://vecinocustom.com'}/portal/${influe
 ${content ? `Mensagem da equipa:\n${content}\n\n` : ''}Cumprimentos,\nEquipa VecinoCustom`;
         }
 
+        logger.info('[DESIGN_MESSAGES] Sending email...', { to: influencer.email, subject: emailSubject });
         await sendEmail(auth, {
           to: influencer.email,
           subject: emailSubject,
           body: emailBody,
         });
         
-        logger.info('[DESIGN_MESSAGES] Email notification sent to influencer:', { 
+        logger.info('[DESIGN_MESSAGES] Email notification sent successfully:', { 
           email: influencer.email,
           template: templateKey,
           isFirstDesign 
         });
+      } else {
+        logger.warn('[DESIGN_MESSAGES] No influencer email found, skipping email notification');
       }
     } catch (emailError) {
       logger.error('[DESIGN_MESSAGES] Failed to send email notification:', emailError);
