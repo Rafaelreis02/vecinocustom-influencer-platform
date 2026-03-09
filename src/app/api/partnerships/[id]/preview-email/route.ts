@@ -70,9 +70,11 @@ export async function POST(
     }
     // Step 4: Design Review - check if first design or revision
     else if (currentStep === 4) {
-      const messageCount = await prisma.designMessage.count({
-        where: { workflowId: id, senderType: 'ADMIN' },
-      });
+      // Use raw query to avoid table name mismatch issues
+      const messageResult = await prisma.$queryRaw<{ count: number }[]>`
+        SELECT COUNT(*) as count FROM "DesignMessage" WHERE "workflowId" = ${id} AND "senderType" = 'ADMIN'
+      `;
+      const messageCount = Number(messageResult[0]?.count || 0);
       const isFirstDesign = messageCount === 0;
       const key = isFirstDesign ? 'DESIGN_REVIEW_FIRST' : 'DESIGN_REVIEW_REVISION';
       template = await prisma.emailTemplate.findUnique({ where: { key } });
