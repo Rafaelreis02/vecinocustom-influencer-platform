@@ -691,7 +691,7 @@ model DesignMessage {
   // Index for fast lookup
   @@index([workflowId])
   @@index([createdAt])
-  @@map("design_messages")
+  @@map("DesignMessage")
 }
 
 enum SenderType {

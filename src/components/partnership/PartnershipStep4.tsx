@@ -71,23 +71,37 @@ export function PartnershipStep4({ workflow, isLocked, onAdvance }: PartnershipS
     const file = e.target.files?.[0];
     setUploadError(null);
     
-    if (!file) return;
+    if (!file) {
+      console.log('[UPLOAD] No file selected');
+      return;
+    }
+
+    console.log('[UPLOAD] File selected:', { name: file.name, type: file.type, size: file.size });
 
     if (file.size > MAX_FILE_SIZE) {
       setUploadError('A imagem deve ter menos de 5MB');
       return;
     }
 
-    if (!file.type.startsWith('image/')) {
-      setUploadError('O ficheiro deve ser uma imagem');
+    // More permissive image check for mobile devices
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/jpg', 'image/heic', 'image/heif'];
+    const isImage = validTypes.includes(file.type) || file.type.startsWith('image/');
+    
+    if (!isImage) {
+      setUploadError('O ficheiro deve ser uma imagem (JPG, PNG, GIF, WEBP)');
       return;
     }
 
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64 = reader.result as string;
+      console.log('[UPLOAD] File converted to base64, length:', base64.length);
       setUploadedImage(base64);
       setImageUrl(base64);
+    };
+    reader.onerror = () => {
+      console.error('[UPLOAD] FileReader error');
+      setUploadError('Erro ao ler o ficheiro. Tenta novamente.');
     };
     reader.readAsDataURL(file);
   }, []);
@@ -321,15 +335,20 @@ export function PartnershipStep4({ workflow, isLocked, onAdvance }: PartnershipS
           )}
           
           <div className="flex items-end gap-2">
-            {/* Image Upload Button */}
-            <label className="flex-shrink-0 cursor-pointer">
+            {/* Image Upload Button - Mobile Optimized */}
+            <label className="flex-shrink-0 cursor-pointer touch-manipulation">
               <input
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/gif,image/webp,image/jpg,image/heic,image/heif"
                 onChange={handleFileChange}
                 className="sr-only"
+                style={{ display: 'none' }}
+                id="image-upload-input"
               />
-              <div className="p-3 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors">
+              <div 
+                className="p-3 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors active:bg-gray-200"
+                onClick={() => document.getElementById('image-upload-input')?.click()}
+              >
                 <ImageIcon className="h-5 w-5" />
               </div>
             </label>

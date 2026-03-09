@@ -32,10 +32,11 @@ export async function GET(
       return NextResponse.json({ error: 'No active workflow found' }, { status: 404 });
     }
 
-    // Use raw query to avoid table name mismatch
+    // Use raw query - table name is DesignMessage (camelCase in DB)
     logger.info('[PORTAL_DESIGN] Fetching messages for workflow:', workflow.id);
     const messages = await prisma.$queryRaw`
-      SELECT * FROM "DesignMessage" 
+      SELECT id, content, "imageUrl", "senderType", "createdAt" 
+      FROM "DesignMessage" 
       WHERE "workflowId" = ${workflow.id} 
       ORDER BY "createdAt" ASC
     `;
