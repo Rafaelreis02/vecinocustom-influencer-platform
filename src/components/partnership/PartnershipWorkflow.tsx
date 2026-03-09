@@ -864,9 +864,27 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
               </div>
             )}
             
-            {/* Step 4: Design Review - Show advance button when approved */}
+            {/* Step 4: Design Review - Show preview email and advance button when approved */}
             {currentStep === 4 && (
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={loadEmailPreview}
+                  disabled={isAdvancing || isLoadingPreview}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  {isLoadingPreview ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      A carregar...
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="h-4 w-4" />
+                      Ver Email
+                    </>
+                  )}
+                </button>
+                
                 {workflow.designApproved ? (
                   <button
                     onClick={advanceStep}
@@ -886,9 +904,9 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
                     )}
                   </button>
                 ) : (
-                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
                     <p className="text-sm text-amber-800">
-                      <span className="font-medium">⏳ Aguardando aprovação:</span> O influencer precisa de aprovar o design no portal antes de avançares.
+                      <span className="font-medium">⏳ Aguardando aprovação</span>
                     </p>
                   </div>
                 )}
