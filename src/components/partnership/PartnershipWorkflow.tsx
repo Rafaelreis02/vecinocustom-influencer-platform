@@ -169,26 +169,19 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
       setIsAdvancing(true);
       setAdvanceError(null);
       
-      // First, refresh workflow data to ensure we have the latest state
-      const refreshRes = await fetch(`/api/partnerships/${workflow.id}`);
-      const refreshData = await refreshRes.json();
-      
-      if (refreshData.success) {
-        setWorkflow(refreshData.data);
-      }
-      
-      // Small delay to ensure state is updated
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
       const res = await fetch(`/api/partnerships/${workflow.id}/advance`, {
         method: 'POST',
       });
       
       const data = await res.json();
       if (data.success) {
-        setWorkflow(data.data);
+        // Force immediate update of workflow state
+        setWorkflow({ ...data.data });
         setShowEmailPreview(false);
         setEmailPreview(null);
+        
+        // Force re-fetch to ensure latest data
+        await fetchWorkflow();
       } else {
         setAdvanceError(data.error || data.missing?.join(', '));
       }

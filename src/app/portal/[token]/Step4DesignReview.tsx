@@ -31,6 +31,9 @@ export function Step4DesignReview({ token, onApprove }: Step4DesignReviewProps) 
   // Fetch messages
   useEffect(() => {
     fetchMessages();
+    // Poll for new messages every 5 seconds
+    const interval = setInterval(fetchMessages, 5000);
+    return () => clearInterval(interval);
   }, [token]);
 
   // Handle file upload - Mobile optimized
@@ -79,13 +82,21 @@ export function Step4DesignReview({ token, onApprove }: Step4DesignReviewProps) 
 
   const fetchMessages = async () => {
     try {
+      console.log('[PORTAL] Fetching messages for token:', token);
       const res = await fetch(`/api/portal/${token}/design-messages`);
       const data = await res.json();
+      console.log('[PORTAL] Response:', data);
+      
       if (data.success) {
-        setMessages(data.data);
+        console.log('[PORTAL] Found messages:', data.data?.length || 0);
+        setMessages(data.data || []);
+      } else {
+        console.error('[PORTAL] API error:', data.error);
+        setError(data.error || 'Erro ao carregar mensagens');
       }
     } catch (err) {
-      console.error('Error fetching messages:', err);
+      console.error('[PORTAL] Error fetching messages:', err);
+      setError('Erro de rede ao carregar mensagens');
     } finally {
       setIsLoading(false);
     }
