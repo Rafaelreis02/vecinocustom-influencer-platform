@@ -11,7 +11,31 @@ interface ContractData {
   userAgent?: string;
 }
 
+// Helper to remove emojis and special characters that can't be encoded in WinAnsi
+function sanitizeText(text: string): string {
+  return text
+    .replace(/[\u{1F600}-\u{1F64F}]/gu, '') // Emoticons
+    .replace(/[\u{1F300}-\u{1F5FF}]/gu, '') // Misc Symbols and Pictographs
+    .replace(/[\u{1F680}-\u{1F6FF}]/gu, '') // Transport and Map
+    .replace(/[\u{1F1E0}-\u{1F1FF}]/gu, '') // Flags
+    .replace(/[\u{2600}-\u{26FF}]/gu, '')   // Misc symbols
+    .replace(/[\u{2700}-\u{27BF}]/gu, '')   // Dingbats
+    .replace(/[\u{1F900}-\u{1F9FF}]/gu, '') // Supplemental Symbols and Pictographs
+    .replace(/[\u{1F018}-\u{1F270}]/gu, '') // Chess symbols
+    .replace(/[\u{238C}-\u{2454}]/gu, '')   // Misc symbols
+    .replace(/[\u{20D0}-\u{20FF}]/gu, '')   // Combining Diacritical Marks for Symbols
+    .replace(/[\u{FE0F}]/gu, '');           // Variation Selector
+}
+
 export async function generateContractPDF(data: ContractData): Promise<Uint8Array> {
+  // Sanitize inputs to remove emojis
+  const sanitizedData = {
+    ...data,
+    influencerName: sanitizeText(data.influencerName),
+    influencerHandle: sanitizeText(data.influencerHandle),
+    productDescription: data.productDescription ? sanitizeText(data.productDescription) : undefined,
+  };
+
   const pdfDoc = await PDFDocument.create();
   
   // A4 size
@@ -142,8 +166,8 @@ export async function generateContractPDF(data: ContractData): Promise<Uint8Arra
   addWrappedText('   A registered brand owned by BRILLOSCURO LDA, with registered office at Rua Comendador Sá Couto 112, 4520-192 Santa Maria da Feira, Portugal, Tax ID: 517924773 (hereinafter referred to as the "Brand" or "First Party")', 9, false, 10);
   y -= 8;
   
-  addWrappedText(`2. ${data.influencerName}`, 10, true);
-  addWrappedText(`   Content Creator with social media handle @${data.influencerHandle} (hereinafter referred to as the "Creator" or "Second Party")`, 9, false, 10);
+  addWrappedText(`2. ${sanitizedData.influencerName}`, 10, true);
+  addWrappedText(`   Content Creator with social media handle @${sanitizedData.influencerHandle} (hereinafter referred to as the "Creator" or "Second Party")`, 9, false, 10);
   y -= 15;
   
   addWrappedText('Enter into the present Collaboration Agreement, governed by the following clauses:', 10);
@@ -151,18 +175,18 @@ export async function generateContractPDF(data: ContractData): Promise<Uint8Arra
   
   // === CLAUSE 1 ===
   addSectionTitle('1. Purpose of the Collaboration');
-  addWrappedText(`The purpose of this partnership is the creation of original digital content by the Creator, with the aim of promoting the products of VECINO CUSTOM, namely ${data.productDescription || 'personalized jewelry pieces'}.`, 10);
+  addWrappedText(`The purpose of this partnership is the creation of original digital content by the Creator, with the aim of promoting the products of VECINO CUSTOM, namely ${sanitizedData.productDescription || 'personalized jewelry pieces'}.`, 10);
   
   // === CLAUSE 2 ===
   addSectionTitle('2. Collaboration Terms');
   
   addWrappedText('Obligations of the Brand (First Party):', 10, true);
   addBulletPoint('Free delivery of 1 personalized jewelry piece, selected based on the Creator\'s personal style and preferences');
-  addBulletPoint(`Assignment of an exclusive discount code providing: (i) 10% discount for the Creator's community; (ii) ${data.commissionRate}% commission on each sale made using the code`);
+  addBulletPoint(`Assignment of an exclusive discount code providing: (i) 10% discount for the Creator's community; (ii) ${sanitizedData.commissionRate}% commission on each sale made using the code`);
   
   // Only show fixed remuneration if agreedPrice > 0
-  if (data.agreedPrice > 0) {
-    addBulletPoint(`Payment of a fixed remuneration of ${data.agreedPrice.toFixed(2)}€ upon completion of deliverables`);
+  if (sanitizedData.agreedPrice > 0) {
+    addBulletPoint(`Payment of a fixed remuneration of ${sanitizedData.agreedPrice.toFixed(2)}€ upon completion of deliverables`);
   }
   y -= 8;
   
@@ -182,12 +206,12 @@ export async function generateContractPDF(data: ContractData): Promise<Uint8Arra
   // === CLAUSE 4 ===
   addSectionTitle('4. Remuneration and Commissions');
   
-  if (data.agreedPrice > 0) {
-    addBulletPoint(`Fixed remuneration: ${data.agreedPrice.toFixed(2)}€ (paid after content delivery and approval)`);
-    addBulletPoint(`Commission: ${data.commissionRate}% on each sale using the exclusive discount code`);
+  if (sanitizedData.agreedPrice > 0) {
+    addBulletPoint(`Fixed remuneration: ${sanitizedData.agreedPrice.toFixed(2)}€ (paid after content delivery and approval)`);
+    addBulletPoint(`Commission: ${sanitizedData.commissionRate}% on each sale using the exclusive discount code`);
   } else {
     addBulletPoint('This is a commission-only partnership with no fixed remuneration.');
-    addBulletPoint(`Commission: ${data.commissionRate}% on each sale using the exclusive discount code`);
+    addBulletPoint(`Commission: ${sanitizedData.commissionRate}% on each sale using the exclusive discount code`);
   }
   addBulletPoint('Commission payments made monthly by the 10th day of each month');
   addBulletPoint('Payment requires: (i) Content delivery; (ii) Access codes for sponsorship; (iii) Valid receipt/invoice from Creator');
@@ -231,29 +255,29 @@ export async function generateContractPDF(data: ContractData): Promise<Uint8Arra
   addCenteredText('DIGITAL ACCEPTANCE', 13, true, 0);
   y -= 20;
   
-  addWrappedText(`This contract was digitally accepted by ${data.influencerName} (@${data.influencerHandle})`, 9);
-  addWrappedText(`Date: ${data.date}`, 9);
-  
-  if (data.ipAddress) {
-    addWrappedText(`IP Address: ${data.ipAddress}`, 9);
+  addWrappedText(`This contract was digitally accepted by ${sanitizedData.influencerName} (@${sanitizedData.influencerHandle})`, 9);
+  addWrappedText(`Date: ${sanitizedData.date}`, 9);
+
+  if (sanitizedData.ipAddress) {
+    addWrappedText(`IP Address: ${sanitizedData.ipAddress}`, 9);
   }
-  
+
   y -= 10;
   addWrappedText('This digital acceptance constitutes a valid electronic signature under Portuguese and EU law (eIDAS Regulation).', 8);
-  
+
   // === FOOTER ===
   checkNewPage(60);
   y -= 40;
-  
+
   page.drawLine({
     start: { x: margin, y: y + 20 },
     end: { x: pageWidth - margin, y: y + 20 },
     thickness: 0.5,
     color: rgb(0.7, 0.7, 0.7),
   });
-  
+
   y -= 15;
-  addCenteredText(`Santa Maria da Feira, ${data.date}`, 10);
+  addCenteredText(`Santa Maria da Feira, ${sanitizedData.date}`, 10);
   
   const pdfBytes = await pdfDoc.save();
   return pdfBytes;
