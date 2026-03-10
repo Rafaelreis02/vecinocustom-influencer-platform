@@ -1100,7 +1100,7 @@ function Step4({ data, token, onNext }: StepProps) {
       <h2 className="text-xl font-bold text-[#0E1E37] mb-6 uppercase">Contract</h2>
       
       {/* Contract Display */}
-      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6 max-h-96 overflow-y-auto text-sm">
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6 text-sm">
         <h3 className="text-center font-bold text-lg mb-4">COLLABORATION AGREEMENT</h3>
         <p className="text-center text-sm mb-4">BETWEEN THE BRAND VECINO CUSTOM AND CONTENT CREATOR</p>
         
