@@ -51,12 +51,11 @@ const STEPS = [
   { number: 1, name: 'Partnership', status: 'ANALYZING' },
   { number: 2, name: 'Shipping', status: 'AGREED' },
   { number: 3, name: 'Preparing', status: 'PRODUCT_SELECTION' },
-  { number: 4, name: 'Design Reference', status: 'DESIGN_REFERENCE_SUBMITTED' },
-  { number: 5, name: 'Design Review', status: 'DESIGN_REVIEW' },
-  { number: 6, name: 'Contract', status: 'CONTRACT_PENDING' },
-  { number: 7, name: 'Preparing Shipment', status: 'SHIPPED' },
-  { number: 8, name: 'Delivered', status: 'DELIVERED' },
-  { number: 9, name: 'Completed', status: 'COMPLETED' },
+  { number: 4, name: 'Design Review', status: 'DESIGN_REVIEW' },
+  { number: 5, name: 'Contract', status: 'CONTRACT_PENDING' },
+  { number: 6, name: 'Preparing Shipment', status: 'SHIPPED' },
+  { number: 7, name: 'Delivered', status: 'DELIVERED' },
+  { number: 8, name: 'Completed', status: 'COMPLETED' },
 ];
 
 export function PartnershipWorkflow({ influencerId, influencerName, influencerHandle, influencerStatus, portalUrl }: PartnershipWorkflowProps) {
@@ -796,20 +795,13 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
           />
         )}
         {currentStep === 4 && (
-          <PartnershipStep4Reference
-            workflow={workflow}
-            isLocked={isCompleted || isCancelled}
-            onAdvance={advanceStep}
-          />
-        )}
-        {currentStep === 5 && (
           <PartnershipStep4
             workflow={workflow}
             isLocked={isCompleted || isCancelled}
             onAdvance={workflow.designApproved ? advanceStep : undefined}
           />
         )}
-        {currentStep === 6 && (
+        {currentStep === 5 && (
           <PartnershipStep5
             workflow={workflow}
             onUpdate={updateWorkflow}
@@ -820,8 +812,8 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
         {/* Action buttons based on step type */}
         {!isCompleted && !isCancelled && (
           <div className="mt-6">
-            {/* Steps 3, 6, 7: Admin advances and sends email */}
-            {(currentStep === 3 || currentStep === 6 || currentStep === 7) && (
+            {/* Steps 3, 5, 6: Admin advances and sends email */}
+            {(currentStep === 3 || currentStep === 5 || currentStep === 6) && (
               <div className="flex justify-end gap-3">
                 <button
                   onClick={loadEmailPreview}
@@ -851,12 +843,12 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
                       <Loader2 className="h-4 w-4 animate-spin" />
                       A processar...
                     </>
-                  ) : currentStep === 7 ? (
+                  ) : currentStep === 6 ? (
                     <>
                       <CheckCircle2 className="h-4 w-4" />
                       Completar Parceria
                     </>
-                  ) : currentStep === 6 ? (
+                  ) : currentStep === 5 ? (
                     <>
                       <CheckCircle2 className="h-4 w-4" />
                       Finalizar Parceria
@@ -875,57 +867,17 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
             {(currentStep === 1 || currentStep === 2 || currentStep === 4) && (
               <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
                 <p className="text-sm text-amber-800">
-                  <span className="font-medium">📧 Email manual:</span> Neste step não é enviado email automático. Quando o influencer avançar, deves enviar email manualmente através do teu Gmail se necessário.
+                  <span className="font-medium">📧 Comunicação via Chat:</span> Neste step a comunicação é feita através do chat acima. O influencer recebe notificação quando enviares mensagens.
                 </p>
               </div>
             )}
             
-            {/* Step 5: Design Review - Show preview email and advance button when approved */}
-            {currentStep === 5 && (
-              <div className="flex justify-end gap-3">
-                <button
-                  onClick={loadEmailPreview}
-                  disabled={isAdvancing || isLoadingPreview}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
-                >
-                  {isLoadingPreview ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      A carregar...
-                    </>
-                  ) : (
-                    <>
-                      <Eye className="h-4 w-4" />
-                      Ver Email
-                    </>
-                  )}
-                </button>
-                
-                {workflow.designApproved ? (
-                  <button
-                    onClick={advanceStep}
-                    disabled={isAdvancing}
-                    className="inline-flex items-center gap-2 px-6 py-2.5 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
-                  >
-                    {isAdvancing ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        A processar...
-                      </>
-                    ) : (
-                      <>
-                        Avançar para Contrato
-                        <ChevronRight className="h-4 w-4" />
-                      </>
-                    )}
-                  </button>
-                ) : (
-                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                    <p className="text-sm text-amber-800">
-                      <span className="font-medium">⏳ Aguardando aprovação</span>
-                    </p>
-                  </div>
-                )}
+            {/* Step 4: Design Review - Show status only (advance is handled by component) */}
+            {currentStep === 4 && !workflow.designApproved && (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <p className="text-sm text-amber-800">
+                  <span className="font-medium">⏳ Aguardando aprovação do influencer</span>
+                </p>
               </div>
             )}
           </div>

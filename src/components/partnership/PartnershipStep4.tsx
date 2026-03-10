@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Loader2, Send, Image as ImageIcon, CheckCircle, X, ChevronRight } from 'lucide-react';
+import { Loader2, Send, Image as ImageIcon, CheckCircle, X, Eye } from 'lucide-react';
 
 interface DesignMessage {
   id: string;
@@ -13,6 +13,8 @@ interface DesignMessage {
 
 interface Workflow {
   id: string;
+  designReferenceUrl: string | null;
+  designReferenceSubmittedAt: string | null;
   designApproved: boolean;
   designRevisionCount: number;
 }
@@ -23,42 +25,34 @@ interface PartnershipStep4Props {
   onAdvance?: () => void;
 }
 
-// Max file size: 5MB
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
-// Componente atualizado v2 - Chat moderno
 export function PartnershipStep4({ workflow, isLocked, onAdvance }: PartnershipStep4Props) {
   const [messages, setMessages] = useState<DesignMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [fileInputKey, setFileInputKey] = useState(Date.now());
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  // Auto-scroll to bottom when new messages arrive
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
 
   useEffect(() => {
     fetchMessages();
-    // Poll for new messages every 10 seconds
-    const interval = setInterval(fetchMessages, 10000);
+    const interval = setInterval(fetchMessages, 5000);
     return () => clearInterval(interval);
   }, [workflow.id]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   const fetchMessages = async () => {
     try {
       const res = await fetch(`/api/partnerships/${workflow.id}/design-messages`);
       const data = await res.json();
       if (data.success) {
-        setMessages(data.data);
+        setMessages(data.data || []);
       }
     } catch (err) {
       console.error('Error fetching messages:', err);
@@ -67,63 +61,45 @@ export function PartnershipStep4({ workflow, isLocked, onAdvance }: PartnershipS
     }
   };
 
-  const [fileInputKey, setFileInputKey] = useState(Date.now());
-
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     setUploadError(null);
-    
-    // Reset input key to allow re-selecting same file
     setFileInputKey(Date.now());
     
-    if (!file) {
-      console.log('[UPLOAD] No file selected');
-      return;
-    }
-
-    console.log('[UPLOAD] File selected:', { name: file.name, type: file.type, size: file.size });
+    if (!file) return;
 
     if (file.size > MAX_FILE_SIZE) {
       setUploadError('A imagem deve ter menos de 5MB');
       return;
     }
 
-    // More permissive image check for mobile devices
-    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/jpg', 'image/heic', 'image/heif'];
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/jpg'];
     const isImage = validTypes.includes(file.type) || file.type.startsWith('image/');
     
     if (!isImage) {
-      setUploadError('O ficheiro deve ser uma imagem (JPG, PNG, GIF, WEBP)');
+      setUploadError('O ficheiro deve ser uma imagem');
       return;
     }
 
     const reader = new FileReader();
     reader.onloadend = () => {
-      const base64 = reader.result as string;
-      console.log('[UPLOAD] File converted to base64, length:', base64.length);
-      setUploadedImage(base64);
-      setImageUrl(base64);
-    };
-    reader.onerror = () => {
-      console.error('[UPLOAD] FileReader error');
-      setUploadError('Erro ao ler o ficheiro. Tenta novamente.');
+      setUploadedImage(reader.result as string);
     };
     reader.readAsDataURL(file);
   }, []);
 
   const clearImage = () => {
     setUploadedImage(null);
-    setImageUrl('');
     setUploadError(null);
   };
 
   const sendMessage = async () => {
-    if (!newMessage.trim() && !imageUrl) return;
+    if (!newMessage.trim() && !uploadedImage) return;
 
     try {
       setIsSending(true);
       
-      let finalImageUrl = imageUrl;
+      let finalImageUrl = null;
       if (uploadedImage && uploadedImage.startsWith('data:')) {
         const uploadRes = await fetch('/api/upload/design-image', {
           method: 'POST',
@@ -145,49 +121,15 @@ export function PartnershipStep4({ workflow, isLocked, onAdvance }: PartnershipS
 
       if (res.ok) {
         setNewMessage('');
-        setImageUrl('');
         setUploadedImage(null);
         await fetchMessages();
-      } else {
-        const errorData = await res.json().catch(() => ({}));
-        console.error('Server error:', errorData);
-        setUploadError(errorData.error || 'Erro ao enviar mensagem');
       }
     } catch (err) {
       console.error('Error sending message:', err);
-      setUploadError('Erro de rede ao enviar mensagem');
     } finally {
       setIsSending(false);
     }
   };
-
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    
-    if (date.toDateString() === today.toDateString()) {
-      return 'Hoje';
-    } else if (date.toDateString() === yesterday.toDateString()) {
-      return 'Ontem';
-    } else {
-      return date.toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' });
-    }
-  };
-
-  // Group messages by date
-  const groupedMessages = messages.reduce((groups: Record<string, DesignMessage[]>, msg) => {
-    const date = new Date(msg.createdAt).toDateString();
-    if (!groups[date]) groups[date] = [];
-    groups[date].push(msg);
-    return groups;
-  }, {});
 
   if (isLoading) {
     return (
@@ -197,96 +139,68 @@ export function PartnershipStep4({ workflow, isLocked, onAdvance }: PartnershipS
     );
   }
 
+  const hasReference = messages.some(m => m.senderType === 'INFLUENCER');
+  const hasMockups = messages.some(m => m.senderType === 'ADMIN');
+
   return (
     <div className="flex flex-col h-[600px]">
       {/* Header */}
       <div className="flex items-center justify-between pb-4 border-b border-gray-200">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900">
-            💬 Chat de Design
-          </h3>
+          <h3 className="text-lg font-semibold text-gray-900">Step 4: Design Review</h3>
           <p className="text-sm text-gray-500">
-            Comunica com o influencer sobre o design/mockup
+            {!hasReference 
+              ? 'Aguardando referência do influencer'
+              : !hasMockups 
+                ? 'Referência recebida. Envia as provas do design'
+                : workflow.designApproved 
+                  ? 'Design aprovado!'
+                  : 'Aguardando aprovação do influencer'
+            }
           </p>
         </div>
-        <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-          workflow.designApproved 
-            ? 'bg-green-100 text-green-700' 
-            : 'bg-amber-100 text-amber-700'
-        }`}>
-          {workflow.designApproved ? '✅ Aprovado' : `⏳ Em revisão (${workflow.designRevisionCount})`}
-        </div>
+        {workflow.designApproved && (
+          <div className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+            ✅ Aprovado
+          </div>
+        )}
       </div>
 
       {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto py-4 space-y-6">
+      <div className="flex-1 overflow-y-auto py-4 space-y-4">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-gray-400">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-              <ImageIcon className="h-8 w-8" />
-            </div>
-            <p className="text-sm">Nenhuma mensagem ainda</p>
-            <p className="text-xs">Envia o mockup do design para começar</p>
+            <ImageIcon className="h-12 w-12 mb-3" />
+            <p className="text-sm">Aguardando referência do influencer...</p>
           </div>
         ) : (
-          Object.entries(groupedMessages).map(([date, dateMessages]) => (
-            <div key={date} className="space-y-3">
-              {/* Date separator */}
-              <div className="flex items-center justify-center">
-                <span className="text-xs text-gray-400 bg-gray-100 px-3 py-1 rounded-full">
-                  {formatDate(dateMessages[0].createdAt)}
-                </span>
-              </div>
-              
-              {dateMessages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex ${msg.senderType === 'ADMIN' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div className={`flex items-end gap-2 max-w-[85%] ${
-                    msg.senderType === 'ADMIN' ? 'flex-row-reverse' : ''
-                  }`}>
-                    {/* Avatar */}
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                      msg.senderType === 'ADMIN' 
-                        ? 'bg-black text-white' 
-                        : 'bg-purple-100 text-purple-700'
-                    }`}>
-                      {msg.senderType === 'ADMIN' ? 'VC' : 'IN'}
-                    </div>
-                    
-                    {/* Message bubble */}
-                    <div className={`rounded-2xl px-4 py-2.5 ${
-                      msg.senderType === 'ADMIN'
-                        ? 'bg-black text-white rounded-br-md'
-                        : 'bg-gray-100 text-gray-800 rounded-bl-md border border-gray-200'
-                    }`}>
-                      {msg.imageUrl && (
-                        <a 
-                          href={msg.imageUrl} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="block mb-2"
-                        >
-                          <img
-                            src={msg.imageUrl}
-                            alt="Design"
-                            className="rounded-lg max-w-[250px] max-h-[200px] object-cover hover:opacity-90 transition-opacity"
-                          />
-                        </a>
-                      )}
-                      {msg.content && (
-                        <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                      )}
-                      <span className={`text-xs mt-1 block ${
-                        msg.senderType === 'ADMIN' ? 'text-gray-400' : 'text-gray-400'
-                      }`}>
-                        {formatTime(msg.createdAt)}
-                      </span>
-                    </div>
-                  </div>
+          messages.map((msg) => (
+            <div
+              key={msg.id}
+              className={`flex ${msg.senderType === 'ADMIN' ? 'justify-end' : 'justify-start'}`}
+            >
+              <div className={`flex items-end gap-2 max-w-[85%] ${msg.senderType === 'ADMIN' ? 'flex-row-reverse' : ''}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                  msg.senderType === 'ADMIN' ? 'bg-black text-white' : 'bg-purple-100 text-purple-700'
+                }`}>
+                  {msg.senderType === 'ADMIN' ? 'VC' : 'IN'}
                 </div>
-              ))}
+                <div className={`rounded-2xl px-4 py-2.5 ${
+                  msg.senderType === 'ADMIN'
+                    ? 'bg-black text-white rounded-br-md'
+                    : 'bg-gray-100 text-gray-800 rounded-bl-md border border-gray-200'
+                }`}>
+                  {msg.imageUrl && (
+                    <a href={msg.imageUrl} target="_blank" rel="noopener noreferrer" className="block mb-2">
+                      <img src={msg.imageUrl} alt="Design" className="rounded-lg max-w-[250px] max-h-[200px] object-cover hover:opacity-90" />
+                    </a>
+                  )}
+                  {msg.content && <p className="text-sm whitespace-pre-wrap">{msg.content}</p>}
+                  <span className="text-xs opacity-60 mt-1 block">
+                    {new Date(msg.createdAt).toLocaleString('pt-PT')}
+                  </span>
+                </div>
+              </div>
             </div>
           ))
         )}
@@ -302,17 +216,14 @@ export function PartnershipStep4({ workflow, isLocked, onAdvance }: PartnershipS
             </div>
             <div className="flex-1">
               <p className="font-medium text-green-900">Design aprovado!</p>
-              <p className="text-sm text-green-700">
-                O influencer já aprovou o design. Podes avançar para o contrato.
-              </p>
+              <p className="text-sm text-green-700">O influencer aprovou o design.</p>
             </div>
             {onAdvance && !isLocked && (
               <button
                 onClick={onAdvance}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700"
               >
-                Avançar
-                <ChevronRight className="h-4 w-4" />
+                Avançar para Contrato
               </button>
             )}
           </div>
@@ -320,57 +231,40 @@ export function PartnershipStep4({ workflow, isLocked, onAdvance }: PartnershipS
       )}
 
       {/* Input Area */}
-      {!isLocked && !workflow.designApproved && (
+      {!isLocked && !workflow.designApproved && hasReference && (
         <div className="border-t border-gray-200 pt-4">
-          {/* Image Preview */}
           {uploadedImage && (
             <div className="relative mb-3 inline-block">
-              <img
-                src={uploadedImage}
-                alt="Preview"
-                className="h-20 w-20 object-cover rounded-lg border border-gray-200"
-              />
-              <button
-                onClick={clearImage}
-                className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 shadow-sm"
-              >
+              <img src={uploadedImage} alt="Preview" className="h-20 w-20 object-cover rounded-lg border" />
+              <button onClick={clearImage} className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full">
                 <X className="h-3 w-3" />
               </button>
             </div>
           )}
           
           <div className="flex items-end gap-2">
-            {/* Image Upload Button - Mobile Optimized */}
-            <label htmlFor="image-upload-input" className="flex-shrink-0 cursor-pointer touch-manipulation">
+            <label htmlFor="admin-image-upload" className="flex-shrink-0 cursor-pointer">
               <input
                 key={fileInputKey}
                 type="file"
-                accept="image/jpeg,image/png,image/gif,image/webp,image/jpg,image/heic,image/heif"
+                accept="image/*"
                 onChange={handleFileChange}
                 className="sr-only"
-                id="image-upload-input"
+                id="admin-image-upload"
               />
-              <div 
-                className="p-3 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors active:bg-gray-200"
-              >
+              <div className="p-3 text-gray-500 hover:bg-gray-100 rounded-full transition-colors">
                 <ImageIcon className="h-5 w-5" />
               </div>
             </label>
             
-            {/* Text Input */}
             <div className="flex-1 relative">
               <textarea
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 placeholder="Escreve uma mensagem..."
                 rows={1}
-                className="w-full px-4 py-3 bg-gray-100 border-0 rounded-2xl text-sm focus:ring-2 focus:ring-black focus:bg-white resize-none min-h-[48px] max-h-[120px]"
+                className="w-full px-4 py-3 bg-gray-100 border-0 rounded-2xl text-sm focus:ring-2 focus:ring-black focus:bg-white resize-none"
                 style={{ height: 'auto' }}
-                onInput={(e) => {
-                  const target = e.target as HTMLTextAreaElement;
-                  target.style.height = 'auto';
-                  target.style.height = target.scrollHeight + 'px';
-                }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
@@ -380,25 +274,23 @@ export function PartnershipStep4({ workflow, isLocked, onAdvance }: PartnershipS
               />
             </div>
             
-            {/* Send Button */}
             <button
               onClick={sendMessage}
-              disabled={isSending || (!newMessage.trim() && !imageUrl) || !!uploadError}
-              className="flex-shrink-0 p-3 bg-black text-white rounded-full hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              disabled={isSending || (!newMessage.trim() && !uploadedImage) || !!uploadError}
+              className="flex-shrink-0 p-3 bg-black text-white rounded-full hover:bg-gray-800 disabled:opacity-50"
             >
-              {isSending ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
-              ) : (
-                <Send className="h-5 w-5" />
-              )}
+              {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
             </button>
           </div>
           
-          {uploadError && (
-            <p className="text-xs text-red-600 mt-2 ml-12">{uploadError}</p>
-          )}
-          <p className="text-xs text-gray-400 mt-2 ml-12">
-            Pressiona Enter para enviar • Máx. 5MB
+          {uploadError && <p className="text-xs text-red-600 mt-2">{uploadError}</p>}
+        </div>
+      )}
+
+      {!hasReference && !isLocked && (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <p className="text-sm text-amber-800">
+            Aguardando referência do influencer. Assim que enviar, podes responder com as provas do design.
           </p>
         </div>
       )}

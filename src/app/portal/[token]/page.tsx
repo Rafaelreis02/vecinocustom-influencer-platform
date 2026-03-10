@@ -312,26 +312,20 @@ export default function PortalPage() {
           {currentStep === 4 && (
             <StepDesignReference
               token={token}
-              onNext={() => setCurrentStep(5)}
+              onApprove={() => setCurrentStep(5)}
               designReferenceUrl={influencerData?.designReferenceUrl}
             />
           )}
           {currentStep === 5 && (
-            <Step4DesignReview
-              token={token}
-              onApprove={() => setCurrentStep(6)}
-            />
-          )}
-          {currentStep === 6 && (
             <Step5Contract
               data={influencerData}
               token={token}
               onUpdate={fetchInfluencerData}
-              onNext={() => setCurrentStep(7)}
+              onNext={() => setCurrentStep(6)}
             />
           )}
-          {currentStep === 7 && <Step6 data={influencerData} />}
-          {currentStep === 8 && <Step7 data={influencerData} />}
+          {currentStep === 6 && <Step6 data={influencerData} />}
+          {currentStep === 7 && <Step7 data={influencerData} />}
         </div>
 
         {/* Exit Portal Link */}
