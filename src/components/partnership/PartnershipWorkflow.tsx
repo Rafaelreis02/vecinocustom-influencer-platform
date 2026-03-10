@@ -5,6 +5,7 @@ import { Loader2, CheckCircle2, Circle, Lock, ChevronRight, RefreshCcw, X, Check
 import { PartnershipStep1 } from './PartnershipStep1';
 import { PartnershipStep2 } from './PartnershipStep2';
 import { PartnershipStep3 } from './PartnershipStep3';
+import { PartnershipStep4Reference } from './PartnershipStep4Reference';
 import { PartnershipStep4 } from './PartnershipStep4';
 import { PartnershipStep5 } from './PartnershipStep5';
 
@@ -29,6 +30,8 @@ interface Workflow {
   productSuggestion2: string | null;
   productSuggestion3: string | null;
   selectedProductUrl: string | null;
+  designReferenceUrl: string | null;
+  designReferenceSubmittedAt: string | null;
   designApproved: boolean;
   designRevisionCount: number;
   contractSigned: boolean;
@@ -48,11 +51,12 @@ const STEPS = [
   { number: 1, name: 'Partnership', status: 'ANALYZING' },
   { number: 2, name: 'Shipping', status: 'AGREED' },
   { number: 3, name: 'Preparing', status: 'PRODUCT_SELECTION' },
-  { number: 4, name: 'Design Review', status: 'DESIGN_REVIEW' },
-  { number: 5, name: 'Contract', status: 'CONTRACT_PENDING' },
-  { number: 6, name: 'Preparing Shipment', status: 'SHIPPED' },
-  { number: 7, name: 'Delivered', status: 'DELIVERED' },
-  { number: 8, name: 'Completed', status: 'COMPLETED' },
+  { number: 4, name: 'Design Reference', status: 'DESIGN_REFERENCE_SUBMITTED' },
+  { number: 5, name: 'Design Review', status: 'DESIGN_REVIEW' },
+  { number: 6, name: 'Contract', status: 'CONTRACT_PENDING' },
+  { number: 7, name: 'Preparing Shipment', status: 'SHIPPED' },
+  { number: 8, name: 'Delivered', status: 'DELIVERED' },
+  { number: 9, name: 'Completed', status: 'COMPLETED' },
 ];
 
 export function PartnershipWorkflow({ influencerId, influencerName, influencerHandle, influencerStatus, portalUrl }: PartnershipWorkflowProps) {
@@ -506,7 +510,7 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
           }`}>
             {isCompleted ? 'Concluída' :
              isCancelled ? 'Cancelada' :
-             `Step ${currentStep} de 8: ${STEPS[currentStep - 1]?.name || 'Completed'}`}
+             `Step ${currentStep} de 9: ${STEPS[currentStep - 1]?.name || 'Completed'}`}
           </span>
         </div>
 
@@ -585,7 +589,19 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
               </p>
             </div>
 
-            {/* Step 4 - Contract */}
+            {/* Step 4 - Design Reference */}
+            <div className="p-2 bg-white rounded border border-gray-100">
+              <span className="text-gray-500 text-xs">Referência do Design:</span>
+              <p className={`font-medium ${workflow.designReferenceUrl ? 'text-slate-900' : 'text-amber-600'} truncate`}>
+                {workflow.designReferenceUrl ? (
+                  <a href={workflow.designReferenceUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                    Ver referência
+                  </a>
+                ) : 'Em falta'}
+              </p>
+            </div>
+
+            {/* Step 5 - Contract */}
             <div className="p-2 bg-white rounded border border-gray-100">
               <span className="text-gray-500 text-xs">Contrato Assinado:</span>
               <p className={`font-medium ${workflow.contractSigned ? 'text-green-600' : 'text-amber-600'}`}>
@@ -780,13 +796,20 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
           />
         )}
         {currentStep === 4 && (
+          <PartnershipStep4Reference
+            workflow={workflow}
+            isLocked={isCompleted || isCancelled}
+            onAdvance={advanceStep}
+          />
+        )}
+        {currentStep === 5 && (
           <PartnershipStep4
             workflow={workflow}
             isLocked={isCompleted || isCancelled}
             onAdvance={workflow.designApproved ? advanceStep : undefined}
           />
         )}
-        {currentStep === 5 && (
+        {currentStep === 6 && (
           <PartnershipStep5
             workflow={workflow}
             onUpdate={updateWorkflow}
@@ -797,8 +820,8 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
         {/* Action buttons based on step type */}
         {!isCompleted && !isCancelled && (
           <div className="mt-6">
-            {/* Steps 3, 5, 6: Admin advances and sends email */}
-            {(currentStep === 3 || currentStep === 5 || currentStep === 6) && (
+            {/* Steps 3, 6, 7: Admin advances and sends email */}
+            {(currentStep === 3 || currentStep === 6 || currentStep === 7) && (
               <div className="flex justify-end gap-3">
                 <button
                   onClick={loadEmailPreview}
@@ -828,12 +851,12 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
                       <Loader2 className="h-4 w-4 animate-spin" />
                       A processar...
                     </>
-                  ) : currentStep === 6 ? (
+                  ) : currentStep === 7 ? (
                     <>
                       <CheckCircle2 className="h-4 w-4" />
                       Completar Parceria
                     </>
-                  ) : currentStep === 5 ? (
+                  ) : currentStep === 6 ? (
                     <>
                       <CheckCircle2 className="h-4 w-4" />
                       Finalizar Parceria
@@ -848,8 +871,8 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
               </div>
             )}
             
-            {/* Steps 1, 2: Automatic - no email sent by system */}
-            {(currentStep === 1 || currentStep === 2) && (
+            {/* Steps 1, 2, 4: Automatic - no email sent by system */}
+            {(currentStep === 1 || currentStep === 2 || currentStep === 4) && (
               <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
                 <p className="text-sm text-amber-800">
                   <span className="font-medium">📧 Email manual:</span> Neste step não é enviado email automático. Quando o influencer avançar, deves enviar email manualmente através do teu Gmail se necessário.
@@ -857,8 +880,8 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
               </div>
             )}
             
-            {/* Step 4: Design Review - Show preview email and advance button when approved */}
-            {currentStep === 4 && (
+            {/* Step 5: Design Review - Show preview email and advance button when approved */}
+            {currentStep === 5 && (
               <div className="flex justify-end gap-3">
                 <button
                   onClick={loadEmailPreview}

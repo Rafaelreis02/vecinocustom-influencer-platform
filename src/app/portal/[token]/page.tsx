@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Loader2, XCircle, CheckCircle, FileText } from 'lucide-react';
 import { ProductSearchInput } from './components/ProductSearchInput';
 import { Step4DesignReview } from './Step4DesignReview';
+import { StepDesignReference } from './StepDesignReference';
 
 // Constants
 const VALIDATION_ERROR_DISPLAY_DURATION = 4000; // 4 seconds
@@ -306,21 +307,27 @@ export default function PortalPage() {
           )}
           {currentStep === 3 && <Step3 />}
           {currentStep === 4 && (
-            <Step4DesignReview
+            <StepDesignReference
               token={token}
-              onApprove={() => setCurrentStep(5)}
+              onNext={() => setCurrentStep(5)}
             />
           )}
           {currentStep === 5 && (
+            <Step4DesignReview
+              token={token}
+              onApprove={() => setCurrentStep(6)}
+            />
+          )}
+          {currentStep === 6 && (
             <Step5Contract
               data={influencerData}
               token={token}
               onUpdate={fetchInfluencerData}
-              onNext={() => setCurrentStep(6)}
+              onNext={() => setCurrentStep(7)}
             />
           )}
-          {currentStep === 6 && <Step6 data={influencerData} />}
-          {currentStep === 7 && <Step7 data={influencerData} />}
+          {currentStep === 7 && <Step6 data={influencerData} />}
+          {currentStep === 8 && <Step7 data={influencerData} />}
         </div>
 
         {/* Exit Portal Link */}

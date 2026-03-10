@@ -164,7 +164,8 @@ enum InfluencerStatus {
 
   // Fase 3: Em Curso
   AGREED             // 🤝 Acordado - valores acordados, falta sugerir produtos + morada
-  PRODUCT_SELECTION  // 🎁 Seleção Produto - produto escolhido, aguardar confirmação design
+  PRODUCT_SELECTION  // 🎁 Seleção Produto - produto escolhido, aguardar referência do influencer
+  DESIGN_REFERENCE_SUBMITTED // 🖼️ Referência Enviada - influencer enviou imagem de referência
   DESIGN_REVIEW      // 🎨 Design Review - aguardar aprovação do design pelo influencer
   ALTERATIONS_REQUESTED // 📝 Alterações Solicitadas - influencer pediu alterações ao design
   CONTRACT_PENDING   // 📝 Contrato Pendente - design escolhido, falta assinar contrato
@@ -620,6 +621,10 @@ model PartnershipWorkflow {
   // Step 3: Preparing (PRODUCT_SELECTION)
   selectedProductUrl String?
   step3CompletedAt   DateTime?
+
+  // Step 3.5: Design Reference (influencer envia referência do que quer gravar)
+  designReferenceUrl String?  // URL da imagem de referência enviada pelo influencer
+  designReferenceSubmittedAt DateTime?
 
   // Step 4: Design Review (NOVO - Aprovar Design)
   designApproved     Boolean  @default(false)
