@@ -29,6 +29,7 @@ interface InfluencerData {
   chosenProduct: string | null;
   trackingUrl: string | null;
   couponCode: string | null;
+  designReferenceUrl?: string | null;
 }
 
 interface StepProps {
@@ -217,6 +218,8 @@ export default function PortalPage() {
         return 2;
       case 'PRODUCT_SELECTION':
         return 3;
+      case 'DESIGN_REFERENCE_SUBMITTED':
+        return 4; // Show Design Review step (waiting for admin mockups)
       case 'DESIGN_REVIEW':
         return 4;
       case 'CONTRACT_PENDING':
@@ -310,6 +313,7 @@ export default function PortalPage() {
             <StepDesignReference
               token={token}
               onNext={() => setCurrentStep(5)}
+              designReferenceUrl={influencerData?.designReferenceUrl}
             />
           )}
           {currentStep === 5 && (

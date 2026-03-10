@@ -39,12 +39,13 @@ export async function POST(
       return NextResponse.json({ error: 'No active workflow found' }, { status: 404 });
     }
 
-    // Update workflow with design reference
+    // Update workflow with design reference AND advance to step 4 (Design Review)
     await prisma.partnershipWorkflow.update({
       where: { id: workflow.id },
       data: {
         designReferenceUrl: imageUrl,
         designReferenceSubmittedAt: new Date(),
+        currentStep: 4, // Advance to Design Review step
       },
     });
 

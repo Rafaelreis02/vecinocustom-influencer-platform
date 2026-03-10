@@ -6,12 +6,13 @@ import { Loader2, Image as ImageIcon, X, CheckCircle, Upload } from 'lucide-reac
 interface StepDesignReferenceProps {
   token: string;
   onNext: () => void;
+  designReferenceUrl?: string | null;
 }
 
 // Max file size: 5MB
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
-export function StepDesignReference({ token, onNext }: StepDesignReferenceProps) {
+export function StepDesignReference({ token, onNext, designReferenceUrl }: StepDesignReferenceProps) {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -121,16 +122,27 @@ export function StepDesignReference({ token, onNext }: StepDesignReferenceProps)
     }
   };
 
-  if (success) {
+  // If reference already submitted, show waiting message
+  if (designReferenceUrl || success) {
     return (
       <div className="text-center py-12">
         <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
           <CheckCircle className="h-8 w-8 text-green-600" />
         </div>
         <h3 className="text-lg font-bold text-green-800 mb-2">Referência enviada!</h3>
-        <p className="text-sm text-green-700">
-          Vamos analisar a tua referência e enviar as provas em breve.
+        <p className="text-sm text-green-700 mb-4">
+          Já recebemos a tua referência. Vamos analisar e enviar as provas do design em breve.
         </p>
+        {designReferenceUrl && (
+          <div className="mt-4">
+            <p className="text-xs text-gray-500 mb-2">A tua referência:</p>
+            <img 
+              src={designReferenceUrl} 
+              alt="Referência enviada" 
+              className="max-w-full h-48 object-contain mx-auto rounded-lg border border-gray-200"
+            />
+          </div>
+        )}
       </div>
     );
   }
@@ -146,19 +158,17 @@ export function StepDesignReference({ token, onNext }: StepDesignReferenceProps)
       {/* Upload Area */}
       <div className="space-y-4">
         {!uploadedImage ? (
-          <label className="block cursor-pointer touch-manipulation">
+          <label htmlFor="design-reference-upload" className="block cursor-pointer touch-manipulation">
             <input
               key={fileInputKey}
               type="file"
               accept="image/jpeg,image/png,image/gif,image/webp,image/jpg,image/heic,image/heif"
               onChange={handleFileChange}
               className="sr-only"
-              style={{ display: 'none' }}
               id="design-reference-upload"
             />
             <div 
               className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-[#0E1E37] hover:bg-gray-50 transition-colors active:bg-gray-100"
-              onClick={() => document.getElementById('design-reference-upload')?.click()}
             >
               <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Upload className="h-8 w-8 text-gray-400" />

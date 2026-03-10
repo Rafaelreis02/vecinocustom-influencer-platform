@@ -64,6 +64,7 @@ export async function GET(
       agreedPrice: workflow.agreedPrice,
       status: influencer.status,
       currentStep: workflow.currentStep,
+      designReferenceUrl: workflow.designReferenceUrl,
       shippingAddress: workflow.shippingAddress,
       productSuggestion1: workflow.productSuggestion1,
       productSuggestion2: workflow.productSuggestion2,

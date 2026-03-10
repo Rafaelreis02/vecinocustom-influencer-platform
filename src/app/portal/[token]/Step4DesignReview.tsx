@@ -281,19 +281,17 @@ export function Step4DesignReview({ token, onApprove }: Step4DesignReviewProps) 
             />
             {/* Upload Button - Mobile Optimized */}
             <div className="flex items-center gap-2 mt-2">
-              <label className="flex-shrink-0 cursor-pointer touch-manipulation">
+              <label htmlFor="portal-image-upload" className="flex-shrink-0 cursor-pointer touch-manipulation">
                 <input
                   key={fileInputKey}
                   type="file"
                   accept="image/jpeg,image/png,image/gif,image/webp,image/jpg,image/heic,image/heif"
                   onChange={handleFileChange}
                   className="sr-only"
-                  style={{ display: 'none' }}
                   id="portal-image-upload"
                 />
                 <div 
                   className="p-3 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors active:bg-gray-200 border border-gray-200"
-                  onClick={() => document.getElementById('portal-image-upload')?.click()}
                 >
                   <ImageIcon className="h-5 w-5" />
                 </div>
