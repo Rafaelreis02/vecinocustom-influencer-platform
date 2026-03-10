@@ -317,15 +317,16 @@ export default function PortalPage() {
             />
           )}
           {currentStep === 5 && (
-            <Step5Contract
+            <Step5
               data={influencerData}
               token={token}
               onUpdate={fetchInfluencerData}
               onNext={() => setCurrentStep(6)}
             />
           )}
-          {currentStep === 6 && <Step6 data={influencerData} />}
-          {currentStep === 7 && <Step7 data={influencerData} />}
+          {currentStep === 6 && <Step6Preparing data={influencerData} />}
+          {currentStep === 7 && <Step7Delivered data={influencerData} />}
+          {currentStep === 8 && <Step8Completed data={influencerData} />}
         </div>
 
         {/* Exit Portal Link */}
@@ -344,7 +345,7 @@ export default function PortalPage() {
 
 // Progress Bar Component
 function ProgressBar({ currentStep }: { currentStep: number }) {
-  const steps = [1, 2, 3, 4, 5];
+  const steps = [1, 2, 3, 4, 5, 6, 7, 8];
   
   return (
     <div className="mb-8">
@@ -353,7 +354,7 @@ function ProgressBar({ currentStep }: { currentStep: number }) {
           <div key={step} className="flex items-center flex-1">
             {/* Circle */}
             <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-colors ${
+              className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-colors ${
                 step < currentStep
                   ? 'bg-[#27ae60] text-white'
                   : step === currentStep
@@ -366,13 +367,23 @@ function ProgressBar({ currentStep }: { currentStep: number }) {
             {/* Line */}
             {index < steps.length - 1 && (
               <div
-                className={`flex-1 h-1 mx-2 transition-colors ${
+                className={`flex-1 h-1 mx-1 transition-colors ${
                   step < currentStep ? 'bg-[#27ae60]' : 'bg-gray-300'
                 }`}
               />
             )}
           </div>
         ))}
+      </div>
+      <div className="flex justify-between mt-2 text-xs text-gray-500">
+        <span>Partnership</span>
+        <span>Shipping</span>
+        <span>Prep</span>
+        <span>Design</span>
+        <span>Contract</span>
+        <span>Ship</span>
+        <span>Sent</span>
+        <span>Done</span>
       </div>
     </div>
   );
@@ -1169,8 +1180,113 @@ function Step4({ data, token, onNext }: StepProps) {
   );
 }
 
-// Step 5: Preparing Shipment (Informational only)
-function Step5Contract({ data, token, onUpdate, onNext }: StepProps & { token: string }) {
+// Step 5: Contract
+function Step5({ data, token, onNext }: StepProps & { token: string }) {
+  const [accepted, setAccepted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleAccept = async () => {
+    if (!accepted) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const ipResponse = await fetch('https://api.ipify.org?format=json').catch(() => ({ json: () => ({ ip: 'unknown' }) }));
+      const { ip } = await ipResponse.json();
+      
+      const res = await fetch(`/api/portal/${token}/accept-contract`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ipAddress: ip,
+          userAgent: navigator.userAgent,
+        }),
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to accept contract');
+      }
+      
+      await onNext();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const agreedPrice = data.agreedPrice || 0;
+  const handle = data.tiktokHandle || data.instagramHandle || 'influencer';
+
+  return (
+    <div>
+      <h2 className="text-xl font-bold text-[#0E1E37] mb-6 uppercase">Contract</h2>
+      
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6 max-h-96 overflow-y-auto text-sm">
+        <h3 className="text-center font-bold text-lg mb-4">COLLABORATION AGREEMENT</h3>
+        <p className="text-center text-sm mb-4">BETWEEN THE BRAND VECINO CUSTOM AND CONTENT CREATOR</p>
+        
+        <div className="space-y-3 text-gray-700">
+          <p>Between the parties:</p>
+          <p><strong>VECINO CUSTOM</strong>, a registered brand...</p>
+          <p><strong>{data.name}</strong> (@{handle}), hereinafter referred to as the "second contracting party",</p>
+          
+          <p className="font-bold mt-4">1. Purpose of the Collaboration</p>
+          <p>The purpose of this partnership is the creation of original digital content...</p>
+          
+          <p className="font-bold mt-4">2. Collaboration Terms</p>
+          <p className="font-semibold">On the part of the first contracting party:</p>
+          <ul className="list-disc pl-5 space-y-1">
+            <li>Free delivery of 1 personalized piece of jewelry...</li>
+            <li>Assignment of an exclusive discount code...</li>
+            <li>Payment of a fixed remuneration in the amount of {agreedPrice}€.</li>
+          </ul>
+          
+          <p className="font-semibold mt-2">On the part of the second contracting party:</p>
+          <ul className="list-disc pl-5 space-y-1">
+            <li>Creation and publication of one creative video...</li>
+            <li>The video shall be published on TikTok and Instagram Reels...</li>
+            <li>The content must be completed and published within 5 days...</li>
+          </ul>
+        </div>
+      </div>
+      
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-sm text-red-700">{error}</p>
+        </div>
+      )}
+      
+      <div className="mb-6">
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={accepted}
+            onChange={(e) => setAccepted(e.target.checked)}
+            className="mt-1 w-5 h-5 text-[#0E1E37] border-gray-300 rounded focus:ring-[#0E1E37]"
+          />
+          <span className="text-sm text-gray-700">
+            I have read and accept the terms of this collaboration agreement...
+          </span>
+        </label>
+      </div>
+      
+      <button
+        onClick={handleAccept}
+        disabled={!accepted || loading}
+        className="w-full py-3 bg-[#0E1E37] text-white font-semibold rounded-lg hover:bg-[#1a2f4f] transition disabled:opacity-50"
+      >
+        {loading ? 'Processing...' : 'Accept and Sign'}
+      </button>
+    </div>
+  );
+}
+
+// Step 6: Preparing Shipment
+function Step6Preparing({ data }: { data: InfluencerData }) {
   return (
     <div>
       <h2 className="text-xl font-bold text-[#0E1E37] mb-6 uppercase">Preparing Shipment</h2>
@@ -1194,8 +1310,8 @@ function Step5Contract({ data, token, onUpdate, onNext }: StepProps & { token: s
   );
 }
 
-// Step 6: Delivered (All information shown)
-function Step6({ data }: { data: InfluencerData }) {
+// Step 7: Delivered
+function Step7Delivered({ data }: { data: InfluencerData }) {
   return (
     <div>
       <h2 className="text-xl font-bold text-[#0E1E37] mb-6 uppercase">Delivered</h2>
@@ -1207,18 +1323,16 @@ function Step6({ data }: { data: InfluencerData }) {
         </p>
 
         <div className="space-y-4">
-          {/* Coupon Code */}
           {data.couponCode && (
             <div>
               <p className="text-xs font-semibold text-gray-600 mb-2 uppercase">Your Coupon Code</p>
               <div className="p-3 border-2 border-dashed border-green-300 rounded-lg bg-green-50 text-center">
                 <p className="text-lg font-mono font-bold text-green-700">{data.couponCode}</p>
-                <p className="text-xs text-green-600 mt-1">10% off for your followers + 20% commission for you</p>
+                <p className="text-xs text-green-600 mt-1">10% off + 20% commission</p>
               </div>
             </div>
           )}
 
-          {/* Address */}
           {data.shippingAddress && (
             <div>
               <p className="text-xs font-semibold text-gray-600 mb-2 uppercase">Delivery Address</p>
@@ -1226,7 +1340,6 @@ function Step6({ data }: { data: InfluencerData }) {
             </div>
           )}
 
-          {/* Product Link */}
           {data.chosenProduct && (
             <div>
               <p className="text-xs font-semibold text-gray-600 mb-2 uppercase">Your Product</p>
@@ -1241,7 +1354,6 @@ function Step6({ data }: { data: InfluencerData }) {
             </div>
           )}
 
-          {/* Track Order Button */}
           {data.trackingUrl && (
             <div className="mt-6">
               <a
@@ -1260,8 +1372,8 @@ function Step6({ data }: { data: InfluencerData }) {
   );
 }
 
-// Step 7: Completed
-function Step7({ data }: { data: InfluencerData }) {
+// Step 8: Completed
+function Step8Completed({ data }: { data: InfluencerData }) {
   return (
     <div>
       <h2 className="text-xl font-bold text-[#0E1E37] mb-6 uppercase">Completed</h2>
@@ -1273,18 +1385,16 @@ function Step7({ data }: { data: InfluencerData }) {
         </p>
 
         <div className="space-y-4">
-          {/* Coupon Code */}
           {data.couponCode && (
             <div>
               <p className="text-xs font-semibold text-gray-600 mb-2 uppercase">Your Coupon Code</p>
               <div className="p-3 border-2 border-dashed border-green-300 rounded-lg bg-green-50 text-center">
                 <p className="text-lg font-mono font-bold text-green-700">{data.couponCode}</p>
-                <p className="text-xs text-green-600 mt-1">10% off for your followers + 20% commission for you</p>
+                <p className="text-xs text-green-600 mt-1">10% off + 20% commission</p>
               </div>
             </div>
           )}
 
-          {/* Tracking */}
           {data.trackingUrl && (
             <div>
               <a
