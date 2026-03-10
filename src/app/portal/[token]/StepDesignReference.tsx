@@ -18,11 +18,16 @@ export function StepDesignReference({ token, onNext }: StepDesignReferenceProps)
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
+  const [fileInputKey, setFileInputKey] = useState(Date.now());
+
   // Handle file upload - Mobile optimized
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     setUploadError(null);
     setError(null);
+    
+    // Reset input key to allow re-selecting same file
+    setFileInputKey(Date.now());
     
     if (!file) {
       console.log('[UPLOAD] No file selected');
@@ -143,6 +148,7 @@ export function StepDesignReference({ token, onNext }: StepDesignReferenceProps)
         {!uploadedImage ? (
           <label className="block cursor-pointer touch-manipulation">
             <input
+              key={fileInputKey}
               type="file"
               accept="image/jpeg,image/png,image/gif,image/webp,image/jpg,image/heic,image/heif"
               onChange={handleFileChange}

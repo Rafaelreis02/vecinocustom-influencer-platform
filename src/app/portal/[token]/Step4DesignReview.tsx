@@ -37,9 +37,14 @@ export function Step4DesignReview({ token, onApprove }: Step4DesignReviewProps) 
   }, [token]);
 
   // Handle file upload - Mobile optimized
+  const [fileInputKey, setFileInputKey] = useState(Date.now());
+
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     setUploadError(null);
+    
+    // Reset input key to allow re-selecting same file
+    setFileInputKey(Date.now());
     
     if (!file) {
       console.log('[UPLOAD] No file selected');
@@ -278,6 +283,7 @@ export function Step4DesignReview({ token, onApprove }: Step4DesignReviewProps) 
             <div className="flex items-center gap-2 mt-2">
               <label className="flex-shrink-0 cursor-pointer touch-manipulation">
                 <input
+                  key={fileInputKey}
                   type="file"
                   accept="image/jpeg,image/png,image/gif,image/webp,image/jpg,image/heic,image/heif"
                   onChange={handleFileChange}

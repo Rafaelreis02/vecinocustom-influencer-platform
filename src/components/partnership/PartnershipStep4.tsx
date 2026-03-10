@@ -67,9 +67,14 @@ export function PartnershipStep4({ workflow, isLocked, onAdvance }: PartnershipS
     }
   };
 
+  const [fileInputKey, setFileInputKey] = useState(Date.now());
+
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     setUploadError(null);
+    
+    // Reset input key to allow re-selecting same file
+    setFileInputKey(Date.now());
     
     if (!file) {
       console.log('[UPLOAD] No file selected');
@@ -338,6 +343,7 @@ export function PartnershipStep4({ workflow, isLocked, onAdvance }: PartnershipS
             {/* Image Upload Button - Mobile Optimized */}
             <label className="flex-shrink-0 cursor-pointer touch-manipulation">
               <input
+                key={fileInputKey}
                 type="file"
                 accept="image/jpeg,image/png,image/gif,image/webp,image/jpg,image/heic,image/heif"
                 onChange={handleFileChange}
