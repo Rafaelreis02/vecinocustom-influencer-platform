@@ -11,7 +11,7 @@ export async function POST(
   try {
     const { token } = await params;
     const body = await req.json();
-    const { message } = body;
+    const { message, imageUrl } = body;
 
     // Get influencer by token
     const influencer = await prisma.influencer.findUnique({
@@ -61,9 +61,10 @@ export async function POST(
 
     // Add message from influencer using raw query
     const messageId = crypto.randomUUID();
+    const finalImageUrl = imageUrl || null;
     await prisma.$executeRaw`
       INSERT INTO "DesignMessage" ("id", "workflowId", "content", "imageUrl", "senderType", "createdAt", "updatedAt")
-      VALUES (${messageId}, ${workflow.id}, ${message || 'Solicitação de alterações'}, null, 'INFLUENCER', NOW(), NOW())
+      VALUES (${messageId}, ${workflow.id}, ${message || 'Solicitação de alterações'}, ${finalImageUrl}, 'INFLUENCER', NOW(), NOW())
     `;
 
     logger.info('[PORTAL_DESIGN] Revision requested:', { workflowId: workflow.id, revisionCount: newRevisionCount });
