@@ -639,8 +639,8 @@ model PartnershipWorkflow {
   // Step 7: Delivered (COMPLETED) - antigo Step 6
   step7CompletedAt   DateTime?
 
-  // Status
-  status             PartnershipStatus @default(ACTIVE)
+  // Status (using String to match DB type)
+  status             String   @default("ACTIVE")
   isRestarted        Boolean  @default(false)
   previousWorkflowId String?
 
