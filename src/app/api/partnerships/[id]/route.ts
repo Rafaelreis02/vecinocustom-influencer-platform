@@ -77,8 +77,8 @@ export async function PATCH(
       3: ['selectedProductUrl', 'designProofUrl', 'designNotes'],
       4: ['designApproved', 'designRevisionCount'],
       5: ['contractSigned', 'contractUrl'],
-      6: ['trackingUrl', 'couponCode'], // Step 6: Contract Signed - admin adds tracking
-      7: ['trackingUrl', 'couponCode'], // Step 7: Shipped - can update tracking
+      6: ['trackingUrl'], // Step 6: Contract Signed - admin adds tracking only
+      7: ['trackingUrl'], // Step 7: Shipped - can update tracking only
     };
 
     const workflow = await prisma.partnershipWorkflow.findUnique({
