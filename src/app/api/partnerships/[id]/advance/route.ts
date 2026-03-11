@@ -347,6 +347,20 @@ export async function POST(
       data: { status: config.nextStatus as any },
     });
 
+    // Verify the update was successful
+    const verifyInfluencer = await prisma.influencer.findUnique({
+      where: { id: workflow.influencerId },
+      select: { status: true },
+    });
+
+    if (verifyInfluencer?.status !== config.nextStatus) {
+      logger.error('Status update verification failed', {
+        influencerId: workflow.influencerId,
+        expectedStatus: config.nextStatus,
+        actualStatus: verifyInfluencer?.status,
+      });
+    }
+
     return NextResponse.json({
       success: true,
       message: `Advanced from ${config.name} to ${STEP_CONFIG[config.nextStep].name}`,
