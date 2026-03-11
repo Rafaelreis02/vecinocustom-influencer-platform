@@ -77,6 +77,7 @@ export async function POST(
       data: {
         workflowId: newWorkflow.id,
         currentStep: 1,
+        status: 'ACTIVE',
       },
     });
   } catch (error: any) {

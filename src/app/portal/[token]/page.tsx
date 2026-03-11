@@ -1469,9 +1469,11 @@ function Step8Delivered({ data, token, onRestart }: { data: InfluencerData; toke
       });
 
       if (res.ok) {
-        await onRestart();
+        // Force full page reload to load new workflow
+        window.location.reload();
       } else {
-        alert('Erro ao reiniciar parceria. Tenta novamente.');
+        const errorData = await res.json().catch(() => ({}));
+        alert(errorData.error || 'Erro ao reiniciar parceria. Tenta novamente.');
       }
     } catch (err) {
       alert('Erro ao reiniciar parceria.');
