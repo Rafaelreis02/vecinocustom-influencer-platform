@@ -55,7 +55,6 @@ const STEPS = [
   { number: 5, name: 'Contract', status: 'CONTRACT_PENDING' },
   { number: 6, name: 'Contract Signed', status: 'CONTRACT_SIGNED' },
   { number: 7, name: 'Shipped', status: 'SHIPPED' },
-  { number: 7, name: 'Shipped', status: 'SHIPPED' },
   { number: 8, name: 'Delivered', status: 'DELIVERED' },
   { number: 9, name: 'Completed', status: 'COMPLETED' },
 ];
