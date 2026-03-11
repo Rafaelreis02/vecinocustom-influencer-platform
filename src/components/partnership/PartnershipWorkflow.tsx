@@ -75,6 +75,9 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
   const [initialPrice, setInitialPrice] = useState('');
   const [priceError, setPriceError] = useState<string | null>(null);
   
+  // Step 6: Local state for tracking URL to prevent lag while typing
+  const [localTrackingUrl, setLocalTrackingUrl] = useState('');
+  
   // Email preview states
   const [showEmailPreview, setShowEmailPreview] = useState(false);
   const [emailPreview, setEmailPreview] = useState<any>(null);
@@ -85,6 +88,13 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
   useEffect(() => {
     setLocalInfluencerStatus(influencerStatus);
   }, [influencerStatus]);
+  
+  // Update local tracking URL when workflow changes
+  useEffect(() => {
+    if (workflow?.trackingUrl) {
+      setLocalTrackingUrl(workflow.trackingUrl);
+    }
+  }, [workflow?.trackingUrl]);
 
   const fetchWorkflow = async () => {
     try {
@@ -851,8 +861,13 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
               </label>
               <input
                 type="url"
-                value={workflow.trackingUrl || ''}
-                onChange={(e) => updateWorkflow({ trackingUrl: e.target.value })}
+                value={localTrackingUrl}
+                onChange={(e) => setLocalTrackingUrl(e.target.value)}
+                onBlur={() => {
+                  if (localTrackingUrl !== workflow.trackingUrl) {
+                    updateWorkflow({ trackingUrl: localTrackingUrl });
+                  }
+                }}
                 placeholder="https://www.ctt.pt/..."
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:border-green-500 focus:outline-none"
               />
