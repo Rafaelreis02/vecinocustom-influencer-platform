@@ -24,7 +24,7 @@ export const PHASES = {
     label: 'Em Curso',
     icon: undefined,
     href: '/dashboard/influencers/closing',
-    statuses: ['AGREED', 'PRODUCT_SELECTION', 'DESIGN_REFERENCE_SUBMITTED', 'CONTRACT_PENDING', 'SHIPPED', 'COMPLETED'],
+    statuses: ['AGREED', 'PRODUCT_SELECTION', 'DESIGN_REFERENCE_SUBMITTED', 'DESIGN_REVIEW', 'ALTERATIONS_REQUESTED', 'CONTRACT_PENDING', 'SHIPPED', 'COMPLETED'],
   },
 } as const;
 
@@ -107,6 +107,22 @@ export const INFLUENCER_STATUS_CONFIG = {
     label: 'Referência Enviada',
     color: 'bg-pink-100 text-pink-700 border-pink-300',
     dotColor: 'bg-pink-500',
+    
+    icon: undefined,
+    phase: 'CLOSING' as PhaseId,
+  },
+  DESIGN_REVIEW: {
+    label: 'Design Review',
+    color: 'bg-teal-100 text-teal-700 border-teal-300',
+    dotColor: 'bg-teal-500',
+    
+    icon: undefined,
+    phase: 'CLOSING' as PhaseId,
+  },
+  ALTERATIONS_REQUESTED: {
+    label: 'Alterações Solicitadas',
+    color: 'bg-orange-100 text-orange-700 border-orange-300',
+    dotColor: 'bg-orange-500',
     
     icon: undefined,
     phase: 'CLOSING' as PhaseId,
