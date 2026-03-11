@@ -32,18 +32,18 @@ export async function GET(
       );
     }
 
-    // Find active workflow for this influencer (using raw query to avoid enum issues)
+    // Find most recent workflow for this influencer (active OR completed)
     const workflows = await prisma.$queryRaw`
       SELECT * FROM "partnership_workflows" 
       WHERE "influencerId" = ${influencer.id} 
-      AND status = 'ACTIVE'
+      ORDER BY "createdAt" DESC
       LIMIT 1
     `;
     const workflow = Array.isArray(workflows) && workflows.length > 0 ? workflows[0] : null;
 
     if (!workflow) {
       return NextResponse.json(
-        { error: 'No active partnership found. Please contact VecinoCustom to start a partnership.' },
+        { error: 'No partnership found. Please contact VecinoCustom to start a partnership.' },
         { status: 404 }
       );
     }
@@ -72,6 +72,8 @@ export async function GET(
       chosenProduct: workflow.selectedProductUrl,
       trackingUrl: workflow.trackingUrl,
       couponCode: workflow.couponCode,
+      workflowStatus: workflow.status,
+      isEditable: workflow.status === 'ACTIVE',
     };
 
     // Serialize to handle any BigInt values
@@ -110,7 +112,7 @@ export async function PUT(
       );
     }
 
-    // Find workflows and filter for active one (avoid enum comparison issues)
+    // Find most recent workflow (active or completed)
     const workflows = await prisma.partnershipWorkflow.findMany({
       where: {
         influencerId: influencer.id,
@@ -120,14 +122,17 @@ export async function PUT(
       },
     });
 
-    const workflow = workflows.find(w => w.status === 'ACTIVE' || (w.status as any) === 'ACTIVE');
+    const workflow = workflows[0]; // Get most recent workflow
 
     if (!workflow) {
       return NextResponse.json(
-        { error: 'No active partnership found' },
+        { error: 'No partnership found' },
         { status: 404 }
       );
     }
+    
+    // Check if workflow is editable (only ACTIVE workflows can be edited)
+    const isEditable = workflow.status === 'ACTIVE';
 
     // Fields that can be updated by influencer based on current step
     // workflowFields = stored in partnership_workflows table

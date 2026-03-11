@@ -30,6 +30,8 @@ interface InfluencerData {
   trackingUrl: string | null;
   couponCode: string | null;
   designReferenceUrl?: string | null;
+  workflowStatus?: string;
+  isEditable?: boolean;
 }
 
 interface StepProps {
@@ -284,49 +286,56 @@ export default function PortalPage() {
 
         {/* Step Content */}
         <div className="bg-white rounded-lg shadow-lg p-6">
-          {currentStep === 1 && (
-            <Step1
-              data={influencerData}
-              token={token}
-              onUpdate={fetchInfluencerData}
-              onNext={() => {
-                setIsReviewMode(false);
-                setCurrentStep(2);
-              }}
-              isReviewMode={isReviewMode}
-            />
+          {/* Check if workflow is completed but showing step 8 */}
+          {influencerData?.workflowStatus === 'COMPLETED' && currentStep >= 8 ? (
+            <Step8Delivered data={influencerData} token={token} onRestart={fetchInfluencerData} />
+          ) : (
+            <>
+              {currentStep === 1 && (
+                <Step1
+                  data={influencerData}
+                  token={token}
+                  onUpdate={fetchInfluencerData}
+                  onNext={() => {
+                    setIsReviewMode(false);
+                    setCurrentStep(2);
+                  }}
+                  isReviewMode={isReviewMode}
+                />
+              )}
+              {currentStep === 2 && (
+                <Step2
+                  data={influencerData}
+                  token={token}
+                  onUpdate={fetchInfluencerData}
+                  onBack={() => {
+                    setIsReviewMode(true);
+                    setCurrentStep(1);
+                  }}
+                  onNext={() => setCurrentStep(3)}
+                />
+              )}
+              {currentStep === 3 && <Step3 />}
+              {currentStep === 4 && (
+                <StepDesignReference
+                  token={token}
+                  onApprove={() => setCurrentStep(5)}
+                  designReferenceUrl={influencerData?.designReferenceUrl}
+                />
+              )}
+              {currentStep === 5 && (
+                <Step5
+                  data={influencerData}
+                  token={token}
+                  onUpdate={fetchInfluencerData}
+                  onNext={() => setCurrentStep(6)}
+                />
+              )}
+              {currentStep === 6 && <Step6Preparing data={influencerData} />}
+              {currentStep === 7 && <Step7Shipped data={influencerData} />}
+              {currentStep === 8 && <Step8Delivered data={influencerData} token={token} onRestart={fetchInfluencerData} />}
+            </>
           )}
-          {currentStep === 2 && (
-            <Step2
-              data={influencerData}
-              token={token}
-              onUpdate={fetchInfluencerData}
-              onBack={() => {
-                setIsReviewMode(true);
-                setCurrentStep(1);
-              }}
-              onNext={() => setCurrentStep(3)}
-            />
-          )}
-          {currentStep === 3 && <Step3 />}
-          {currentStep === 4 && (
-            <StepDesignReference
-              token={token}
-              onApprove={() => setCurrentStep(5)}
-              designReferenceUrl={influencerData?.designReferenceUrl}
-            />
-          )}
-          {currentStep === 5 && (
-            <Step5
-              data={influencerData}
-              token={token}
-              onUpdate={fetchInfluencerData}
-              onNext={() => setCurrentStep(6)}
-            />
-          )}
-          {currentStep === 6 && <Step6Preparing data={influencerData} />}
-          {currentStep === 7 && <Step7Shipped data={influencerData} />}
-          {currentStep === 8 && <Step8Delivered data={influencerData} token={token} onRestart={fetchInfluencerData} />}
         </div>
 
         {/* Exit Portal Link */}
