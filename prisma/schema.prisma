@@ -170,7 +170,8 @@ enum InfluencerStatus {
   ALTERATIONS_REQUESTED // 📝 Alterações Solicitadas - influencer pediu alterações ao design
   CONTRACT_PENDING   // 📝 Contrato Pendente - design escolhido, falta assinar contrato
   CONTRACT_SIGNED    // ✍️ Contrato Aceite - contrato assinado, a preparar envio
-  SHIPPED            // 📦 Enviado - encomenda enviada, falta entregar conteúdo
+  SHIPPED            // 📦 Enviado - encomenda enviada
+  DELIVERED          // 📬 Entregue - produto entregue ao influencer
   COMPLETED          // ✅ Concluído - conteúdo entregue e aprovado
 
   // Especiais

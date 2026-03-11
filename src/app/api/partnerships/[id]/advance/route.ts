@@ -72,15 +72,24 @@ const STEP_CONFIG: Record<number, {
     canAdminAdvance: true, // NÓS avançamos quando enviamos o produto
   },
   7: {
-    name: 'Delivered',
+    name: 'Shipped',
     status: 'SHIPPED',
-    requiredFields: ['trackingUrl', 'couponCode'],
-    adminRequiredFields: [], // Step 7 é informativo - aguardamos conteúdo
+    requiredFields: ['trackingUrl'],
+    adminRequiredFields: [], // Step 7 é informativo - produto já foi enviado
     nextStep: 8,
+    nextStatus: 'DELIVERED',
+    canAdminAdvance: true, // NÓS avançamos quando produto é entregue
+  },
+  8: {
+    name: 'Delivered',
+    status: 'DELIVERED',
+    requiredFields: [],
+    adminRequiredFields: [], // Step 8 é informativo - aguardamos conteúdo do influencer
+    nextStep: 9,
     nextStatus: 'COMPLETED',
     canAdminAdvance: true, // NÓS avançamos quando recebemos conteúdo
   },
-  8: {
+  9: {
     name: 'Completed',
     status: 'COMPLETED',
     requiredFields: [],

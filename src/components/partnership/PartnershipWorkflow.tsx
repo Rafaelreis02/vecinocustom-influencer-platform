@@ -55,6 +55,7 @@ const STEPS = [
   { number: 5, name: 'Contract', status: 'CONTRACT_PENDING' },
   { number: 6, name: 'Contract Signed', status: 'CONTRACT_SIGNED' },
   { number: 7, name: 'Shipped', status: 'SHIPPED' },
+  { number: 7, name: 'Shipped', status: 'SHIPPED' },
   { number: 8, name: 'Delivered', status: 'DELIVERED' },
   { number: 9, name: 'Completed', status: 'COMPLETED' },
 ];
@@ -486,8 +487,8 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
             Progresso da Parceria
           </h3>
           <div className="flex gap-2">
-            {/* Restart button - available at step 6 (delivered) or when completed/cancelled */}
-            {(currentStep === 6 || isCompleted || isCancelled) && (
+            {/* Restart button - available at step 8 (delivered), step 9 (completed) or when cancelled */}
+            {(currentStep >= 8 || isCompleted || isCancelled) && (
               <button
                 onClick={restartWorkflow}
                 disabled={isRestarting}
@@ -497,8 +498,8 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
                 {isRestarting ? 'A recomeçar...' : 'Reiniciar Parceria'}
               </button>
             )}
-            {/* Advance button - only show if not at step 6 and not completed/cancelled */}
-            {currentStep < 6 && !isCompleted && !isCancelled && (
+            {/* Cancel button - only show if not at final steps and not completed/cancelled */}
+            {currentStep < 8 && !isCompleted && !isCancelled && (
               <button
                 onClick={cancelWorkflow}
                 disabled={isCancelling}
