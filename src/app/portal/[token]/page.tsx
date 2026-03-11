@@ -325,8 +325,8 @@ export default function PortalPage() {
             />
           )}
           {currentStep === 6 && <Step6Preparing data={influencerData} />}
-          {currentStep === 7 && <Step7Delivered data={influencerData} />}
-          {currentStep === 8 && <Step8Completed data={influencerData} />}
+          {currentStep === 7 && <Step7Shipped data={influencerData} />}
+          {currentStep === 8 && <Step8Delivered data={influencerData} token={token} onRestart={fetchInfluencerData} />}
         </div>
 
         {/* Exit Portal Link */}
@@ -1357,7 +1357,7 @@ function Step5({ data, token, onNext }: StepProps & { token: string }) {
   );
 }
 
-// Step 6: Preparing Shipment
+// Step 6: Contract Signed - Preparing Shipment
 function Step6Preparing({ data }: { data: InfluencerData }) {
   return (
     <div>
@@ -1371,22 +1371,22 @@ function Step6Preparing({ data }: { data: InfluencerData }) {
         </div>
         <h3 className="text-lg font-bold text-blue-900 mb-3">Preparing Your Order</h3>
         <p className="text-sm text-blue-700 mb-4">
-          We're preparing your personalized piece for shipment. 
-          As soon as it's ready and shipped, we'll update you with the tracking information.
+          We've received your order and are preparing your personalized piece. 
+          You'll receive tracking information once it's shipped.
         </p>
         <div className="text-xs text-blue-600 bg-blue-100 rounded-lg p-3">
-          You'll receive an email notification when your order is on its way!
+          Contract signed! Preparing your jewelry...
         </div>
       </div>
     </div>
   );
 }
 
-// Step 7: Delivered
-function Step7Delivered({ data }: { data: InfluencerData }) {
+// Step 7: Shipped
+function Step7Shipped({ data }: { data: InfluencerData }) {
   return (
     <div>
-      <h2 className="text-xl font-bold text-[#0E1E37] mb-6 uppercase">Delivered</h2>
+      <h2 className="text-xl font-bold text-[#0E1E37] mb-6 uppercase">Shipped</h2>
       
       <div className="border-l-4 border-green-500 bg-white rounded-lg p-6 shadow-sm">
         <h3 className="text-lg font-bold text-green-700 mb-2">On its way!</h3>
@@ -1444,11 +1444,36 @@ function Step7Delivered({ data }: { data: InfluencerData }) {
   );
 }
 
-// Step 8: Completed
-function Step8Completed({ data }: { data: InfluencerData }) {
+// Step 8: Delivered - Partnership completed, can restart
+function Step8Delivered({ data, token, onRestart }: { data: InfluencerData; token: string; onRestart: () => void }) {
+  const [isRestarting, setIsRestarting] = useState(false);
+
+  const handleRestart = async () => {
+    if (!confirm('Deseja iniciar uma nova parceria? A parceria atual ficará guardada no histórico.')) {
+      return;
+    }
+
+    setIsRestarting(true);
+    try {
+      const res = await fetch(`/api/portal/${token}/restart-partnership`, {
+        method: 'POST',
+      });
+
+      if (res.ok) {
+        await onRestart();
+      } else {
+        alert('Erro ao reiniciar parceria. Tenta novamente.');
+      }
+    } catch (err) {
+      alert('Erro ao reiniciar parceria.');
+    } finally {
+      setIsRestarting(false);
+    }
+  };
+
   return (
     <div>
-      <h2 className="text-xl font-bold text-[#0E1E37] mb-6 uppercase">Completed</h2>
+      <h2 className="text-xl font-bold text-[#0E1E37] mb-6 uppercase">Delivered</h2>
       
       <div className="border-l-4 border-green-500 bg-white rounded-lg p-6 shadow-sm">
         <h3 className="text-lg font-bold text-green-700 mb-2">Partnership Complete!</h3>
@@ -1479,6 +1504,20 @@ function Step8Completed({ data }: { data: InfluencerData }) {
               </a>
             </div>
           )}
+
+          {/* Restart Partnership Button */}
+          <div className="pt-4 border-t border-gray-200">
+            <p className="text-sm text-gray-600 mb-3">
+              Queres colaborar novamente? Inicia uma nova parceria!
+            </p>
+            <button
+              onClick={handleRestart}
+              disabled={isRestarting}
+              className="w-full py-3 bg-[#0E1E37] text-white font-semibold rounded-lg hover:bg-[#1a2f4f] transition disabled:opacity-50"
+            >
+              {isRestarting ? 'A iniciar...' : '🔄 Iniciar Nova Parceria'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
