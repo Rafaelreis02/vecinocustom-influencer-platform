@@ -343,47 +343,109 @@ export default function PortalPage() {
   );
 }
 
-// Progress Bar Component
+// Modern Minimalist Progress Bar - Grouped by phases
 function ProgressBar({ currentStep }: { currentStep: number }) {
-  const steps = [1, 2, 3, 4, 5, 6, 7, 8];
-  
+  // Group steps into 4 main phases
+  const phases = [
+    { 
+      name: 'Setup', 
+      steps: [1, 2], 
+      icon: '📝',
+      description: 'Dados & Envio'
+    },
+    { 
+      name: 'Design', 
+      steps: [3, 4], 
+      icon: '🎨',
+      description: 'Referência & Aprovação'
+    },
+    { 
+      name: 'Contract', 
+      steps: [5, 6], 
+      icon: '🤝',
+      description: 'Contrato & Envio'
+    },
+    { 
+      name: 'Done', 
+      steps: [7, 8], 
+      icon: '🎉',
+      description: 'Receção & Conteúdo'
+    },
+  ];
+
+  // Determine which phase we're in
+  const getCurrentPhase = () => {
+    for (let i = 0; i < phases.length; i++) {
+      if (phases[i].steps.includes(currentStep)) return i + 1;
+    }
+    return 1;
+  };
+
+  const currentPhase = getCurrentPhase();
+  const progress = ((currentPhase - 1) / (phases.length - 1)) * 100;
+
   return (
-    <div className="mb-8">
-      <div className="flex items-center justify-between">
-        {steps.map((step, index) => (
-          <div key={step} className="flex items-center flex-1">
-            {/* Circle */}
-            <div
-              className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-colors ${
-                step < currentStep
-                  ? 'bg-[#27ae60] text-white'
-                  : step === currentStep
-                  ? 'bg-[#0E1E37] text-white'
-                  : 'bg-gray-300 text-gray-600'
-              }`}
-            >
-              {step}
-            </div>
-            {/* Line */}
-            {index < steps.length - 1 && (
-              <div
-                className={`flex-1 h-1 mx-1 transition-colors ${
-                  step < currentStep ? 'bg-[#27ae60]' : 'bg-gray-300'
-                }`}
-              />
-            )}
-          </div>
-        ))}
+    <div className="mb-8 px-2">
+      {/* Progress Line Background */}
+      <div className="relative h-2 bg-gray-100 rounded-full mb-6">
+        <div 
+          className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#0E1E37] to-[#27ae60] rounded-full transition-all duration-700 ease-out"
+          style={{ width: `${progress}%` }}
+        />
       </div>
-      <div className="flex justify-between mt-2 text-xs text-gray-500">
-        <span>Partnership</span>
-        <span>Shipping</span>
-        <span>Prep</span>
-        <span>Design</span>
-        <span>Contract</span>
-        <span>Ship</span>
-        <span>Sent</span>
-        <span>Done</span>
+
+      {/* Phase Indicators */}
+      <div className="flex justify-between items-start">
+        {phases.map((phase, index) => {
+          const phaseNum = index + 1;
+          const isCompleted = phaseNum < currentPhase;
+          const isCurrent = phaseNum === currentPhase;
+          const isUpcoming = phaseNum > currentPhase;
+
+          return (
+            <div 
+              key={phase.name} 
+              className={`flex flex-col items-center transition-all duration-500 ${
+                isUpcoming ? 'opacity-40' : 'opacity-100'
+              }`}
+              style={{ width: '23%' }}
+            >
+              {/* Phase Circle */}
+              <div
+                className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl mb-2 transition-all duration-500 shadow-lg ${
+                  isCompleted
+                    ? 'bg-gradient-to-br from-[#27ae60] to-[#219a52] text-white scale-100'
+                    : isCurrent
+                    ? 'bg-gradient-to-br from-[#0E1E37] to-[#1a2f4f] text-white scale-110 ring-4 ring-[#0E1E37]/20'
+                    : 'bg-white text-gray-400 border-2 border-gray-200'
+                }`}
+              >
+                {isCompleted ? '✓' : phase.icon}
+              </div>
+
+              {/* Phase Name */}
+              <span 
+                className={`text-xs font-semibold uppercase tracking-wider mb-1 ${
+                  isCurrent ? 'text-[#0E1E37]' : 'text-gray-500'
+                }`}
+              >
+                {phase.name}
+              </span>
+
+              {/* Phase Description */}
+              <span className="text-[10px] text-gray-400 text-center leading-tight hidden sm:block">
+                {phase.description}
+              </span>
+
+              {/* Current Step Indicator */}
+              {isCurrent && (
+                <div className="mt-2 px-3 py-1 bg-[#0E1E37] text-white text-[10px] rounded-full font-medium">
+                  Step {currentStep}/8
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

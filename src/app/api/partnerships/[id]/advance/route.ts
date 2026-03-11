@@ -59,26 +59,26 @@ const STEP_CONFIG: Record<number, {
     requiredFields: ['contractSigned'],
     adminRequiredFields: [], // Nada obrigatório por nós
     nextStep: 6,
-    nextStatus: 'SHIPPED',
+    nextStatus: 'CONTRACT_SIGNED', // NOVO: Contrato assinado, a preparar envio
     canAdminAdvance: false, // Influencer avança via portal (aceita contrato)
   },
   6: {
     name: 'Preparing Shipment',
-    status: 'SHIPPED',
+    status: 'CONTRACT_SIGNED', // NOVO status intermediário
     requiredFields: [],
-    adminRequiredFields: [], // Step 6 é informativo apenas
+    adminRequiredFields: ['trackingUrl'], // Nós precisamos de tracking para avançar
     nextStep: 7,
-    nextStatus: 'SHIPPED', // Mantém status SHIPPED
-    canAdminAdvance: true, // NÓS avançamos quando temos tracking
+    nextStatus: 'SHIPPED', // Muda para SHIPPED quando enviamos
+    canAdminAdvance: true, // NÓS avançamos quando enviamos o produto
   },
   7: {
     name: 'Delivered',
     status: 'SHIPPED',
     requiredFields: ['trackingUrl', 'couponCode'],
-    adminRequiredFields: ['trackingUrl', 'couponCode'], // Nós inserimos tracking + cupom
+    adminRequiredFields: [], // Step 7 é informativo - aguardamos conteúdo
     nextStep: 8,
     nextStatus: 'COMPLETED',
-    canAdminAdvance: true, // NÓS avançamos (completa parceria)
+    canAdminAdvance: true, // NÓS avançamos quando recebemos conteúdo
   },
   8: {
     name: 'Completed',

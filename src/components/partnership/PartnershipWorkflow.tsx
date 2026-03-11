@@ -53,9 +53,10 @@ const STEPS = [
   { number: 3, name: 'Preparing', status: 'PRODUCT_SELECTION' },
   { number: 4, name: 'Design Review', status: 'DESIGN_REVIEW' },
   { number: 5, name: 'Contract', status: 'CONTRACT_PENDING' },
-  { number: 6, name: 'Preparing Shipment', status: 'SHIPPED' },
-  { number: 7, name: 'Delivered', status: 'DELIVERED' },
-  { number: 8, name: 'Completed', status: 'COMPLETED' },
+  { number: 6, name: 'Contract Signed', status: 'CONTRACT_SIGNED' },
+  { number: 7, name: 'Shipped', status: 'SHIPPED' },
+  { number: 8, name: 'Delivered', status: 'DELIVERED' },
+  { number: 9, name: 'Completed', status: 'COMPLETED' },
 ];
 
 export function PartnershipWorkflow({ influencerId, influencerName, influencerHandle, influencerStatus, portalUrl }: PartnershipWorkflowProps) {
@@ -808,12 +809,28 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
             isLocked={isCompleted || isCancelled}
           />
         )}
+        {currentStep === 6 && (
+          <div className="p-6 bg-green-50 border-2 border-green-200 rounded-lg">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                <CheckCircle2 className="h-6 w-6 text-green-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-green-900">Contrato Assinado!</h3>
+                <p className="text-sm text-green-700">O influencer aceitou o contrato.</p>
+              </div>
+            </div>
+            <p className="text-sm text-green-800">
+              Prepara a encomenda e clica em "Marcar como Enviado" quando estiver tudo pronto para envio.
+            </p>
+          </div>
+        )}
 
         {/* Action buttons based on step type */}
         {!isCompleted && !isCancelled && (
           <div className="mt-6">
-            {/* Steps 3, 5, 6: Admin advances and sends email */}
-            {(currentStep === 3 || currentStep === 5 || currentStep === 6) && (
+            {/* Steps 3, 6, 7: Admin advances and sends email */}
+            {(currentStep === 3 || currentStep === 6 || currentStep === 7) && (
               <div className="flex justify-end gap-3">
                 <button
                   onClick={loadEmailPreview}
@@ -843,15 +860,15 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
                       <Loader2 className="h-4 w-4 animate-spin" />
                       A processar...
                     </>
-                  ) : currentStep === 6 ? (
+                  ) : currentStep === 7 ? (
                     <>
                       <CheckCircle2 className="h-4 w-4" />
                       Completar Parceria
                     </>
-                  ) : currentStep === 5 ? (
+                  ) : currentStep === 6 ? (
                     <>
                       <CheckCircle2 className="h-4 w-4" />
-                      Finalizar Parceria
+                      Marcar como Enviado
                     </>
                   ) : (
                     <>
