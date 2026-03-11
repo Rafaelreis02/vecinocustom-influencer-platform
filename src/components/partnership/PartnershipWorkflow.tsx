@@ -820,9 +820,26 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
                 <p className="text-sm text-green-700">O influencer aceitou o contrato.</p>
               </div>
             </div>
-            <p className="text-sm text-green-800">
-              Prepara a encomenda e clica em "Marcar como Enviado" quando estiver tudo pronto para envio.
+            <p className="text-sm text-green-800 mb-4">
+              Prepara a encomenda e adiciona o tracking antes de marcar como enviado.
             </p>
+            
+            {/* Tracking URL Input */}
+            <div className="bg-white p-4 rounded-lg border border-green-200">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Link de Tracking (CTT, DHL, etc.)
+              </label>
+              <input
+                type="url"
+                value={workflow.trackingUrl || ''}
+                onChange={(e) => updateWorkflow({ trackingUrl: e.target.value })}
+                placeholder="https://www.ctt.pt/..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:border-green-500 focus:outline-none"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                O influencer vai receber este link para acompanhar a encomenda.
+              </p>
+            </div>
           </div>
         )}
 
@@ -852,7 +869,7 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
                 
                 <button
                   onClick={advanceStep}
-                  disabled={isAdvancing}
+                  disabled={isAdvancing || (currentStep === 6 && !workflow.trackingUrl)}
                   className="inline-flex items-center gap-2 px-6 py-2.5 bg-black text-white rounded-lg font-medium hover:bg-gray-800 transition-colors disabled:opacity-50"
                 >
                   {isAdvancing ? (
@@ -868,7 +885,7 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
                   ) : currentStep === 6 ? (
                     <>
                       <CheckCircle2 className="h-4 w-4" />
-                      Marcar como Enviado
+                      {workflow.trackingUrl ? 'Marcar como Enviado' : 'Adicionar Tracking Primeiro'}
                     </>
                   ) : (
                     <>
