@@ -84,20 +84,20 @@ export async function POST(
       },
     });
 
-    // Update workflow to advance step
+    // Update workflow to advance step (to step 6: Preparing Shipment)
     await prisma.partnershipWorkflow.update({
       where: { id: workflow.id },
       data: {
-        currentStep: 5,
-        step4CompletedAt: new Date(),
+        currentStep: 6,
+        step5CompletedAt: new Date(),
         contractSigned: true,
       },
     });
 
-    // Update influencer status
+    // Update influencer status to CONTRACT_SIGNED (not SHIPPED yet - admin needs to ship first)
     await prisma.influencer.update({
       where: { id: influencer.id },
-      data: { status: 'SHIPPED' },
+      data: { status: 'CONTRACT_SIGNED' },
     });
 
     logger.info('Contract accepted and PDF generated', {
