@@ -37,12 +37,13 @@ export async function POST(
       );
     }
 
-    // Mark current workflow as RESTARTED
+    // Mark current workflow as COMPLETED (archived for history)
     await prisma.partnershipWorkflow.update({
       where: { id },
       data: {
-        status: 'RESTARTED',
+        status: 'COMPLETED',
         isRestarted: true,
+        currentStep: 9, // Mark as fully completed
       },
     });
 

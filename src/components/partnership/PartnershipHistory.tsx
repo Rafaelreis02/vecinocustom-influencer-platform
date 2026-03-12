@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { History, ChevronDown, ChevronUp, Calendar, CheckCircle2, XCircle, RefreshCcw } from 'lucide-react';
+import { History, ChevronDown, ChevronUp, Calendar, CheckCircle2 } from 'lucide-react';
 
 interface PartnershipHistoryProps {
   partnerships: Array<{
@@ -22,41 +22,38 @@ const STEP_NAMES: Record<number, string> = {
   1: 'Partnership',
   2: 'Shipping',
   3: 'Preparing',
-  4: 'Contract',
-  5: 'Shipped',
+  4: 'Design Review',
+  5: 'Contract',
+  6: 'Contract Signed',
+  7: 'Shipped',
+  8: 'Delivered',
+  9: 'Completed',
 };
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
   COMPLETED: {
-    label: 'Concluída',
+    label: 'Parceria Concluída',
     color: 'bg-green-100 text-green-700 border-green-200',
     icon: <CheckCircle2 className="h-4 w-4" />,
-  },
-  CANCELLED: {
-    label: 'Cancelada',
-    color: 'bg-red-100 text-red-700 border-red-200',
-    icon: <XCircle className="h-4 w-4" />,
-  },
-  RESTARTED: {
-    label: 'Recomeçada',
-    color: 'bg-blue-100 text-blue-700 border-blue-200',
-    icon: <RefreshCcw className="h-4 w-4" />,
   },
 };
 
 export function PartnershipHistory({ partnerships }: PartnershipHistoryProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  // Filter out active partnerships, show only completed/cancelled/restarted
+  // Only show successfully completed partnerships (not cancelled)
   const history = partnerships.filter(
-    p => p.status === 'COMPLETED' || p.status === 'CANCELLED' || p.status === 'RESTARTED'
+    p => p.status === 'COMPLETED' && p.currentStep >= 8
   );
 
   if (history.length === 0) {
     return (
       <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 text-center">
         <History className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-        <p className="text-sm text-gray-500">Sem histórico de parcerias anteriores</p>
+        <p className="text-sm text-gray-500">Sem parcerias concluídas anteriormente</p>
+        <p className="text-xs text-gray-400 mt-1">
+          Apenas parcerias finalizadas com sucesso aparecem aqui
+        </p>
       </div>
     );
   }
@@ -121,7 +118,7 @@ export function PartnershipHistory({ partnerships }: PartnershipHistoryProps) {
                   <div className="flex justify-between">
                     <span className="text-gray-500">Step Alcançado:</span>
                     <span className="text-gray-900">
-                      {partnership.currentStep} de 5 ({STEP_NAMES[partnership.currentStep]})
+                      {partnership.currentStep} de 9 ({STEP_NAMES[partnership.currentStep]})
                     </span>
                   </div>
                   <div className="flex justify-between">
