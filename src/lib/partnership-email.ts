@@ -131,13 +131,14 @@ async function getEmailTemplate(step: number, hasValue: boolean): Promise<any> {
       template = await prisma.emailTemplate.findUnique({ where: { key: 'STEP_3_PREPARING' } });
     }
   }
-  // Step 4: Contract - only generic exists
+  // Step 4: Design Review - no template here (sent via design-messages API)
   else if (step === 4) {
-    template = await prisma.emailTemplate.findUnique({ where: { key: 'STEP_4_CONTRACT' } });
+    // Design review emails are sent separately via sendDesignReviewEmail
+    return null;
   }
-  // Step 5: Shipped - only generic exists
+  // Step 5: Contract - influencer needs to sign
   else if (step === 5) {
-    template = await prisma.emailTemplate.findUnique({ where: { key: 'STEP_5_SHIPPED' } });
+    template = await prisma.emailTemplate.findUnique({ where: { key: 'STEP_5_CONTRACT' } });
   }
   // Step 6: Contract Signed
   else if (step === 6) {
