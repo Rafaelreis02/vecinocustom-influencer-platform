@@ -1,224 +1,32 @@
-/**
- * Gmail Integration Library
- * Syncs emails from brand@vecinocustom.com to the CRM
- */
-
 import { google } from 'googleapis';
 import { prisma } from './prisma';
-import { findInfluencerBySenderEmail, autoLinkEmailsBySender } from './email-auto-link';
 import { logger } from './logger';
 
-const gmail = google.gmail({ version: 'v1' });
+// Gmail API configuration
+const GMAIL_SCOPES = ['https://www.googleapis.com/auth/gmail.send'];
 
-export function getAuthClient() {
-  const oauth2Client = new google.auth.OAuth2(
+async function getSenderSettings() {
+  const settings = await prisma.emailSettings.findFirst();
+  return {
+    senderEmail: settings?.senderEmail || process.env.GMAIL_USER || '',
+    senderName: settings?.senderName || 'VecinoCustom',
+  };
+}
+
+export async function getGmailAuth() {
+  const { OAuth2 } = google.auth;
+  
+  const oauth2Client = new OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
     process.env.GOOGLE_REDIRECT_URI
   );
 
-  if (process.env.GOOGLE_REFRESH_TOKEN) {
-    oauth2Client.setCredentials({ refresh_token: process.env.GOOGLE_REFRESH_TOKEN });
-  }
+  oauth2Client.setCredentials({
+    refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
+  });
+
   return oauth2Client;
-}
-
-export async function getMessageDetails(auth: any, messageId: string) {
-  try {
-    const res = await gmail.users.messages.get({
-      userId: 'me',
-      id: messageId,
-      auth,
-      format: 'full',
-    });
-
-    const message = res.data;
-    const headers = message.payload?.headers || [];
-
-    const from = headers.find(h => h.name === 'From')?.value || '';
-    const to = headers.find(h => h.name === 'To')?.value || '';
-    const subject = headers.find(h => h.name === 'Subject')?.value || '';
-    const date = headers.find(h => h.name === 'Date')?.value || '';
-
-    let body = '';
-    let htmlBody = '';
-
-    if (message.payload?.parts) {
-      for (const part of message.payload.parts) {
-        if (part.mimeType === 'text/plain') {
-          body = Buffer.from(part.body?.data || '', 'base64').toString();
-        } else if (part.mimeType === 'text/html') {
-          htmlBody = Buffer.from(part.body?.data || '', 'base64').toString();
-        } else if (part.parts) {
-          for (const subPart of part.parts) {
-            if (subPart.mimeType === 'text/plain') body = Buffer.from(subPart.body?.data || '', 'base64').toString();
-            if (subPart.mimeType === 'text/html') htmlBody = Buffer.from(subPart.body?.data || '', 'base64').toString();
-          }
-        }
-      }
-    } else if (message.payload?.body?.data) {
-      body = Buffer.from(message.payload.body.data, 'base64').toString();
-    }
-
-    const attachments: any[] = [];
-    if (message.payload?.parts) {
-      for (const part of message.payload.parts) {
-        if (part.filename) {
-          attachments.push({
-            filename: part.filename,
-            mimeType: part.mimeType,
-            size: part.body?.size || 0,
-            attachmentId: part.body?.attachmentId,
-          });
-        }
-      }
-    }
-
-    return {
-      gmailId: messageId,
-      gmailThreadId: message.threadId,
-      from: extractEmail(from),
-      to: extractEmail(to),
-      subject,
-      body,
-      htmlBody,
-      attachments,
-      receivedAt: new Date(date),
-      labels: message.labelIds || [],
-    };
-  } catch (error: any) {
-    console.error('[GMAIL ERROR]', error.message);
-    throw error;
-  }
-}
-
-export async function syncEmails(auth: any) {
-  try {
-    logger.info('[GMAIL SYNC] Starting incremental sync...');
-    let totalSynced = 0;
-    let autoLinked = 0;
-
-    const lastEmail = await prisma.email.findFirst({
-      orderBy: { receivedAt: 'desc' },
-      select: { receivedAt: true }
-    });
-
-    let query = 'label:INBOX';
-    if (lastEmail) {
-      const after = Math.floor(lastEmail.receivedAt.getTime() / 1000);
-      query += ` after:${after}`;
-    }
-
-    const res = await gmail.users.messages.list({
-      userId: 'me',
-      auth,
-      q: query,
-      maxResults: 250, 
-    });
-
-    const messages = res.data.messages || [];
-    
-    // Track which senders we've auto-linked to avoid duplicate calls
-    const processedSenders = new Set<string>();
-    
-    for (const msg of messages) {
-      const exists = await prisma.email.findUnique({ where: { gmailId: msg.id! } });
-      if (exists) continue;
-
-      const emailData = await getMessageDetails(auth, msg.id!);
-      
-      // Tentar encontrar influencer pelo email do remetente
-      let influencerId: string | null = null;
-      const existingInfluencer = await findInfluencerBySenderEmail(emailData.from);
-      
-      if (existingInfluencer) {
-        influencerId = existingInfluencer.id;
-        
-        // Auto-link todos os emails deste remetente (só uma vez por sender)
-        if (!processedSenders.has(emailData.from)) {
-          processedSenders.add(emailData.from);
-          try {
-            const linkResult = await autoLinkEmailsBySender(emailData.from, influencerId);
-            autoLinked += linkResult.linked;
-            logger.info('[GMAIL SYNC] Auto-linked emails for sender', {
-              sender: emailData.from,
-              influencerId,
-              linked: linkResult.linked
-            });
-          } catch (autoLinkError) {
-            logger.error('[GMAIL SYNC] Auto-link failed', { 
-              sender: emailData.from, 
-              error: autoLinkError 
-            });
-          }
-        }
-      }
-
-      await prisma.email.create({
-        data: {
-          ...emailData,
-          influencerId: influencerId,
-        },
-      });
-      totalSynced++;
-    }
-
-    logger.info('[GMAIL SYNC] Completed', { 
-      synced: totalSynced, 
-      autoLinked,
-      uniqueSenders: processedSenders.size 
-    });
-    
-    return totalSynced;
-  } catch (error: any) {
-    logger.error('[GMAIL SYNC ERROR]', error);
-    throw error;
-  }
-}
-
-function extractEmail(emailString: string): string {
-  const match = emailString.match(/<(.+?)>/);
-  return match ? match[1] : emailString.trim();
-}
-
-// Cache for email sender settings
-let cachedSenderSettings: { senderName: string; senderEmail: string } | null = null;
-let cacheTimestamp = 0;
-const CACHE_TTL = 60000; // 1 minute
-
-async function getSenderSettings(): Promise<{ senderName: string; senderEmail: string }> {
-  // Check cache
-  if (cachedSenderSettings && Date.now() - cacheTimestamp < CACHE_TTL) {
-    return cachedSenderSettings;
-  }
-
-  try {
-    // Try to get from database
-    const settings = await prisma.$queryRaw`
-      SELECT value FROM "app_settings" WHERE key = 'email_sender' LIMIT 1
-    `;
-
-    let senderName = process.env.EMAIL_SENDER_NAME || 'VecinoCustom';
-    let senderEmail = process.env.EMAIL_SENDER_EMAIL || 'brand@vecinocustom.com';
-
-    if (Array.isArray(settings) && settings.length > 0) {
-      const dbValue = settings[0]?.value;
-      if (dbValue) {
-        senderName = dbValue.senderName || senderName;
-        senderEmail = dbValue.senderEmail || senderEmail;
-      }
-    }
-
-    cachedSenderSettings = { senderName, senderEmail };
-    cacheTimestamp = Date.now();
-    return cachedSenderSettings;
-  } catch (error) {
-    logger.error('[GMAIL] Error fetching sender settings, using defaults', { error });
-    return {
-      senderName: process.env.EMAIL_SENDER_NAME || 'VecinoCustom',
-      senderEmail: process.env.EMAIL_SENDER_EMAIL || 'brand@vecinocustom.com',
-    };
-  }
 }
 
 export async function sendEmail(auth: any, options: {
@@ -229,41 +37,34 @@ export async function sendEmail(auth: any, options: {
   threadId?: string;
   fromName?: string;
 }) {
-  // Validate inputs
-  if (!options.to) {
-    logger.error('[GMAIL] Missing recipient email');
-    throw new Error('Missing recipient email');
-  }
-  if (!options.subject) {
-    logger.error('[GMAIL] Missing subject');
-    throw new Error('Missing subject');
-  }
-  if (!options.body || options.body.trim() === '') {
-    logger.error('[GMAIL] Missing or empty body', { to: options.to, subject: options.subject });
-    throw new Error('Missing or empty email body');
-  }
-
   logger.info('[GMAIL] Attempting to send email', {
     to: options.to,
     subject: options.subject,
     bodyLength: options.body?.length || 0,
-    bodyPreview: options.body?.substring(0, 100),
   });
+
+  // Validate inputs
+  if (!options.to) {
+    throw new Error('Missing recipient email');
+  }
+  if (!options.subject) {
+    throw new Error('Missing subject');
+  }
+  if (!options.body || options.body.trim() === '') {
+    throw new Error('Missing or empty email body');
+  }
 
   const gmail = google.gmail({ version: 'v1', auth });
   
-  // Get sender settings from database
   const senderSettings = await getSenderSettings();
-  
-  // Use custom sender name from options, or from settings, or default
   const senderName = options.fromName || senderSettings.senderName;
   const senderEmail = senderSettings.senderEmail;
   
-  // Build simple email message - NO encoding, let Gmail handle it
+  // Build simple email message
   const messageParts = [
     'Content-Type: text/plain; charset="utf-8"',
     'MIME-Version: 1.0',
-    'Content-Transfer-Encoding: 7bit',
+    'Content-Transfer-Encoding: quoted-printable',
     `To: ${options.to}`,
     `From: ${senderName} <${senderEmail}>`,
     `Subject: ${options.subject}`,
@@ -272,9 +73,9 @@ export async function sendEmail(auth: any, options: {
     options.body
   ];
 
-  const message = messageParts.filter(Boolean).join('\n');
+  const message = messageParts.filter(Boolean).join('\r\n');
 
-  // Encode to base64url (RFC 4648)
+  // Encode to base64url
   const encodedMessage = Buffer.from(message, 'utf-8')
     .toString('base64')
     .replace(/\+/g, '-')
@@ -293,7 +94,6 @@ export async function sendEmail(auth: any, options: {
     logger.info('[GMAIL] Email sent successfully', {
       to: options.to,
       subject: options.subject,
-      bodyLength: options.body?.length || 0,
       messageId: res.data.id,
     });
     
@@ -303,7 +103,6 @@ export async function sendEmail(auth: any, options: {
       to: options.to,
       subject: options.subject,
       error: error.message,
-      response: error.response?.data,
     });
     throw error;
   }
