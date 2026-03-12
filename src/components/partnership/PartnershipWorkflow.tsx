@@ -493,6 +493,31 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
   const isCompleted = workflow.status === 'COMPLETED';
   const isCancelled = workflow.status === 'CANCELLED';
 
+  // Show simplified view for completed workflows
+  if (isCompleted) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-green-50 border-2 border-green-200 rounded-xl p-8 text-center">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <CheckCircle2 className="h-8 w-8 text-green-600" />
+          </div>
+          <h3 className="text-xl font-bold text-green-900 mb-2">Parceria Concluída!</h3>
+          <p className="text-green-700 mb-6">
+            Esta parceria foi completada com sucesso. Todos os passos foram finalizados.
+          </p>
+          <button
+            onClick={restartWorkflow}
+            disabled={isRestarting}
+            className="inline-flex items-center gap-2 px-6 py-3 bg-[#0E1E37] text-white rounded-lg font-medium hover:bg-[#1a2f4f] transition-colors disabled:opacity-50"
+          >
+            <RefreshCcw className="h-5 w-5" />
+            {isRestarting ? 'A recomeçar...' : '🔄 Iniciar Nova Parceria'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Progress Bar */}
@@ -502,8 +527,8 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
             Progresso da Parceria
           </h3>
           <div className="flex gap-2">
-            {/* Restart button - available at step 8 (delivered), step 9 (completed) or when cancelled */}
-            {(currentStep >= 8 || isCompleted || isCancelled) && (
+            {/* Restart button - available at step 8 (delivered) or when cancelled */}
+            {(currentStep >= 8 || isCancelled) && (
               <button
                 onClick={restartWorkflow}
                 disabled={isRestarting}
@@ -514,7 +539,7 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
               </button>
             )}
             {/* Cancel button - only show if not at final steps and not completed/cancelled */}
-            {currentStep < 8 && !isCompleted && !isCancelled && (
+            {currentStep < 8 && !isCancelled && (
               <button
                 onClick={cancelWorkflow}
                 disabled={isCancelling}

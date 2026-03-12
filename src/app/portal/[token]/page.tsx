@@ -1535,18 +1535,11 @@ function Step8Delivered({ data, token, onRestart }: { data: InfluencerData; toke
             </div>
           )}
 
-          {/* Restart Partnership Button */}
+          {/* Info about partnership completion */}
           <div className="pt-4 border-t border-gray-200">
-            <p className="text-sm text-gray-600 mb-3">
-              Queres colaborar novamente? Inicia uma nova parceria!
+            <p className="text-sm text-gray-600">
+              Obrigado pela colaboração! Se quiseres fazer uma nova parceria, entra em contacto com a VecinoCustom.
             </p>
-            <button
-              onClick={handleRestart}
-              disabled={isRestarting}
-              className="w-full py-3 bg-[#0E1E37] text-white font-semibold rounded-lg hover:bg-[#1a2f4f] transition disabled:opacity-50"
-            >
-              {isRestarting ? 'A iniciar...' : '🔄 Iniciar Nova Parceria'}
-            </button>
           </div>
         </div>
       </div>
