@@ -33,9 +33,9 @@ export async function getGmailAuth() {
 export const getAuthClient = getGmailAuth;
 
 // Stub for syncEmails - implement if needed
-export async function syncEmails() {
+export async function syncEmails(auth?: any) {
   logger.info('[GMAIL] syncEmails called - not implemented');
-  return { success: true };
+  return 0; // Return number of synced emails
 }
 
 export async function sendEmail(auth: any, options: {
