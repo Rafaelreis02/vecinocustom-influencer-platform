@@ -229,6 +229,27 @@ export async function sendEmail(auth: any, options: {
   threadId?: string;
   fromName?: string;
 }) {
+  // Validate inputs
+  if (!options.to) {
+    logger.error('[GMAIL] Missing recipient email');
+    throw new Error('Missing recipient email');
+  }
+  if (!options.subject) {
+    logger.error('[GMAIL] Missing subject');
+    throw new Error('Missing subject');
+  }
+  if (!options.body || options.body.trim() === '') {
+    logger.error('[GMAIL] Missing or empty body', { to: options.to, subject: options.subject });
+    throw new Error('Missing or empty email body');
+  }
+
+  logger.info('[GMAIL] Attempting to send email', {
+    to: options.to,
+    subject: options.subject,
+    bodyLength: options.body?.length || 0,
+    bodyPreview: options.body?.substring(0, 100),
+  });
+
   const gmail = google.gmail({ version: 'v1', auth });
   
   // Get sender settings from database
@@ -238,42 +259,52 @@ export async function sendEmail(auth: any, options: {
   const senderName = options.fromName || senderSettings.senderName;
   const senderEmail = senderSettings.senderEmail;
   
-  // Encode subject in UTF-8 base64 to handle special characters
-  const utf8Subject = `=?UTF-8?B?${Buffer.from(options.subject, 'utf-8').toString('base64')}?=`;
-  
-  // Encode body in base64 and wrap at 76 characters per line (RFC 2045)
-  const base64Body = Buffer.from(options.body, 'utf-8').toString('base64');
-  const wrappedBody = base64Body.match(/.{1,76}/g)?.join('\r\n') || base64Body;
-  
-  // Build MIME message with proper encoding
+  // Build simple email message - NO encoding, let Gmail handle it
   const messageParts = [
-    `From: ${senderName} <${senderEmail}>`,
-    `To: ${options.to}`,
-    `Subject: ${utf8Subject}`,
-    options.inReplyTo ? `In-Reply-To: ${options.inReplyTo}` : '',
+    'Content-Type: text/plain; charset="utf-8"',
     'MIME-Version: 1.0',
-    'Content-Type: text/plain; charset=UTF-8',
-    'Content-Transfer-Encoding: base64',
+    'Content-Transfer-Encoding: 7bit',
+    `To: ${options.to}`,
+    `From: ${senderName} <${senderEmail}>`,
+    `Subject: ${options.subject}`,
+    options.inReplyTo ? `In-Reply-To: ${options.inReplyTo}` : '',
     '',
-    wrappedBody
+    options.body
   ];
 
-  const message = messageParts.filter(Boolean).join('\r\n');
+  const message = messageParts.filter(Boolean).join('\n');
 
   // Encode to base64url (RFC 4648)
-  const encodedMessage = Buffer.from(message)
+  const encodedMessage = Buffer.from(message, 'utf-8')
     .toString('base64')
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
     .replace(/=+$/, '');
 
-  const res = await gmail.users.messages.send({
-    userId: 'me',
-    requestBody: {
-      raw: encodedMessage,
-      threadId: options.threadId,
-    },
-  });
-  
-  return res.data;
+  try {
+    const res = await gmail.users.messages.send({
+      userId: 'me',
+      requestBody: {
+        raw: encodedMessage,
+        threadId: options.threadId,
+      },
+    });
+    
+    logger.info('[GMAIL] Email sent successfully', {
+      to: options.to,
+      subject: options.subject,
+      bodyLength: options.body?.length || 0,
+      messageId: res.data.id,
+    });
+    
+    return res.data;
+  } catch (error: any) {
+    logger.error('[GMAIL] Failed to send email', {
+      to: options.to,
+      subject: options.subject,
+      error: error.message,
+      response: error.response?.data,
+    });
+    throw error;
+  }
 }
