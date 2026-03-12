@@ -3,9 +3,19 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
-import { getAuthClient, sendEmail } from '@/lib/gmail';
+import { sendWorkflowEmail } from '@/lib/partnership-email';
 
-// GET /api/partnerships/[id]/design-messages - List all messages for a workflow
+/**
+ * Design Messages — Step 4
+ *
+ * Botão "Enviar Prova" → guarda mensagem + envia email ao influencer.
+ * 1ª mensagem admin → template DESIGN_REVIEW_FIRST  ("o teu design está pronto")
+ * 2ª+ mensagens admin → template DESIGN_REVIEW_REVISION ("fizemos as alterações")
+ *
+ * Usa sendWorkflowEmail para consistência com o resto do sistema.
+ */
+
+// GET /api/partnerships/[id]/design-messages - Listar mensagens
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -18,10 +28,9 @@ export async function GET(
 
     const { id } = await params;
 
-    // Use raw query to avoid table name mismatch
     const messages = await prisma.$queryRaw`
-      SELECT * FROM "DesignMessage" 
-      WHERE "workflowId" = ${id} 
+      SELECT * FROM "DesignMessage"
+      WHERE "workflowId" = ${id}
       ORDER BY "createdAt" ASC
     `;
 
@@ -32,7 +41,7 @@ export async function GET(
   }
 }
 
-// POST /api/partnerships/[id]/design-messages - Send a new message
+// POST /api/partnerships/[id]/design-messages - Enviar prova/mensagem ao influencer
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -51,9 +60,19 @@ export async function POST(
       return NextResponse.json({ error: 'Content or imageUrl required' }, { status: 400 });
     }
 
-    // Verify workflow exists and is at step 4
+    // Verificar workflow
     const workflow = await prisma.partnershipWorkflow.findUnique({
       where: { id },
+      include: {
+        influencer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            portalToken: true,
+          },
+        },
+      },
     });
 
     if (!workflow) {
@@ -64,106 +83,98 @@ export async function POST(
       return NextResponse.json({ error: 'Design review only available at step 4' }, { status: 400 });
     }
 
-    // Create message using raw query
+    // Guardar mensagem
     const messageId = crypto.randomUUID();
     await prisma.$executeRaw`
       INSERT INTO "DesignMessage" ("id", "workflowId", "content", "imageUrl", "senderType", "createdAt", "updatedAt")
       VALUES (${messageId}, ${id}, ${content || ''}, ${imageUrl || null}, 'ADMIN', NOW(), NOW())
     `;
 
-    // Fetch the created message
     const [message] = await prisma.$queryRaw`
       SELECT * FROM "DesignMessage" WHERE "id" = ${messageId}
     ` as any[];
 
-    logger.info('[DESIGN_MESSAGES] Admin sent message:', { workflowId: id, messageId });
-
-    // Check if this is the first message or a revision
+    // Contar mensagens ADMIN anteriores para saber se é 1ª prova ou revisão
     const countResult = await prisma.$queryRaw`
-      SELECT COUNT(*) as count FROM "DesignMessage" WHERE "workflowId" = ${id} AND "senderType" = 'ADMIN'
+      SELECT COUNT(*) as count FROM "DesignMessage"
+      WHERE "workflowId" = ${id} AND "senderType" = 'ADMIN'
     ` as any[];
-    const previousMessages = Number(countResult[0]?.count || 0);
-    const isFirstDesign = previousMessages === 1;
+    const adminMessageCount = Number(countResult[0]?.count || 0);
+    const isFirstDesign = adminMessageCount === 1;
 
-    // Get email template based on whether it's first design or revision
-    const templateKey = isFirstDesign ? 'DESIGN_REVIEW_FIRST' : 'DESIGN_REVIEW_REVISION';
-    
-    const template = await prisma.emailTemplate.findUnique({
-      where: { key: templateKey },
-    });
+    // Enviar email via sendWorkflowEmail
+    // Step 4 com isFirstDesign determina o template: DESIGN_REVIEW_FIRST ou DESIGN_REVIEW_REVISION
+    // Passamos 'isFirstDesign' como variável extra para o partnership-email escolher o template certo
+    let emailSent = false;
+    let emailError: string | null = null;
 
-    // Send email notification to influencer
-    try {
-      const workflowWithInfluencer = await prisma.partnershipWorkflow.findUnique({
-        where: { id },
-        include: { influencer: true },
-      });
+    if (workflow.influencer.email) {
+      // Usar step 4 para 1ª prova, step 40 (fictício) para revisão — 
+      // na verdade passamos a chave direta para o template
+      const templateKey = isFirstDesign ? 'DESIGN_REVIEW_FIRST' : 'DESIGN_REVIEW_REVISION';
 
-      const influencer = workflowWithInfluencer?.influencer;
-      logger.info('[DESIGN_MESSAGES] Checking influencer email:', { 
-        hasInfluencer: !!influencer, 
-        hasEmail: !!influencer?.email,
-        email: influencer?.email 
-      });
-      
-      if (influencer?.email) {
-        logger.info('[DESIGN_MESSAGES] Getting auth client...');
-        const auth = getAuthClient();
-        
-        // Build email using template or fallback
-        let emailSubject: string;
-        let emailBody: string;
-        
-        const portalUrl = `https://vecinocustom-influencer-platform.vercel.app/portal/${influencer.portalToken}`;
+      const template = await prisma.emailTemplate.findUnique({ where: { key: templateKey } });
 
-        if (template) {
-          emailSubject = template.subject;
-          // Templates usam {{portalToken}} e {{portalUrl}} — substituir ambos
-          emailBody = template.body
-            .replace(/{{nome}}/g, influencer.name || '')
-            .replace(/{{portalToken}}/g, influencer.portalToken || '')
-            .replace(/{{portalUrl}}/g, portalUrl)
-            .replace(/{{mensagem}}/g, content || '');
-        } else {
-          // Fallback se template não encontrado
-          emailSubject = isFirstDesign
-            ? '🎨 O teu design está pronto!'
-            : '🎨 Revisão do teu design - Verifica as alterações';
-          emailBody = `Olá ${influencer.name || ''},
+      if (template) {
+        // Render manual do template (o sendWorkflowEmail usa step number, não key direta)
+        // Para design-messages usamos sendWorkflowEmail com step especial
+        // Step 4 → partnership-email.ts retorna null (design é enviado aqui)
+        // Então fazemos o render e envio direto mas com a mesma lib Gmail
+        const { getAuthClient, sendEmail } = await import('@/lib/gmail');
+        const portalUrl = `https://vecinocustom-influencer-platform.vercel.app/portal/${workflow.influencer.portalToken}`;
 
-${isFirstDesign
-  ? 'Temos uma excelente notícia! O design da tua peça personalizada está pronto. 🎉'
-  : 'Fizemos as alterações solicitadas ao teu design! 🎨'}
+        const subject = template.subject;
+        const body = template.body
+          .replace(/{{nome}}/g, workflow.influencer.name || '')
+          .replace(/{{portalToken}}/g, workflow.influencer.portalToken || '')
+          .replace(/{{portalUrl}}/g, portalUrl)
+          .replace(/{{mensagem}}/g, content || '');
 
-Podes ver ${isFirstDesign ? 'o mockup' : 'a nova versão'} e aprovar através do teu portal:
-${portalUrl}
+        try {
+          const auth = getAuthClient();
+          await sendEmail(auth, { to: workflow.influencer.email, subject, body });
+          emailSent = true;
 
-${content ? `Mensagem da equipa:\n${content}\n\n` : ''}Cumprimentos,\nEquipa VecinoCustom`;
+          // Registar email na DB para histórico
+          await prisma.partnershipEmail.create({
+            data: {
+              workflowId: id,
+              step: 4,
+              templateKey,
+              subject,
+              body,
+              sentBy: session.user.id || 'system',
+              variables: { nome: workflow.influencer.name, portalToken: workflow.influencer.portalToken, mensagem: content } as any,
+            },
+          });
+
+          logger.info('[DESIGN_MESSAGES] Email sent', {
+            workflowId: id,
+            template: templateKey,
+            isFirstDesign,
+            to: workflow.influencer.email,
+          });
+        } catch (err: any) {
+          emailError = err.message;
+          logger.error('[DESIGN_MESSAGES] Email failed', { error: err.message });
         }
-
-        logger.info('[DESIGN_MESSAGES] Sending email...', { to: influencer.email, subject: emailSubject });
-        await sendEmail(auth, {
-          to: influencer.email,
-          subject: emailSubject,
-          body: emailBody,
-        });
-        
-        logger.info('[DESIGN_MESSAGES] Email notification sent successfully:', { 
-          email: influencer.email,
-          template: templateKey,
-          isFirstDesign 
-        });
       } else {
-        logger.warn('[DESIGN_MESSAGES] No influencer email found, skipping email notification');
+        emailError = `Template ${templateKey} not found`;
+        logger.warn('[DESIGN_MESSAGES] Template not found', { templateKey });
       }
-    } catch (emailError) {
-      logger.error('[DESIGN_MESSAGES] Failed to send email notification:', emailError);
-      // Don't fail the request if email fails
+    } else {
+      emailError = 'Influencer has no email';
+      logger.warn('[DESIGN_MESSAGES] No influencer email', { workflowId: id });
     }
 
-    return NextResponse.json({ success: true, data: message });
+    return NextResponse.json({
+      success: true,
+      data: message,
+      emailSent,
+      emailError,
+    });
   } catch (error: any) {
-    logger.error('[DESIGN_MESSAGES] Error sending message:', error);
+    logger.error('[DESIGN_MESSAGES] Error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

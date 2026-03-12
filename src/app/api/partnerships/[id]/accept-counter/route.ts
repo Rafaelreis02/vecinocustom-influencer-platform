@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { updateInfluencerStatus } from '@/lib/status-email';
+import { logger } from '@/lib/logger';
 
 // POST /api/partnerships/[id]/accept-counter - Accept influencer counterproposal
+// Ação: NÓS aceitamos a proposta do influencer.
+// Sem email — foi o influencer que propôs, não nós. Avançamos o workflow apenas.
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -17,18 +19,13 @@ export async function POST(
 
     const { id } = await params;
 
-    // Find the workflow
-    const workflows = await prisma.partnershipWorkflow.findMany({
-      where: { id },
-    });
-
-    const workflow = workflows[0];
+    const workflow = await prisma.partnershipWorkflow.findUnique({ where: { id } });
 
     if (!workflow) {
       return NextResponse.json({ error: 'Workflow not found' }, { status: 404 });
     }
 
-    // Update workflow status to ACTIVE and step
+    // Avançar para Step 2 e atualizar status
     const updatedWorkflow = await prisma.partnershipWorkflow.update({
       where: { id },
       data: {
@@ -37,26 +34,23 @@ export async function POST(
       },
     });
 
-    // Update influencer status to AGREED
-    // This will automatically send the Step 2 email via status transition
-    const statusResult = await updateInfluencerStatus(
-      workflow.influencerId,
-      'AGREED',
-      session.user.id || 'system'
-    );
+    await prisma.influencer.update({
+      where: { id: workflow.influencerId },
+      data: { status: 'AGREED' as any },
+    });
+
+    logger.info('[ACCEPT_COUNTER] Counterproposal accepted', {
+      workflowId: id,
+      influencerId: workflow.influencerId,
+    });
 
     return NextResponse.json({
       success: true,
       message: 'Counterproposal accepted',
-      data: {
-        ...updatedWorkflow,
-        influencerStatus: statusResult.newStatus,
-      },
-      emailSent: statusResult.emailResult?.emailSent || false,
-      emailError: statusResult.emailResult?.error || null,
+      data: updatedWorkflow,
     });
   } catch (error: any) {
-    console.error('Error accepting counterproposal:', error);
+    logger.error('[ACCEPT_COUNTER] Error:', error.message);
     return NextResponse.json(
       { error: 'Failed to accept counterproposal: ' + error.message },
       { status: 500 }
