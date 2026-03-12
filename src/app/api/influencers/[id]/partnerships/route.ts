@@ -48,8 +48,9 @@ export async function GET(
       orderBy: { createdAt: 'desc' },
     });
 
-    // Get active partnership separately
-    const activePartnership = partnerships.find(p => p.status === 'ACTIVE');
+    // Get active partnership or most recent one (even if completed)
+    const activePartnership = partnerships.find(p => p.status === 'ACTIVE') || 
+                               partnerships[0]; // Fallback to most recent if no active
 
     return NextResponse.json({
       success: true,
