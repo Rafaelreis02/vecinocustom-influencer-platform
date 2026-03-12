@@ -241,8 +241,9 @@ export async function sendEmail(auth: any, options: {
   // Encode subject in UTF-8 base64 to handle special characters
   const utf8Subject = `=?UTF-8?B?${Buffer.from(options.subject, 'utf-8').toString('base64')}?=`;
   
-  // Encode body in base64 to ensure UTF-8 characters are preserved
+  // Encode body in base64 and wrap at 76 characters per line (RFC 2045)
   const base64Body = Buffer.from(options.body, 'utf-8').toString('base64');
+  const wrappedBody = base64Body.match(/.{1,76}/g)?.join('\r\n') || base64Body;
   
   // Build MIME message with proper encoding
   const messageParts = [
@@ -254,7 +255,7 @@ export async function sendEmail(auth: any, options: {
     'Content-Type: text/plain; charset=UTF-8',
     'Content-Transfer-Encoding: base64',
     '',
-    base64Body
+    wrappedBody
   ];
 
   const message = messageParts.filter(Boolean).join('\r\n');
