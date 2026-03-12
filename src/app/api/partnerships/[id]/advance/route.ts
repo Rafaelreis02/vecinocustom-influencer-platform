@@ -77,19 +77,10 @@ const STEP_CONFIG: Record<number, {
     requiredFields: ['trackingUrl'],
     adminRequiredFields: [], // Step 7 é informativo - produto já foi enviado
     nextStep: 8,
-    nextStatus: 'DELIVERED',
-    canAdminAdvance: true, // NÓS avançamos quando produto é entregue
+    nextStatus: 'COMPLETED', // Simplificado: Shipped vai direto para Completed
+    canAdminAdvance: true, // NÓS avançamos quando queremos concluir
   },
   8: {
-    name: 'Delivered',
-    status: 'DELIVERED',
-    requiredFields: [],
-    adminRequiredFields: [], // Step 8 é informativo - aguardamos conteúdo do influencer
-    nextStep: 9,
-    nextStatus: 'COMPLETED',
-    canAdminAdvance: true, // NÓS avançamos quando recebemos conteúdo
-  },
-  9: {
     name: 'Completed',
     status: 'COMPLETED',
     requiredFields: [],
@@ -225,14 +216,20 @@ export async function POST(
       });
     }
 
-    // Send email only for steps that need it
-    // Step 5 is informational only - no email sent
+    // Send email only for specific steps:
+    // Steps 1,2,3: Admin actions -> send email
+    // Step 4: Design review -> email sent via design-messages API (not here)
+    // Step 5: Influencer signs contract -> no email (they know they signed)
+    // Step 6: Contract signed confirmed -> send email
+    // Step 7: Product shipped -> send email  
+    // Step 8: Completed -> no email (end of workflow)
+    const STEPS_THAT_SEND_EMAIL = [1, 2, 3, 6, 7];
     let emailResult: { success: boolean; emailId?: string; error?: string } = { success: true };
     
-    if (currentStep !== 5) {
-      // Get product name from URL for step 3 or 6 email
+    if (STEPS_THAT_SEND_EMAIL.includes(currentStep)) {
+      // Get product name from URL for step 3, 6, or 7 email
       let productName = '';
-      if ((currentStep === 3 || currentStep === 6) && workflow.selectedProductUrl) {
+      if ((currentStep === 3 || currentStep === 6 || currentStep === 7) && workflow.selectedProductUrl) {
         try {
           // Extract product name from URL or fetch from Shopify
           const urlParts = workflow.selectedProductUrl.split('/');
@@ -256,7 +253,7 @@ export async function POST(
       // Step-specific variables
       if (currentStep === 1) {
         // Step 1: Initial proposal - NO coupon code yet, just mention benefits
-        variables.cupom = ''; // No coupon code in step 1
+        variables.cupom = '';
         variables.morada = '';
         variables.url_produto = '';
         variables.nome_produto = '';
@@ -264,7 +261,7 @@ export async function POST(
         variables.tracking_url = '';
       } else if (currentStep === 2) {
         // Step 2: Agreement made - still no coupon, asks for shipping info
-        variables.cupom = ''; // No coupon code yet
+        variables.cupom = '';
         variables.morada = workflow.shippingAddress || '';
         variables.sugestao1 = workflow.productSuggestion1 || '';
         variables.sugestao2 = workflow.productSuggestion2 || '';
@@ -284,25 +281,22 @@ export async function POST(
         variables.sugestao3 = workflow.productSuggestion3 || '';
         variables.url_contrato = '';
         variables.tracking_url = '';
-      } else if (currentStep === 4) {
-        // Step 4: Contract pending
+      } else if (currentStep === 6) {
+        // Step 6: Contract signed - preparing shipment
         variables.cupom = workflow.couponCode || '';
         variables.morada = workflow.shippingAddress || '';
         variables.url_produto = workflow.selectedProductUrl || '';
         variables.nome_produto = productName;
         variables.url_contrato = workflow.contractUrl || '';
         variables.tracking_url = '';
-      } else if (currentStep === 6) {
-        // Step 6: DELIVERED - ALL INFO including tracking
+      } else if (currentStep === 7) {
+        // Step 7: Product shipped - include tracking
         variables.cupom = workflow.couponCode || '';
         variables.morada = workflow.shippingAddress || '';
         variables.url_produto = workflow.selectedProductUrl || '';
         variables.nome_produto = productName;
         variables.url_contrato = workflow.contractUrl || '';
         variables.tracking_url = workflow.trackingUrl || '';
-        variables.sugestao1 = workflow.productSuggestion1 || '';
-        variables.sugestao2 = workflow.productSuggestion2 || '';
-        variables.sugestao3 = workflow.productSuggestion3 || '';
       }
 
       // Log which template will be used

@@ -371,9 +371,9 @@ export default function PortalPage() {
   );
 }
 
-// Ultra Minimalist Progress Bar
+// Ultra Minimalist Progress Bar - 8 steps simplified
 function ProgressBar({ currentStep }: { currentStep: number }) {
-  const totalSteps = 8;
+  const totalSteps = 8; // Simplified: removed step 8 (Delivered)
   const progress = Math.min((currentStep / totalSteps) * 100, 100);
 
   return (

@@ -139,10 +139,17 @@ async function getEmailTemplate(step: number, hasValue: boolean): Promise<any> {
   else if (step === 5) {
     template = await prisma.emailTemplate.findUnique({ where: { key: 'STEP_5_SHIPPED' } });
   }
-  // Step 6: Delivered
+  // Step 6: Contract Signed
   else if (step === 6) {
-    const key = hasValue ? 'STEP_6_DELIVERED_WITH_VALUE' : 'STEP_6_DELIVERED_NO_VALUE';
-    template = await prisma.emailTemplate.findUnique({ where: { key } });
+    template = await prisma.emailTemplate.findUnique({ where: { key: 'STEP_6_CONTRACT_SIGNED' } });
+  }
+  // Step 7: Shipped
+  else if (step === 7) {
+    template = await prisma.emailTemplate.findUnique({ where: { key: 'STEP_7_SHIPPED' } });
+  }
+  // Step 9: Completed (not typically sent via advance, but included for completeness)
+  else if (step === 9) {
+    template = await prisma.emailTemplate.findUnique({ where: { key: 'STEP_9_COMPLETED' } });
   }
   
   // Final fallback: any active template for this step
