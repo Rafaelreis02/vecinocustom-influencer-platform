@@ -238,16 +238,23 @@ export async function sendEmail(auth: any, options: {
   const senderName = options.fromName || senderSettings.senderName;
   const senderEmail = senderSettings.senderEmail;
   
-  // Build email content - body as plain text (no encoding in message structure)
+  // Encode subject in UTF-8 base64 to handle special characters
+  const utf8Subject = `=?UTF-8?B?${Buffer.from(options.subject, 'utf-8').toString('base64')}?=`;
+  
+  // Encode body in base64 to ensure UTF-8 characters are preserved
+  const base64Body = Buffer.from(options.body, 'utf-8').toString('base64');
+  
+  // Build MIME message with proper encoding
   const messageParts = [
     `From: ${senderName} <${senderEmail}>`,
     `To: ${options.to}`,
-    `Subject: ${options.subject}`,
+    `Subject: ${utf8Subject}`,
     options.inReplyTo ? `In-Reply-To: ${options.inReplyTo}` : '',
     'MIME-Version: 1.0',
-    'Content-Type: text/plain; charset=utf-8',
+    'Content-Type: text/plain; charset=UTF-8',
+    'Content-Transfer-Encoding: base64',
     '',
-    options.body
+    base64Body
   ];
 
   const message = messageParts.filter(Boolean).join('\r\n');

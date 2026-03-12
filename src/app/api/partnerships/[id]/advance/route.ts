@@ -92,13 +92,13 @@ const STEP_CONFIG: Record<number, {
 };
 
 // Validate admin-required fields for the current step
-function validateAdminStep(workflow: any, step: number): { valid: boolean; missing: string[]; canAdvance: boolean } {
+function validateAdminStep(workflow: any, step: number): { valid: boolean; missing: string[]; canAdvance: boolean; error?: string } {
   const config = STEP_CONFIG[step];
   const missing: string[] = [];
 
   // Check if admin can advance this step
   if (!config.canAdminAdvance) {
-    return { valid: false, missing: [], canAdvance: false };
+    return { valid: false, missing: [], canAdvance: false, error: 'Este step é avançado automaticamente pelo influencer' };
   }
 
   // Validate only admin-required fields
@@ -171,9 +171,25 @@ export async function POST(
 
     // Validate admin-required fields
     if (!validation.valid) {
+      const missingFields = validation.missing;
+      let specificError = 'Campos obrigatórios em falta';
+      
+      // Provide specific error messages for common steps
+      if (currentStep === 3) {
+        if (missingFields.includes('selectedProductUrl') && missingFields.includes('couponCode')) {
+          specificError = 'Falta selecionar o produto e criar o cupão de desconto';
+        } else if (missingFields.includes('selectedProductUrl')) {
+          specificError = 'Falta selecionar o produto';
+        } else if (missingFields.includes('couponCode')) {
+          specificError = 'Falta criar o cupão de desconto';
+        }
+      } else if (currentStep === 6) {
+        specificError = 'Falta adicionar o link de tracking';
+      }
+      
       return NextResponse.json(
         {
-          error: 'Campos obrigatórios em falta',
+          error: specificError,
           missing: validation.missing,
           step: currentStep,
           stepName: config.name,
