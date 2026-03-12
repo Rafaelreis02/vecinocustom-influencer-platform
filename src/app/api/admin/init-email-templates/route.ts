@@ -17,7 +17,8 @@ import { logger } from '@/lib/logger';
  *   STEP_3_PREPARING            → advance Step 3 (nós confirmamos produto)
  *   DESIGN_REVIEW_FIRST         → partnerships/[id]/design-messages (1ª prova)
  *   DESIGN_REVIEW_REVISION      → partnerships/[id]/design-messages (revisão)
- *   STEP_5_CONTRACT             → advance Step 5 (contrato disponível)  [LEGACY - pode não estar em uso]
+ *   STEP_5_CONTRACT_WITH_VALUE  → advance Step 5 (contrato, parceria com valor)
+ *   STEP_5_CONTRACT_NO_VALUE    → advance Step 5 (contrato, só comissão)
  *   STEP_7_SHIPPED              → advance Step 7 (encomenda enviada com tracking)
  */
 const DEFAULT_TEMPLATES = [
@@ -173,17 +174,23 @@ www.vecinocustom.com`,
 
   // ─── 5. CONTRATO ─────────────────────────────────────────────────────────────
   {
-    key: 'STEP_5_CONTRACT',
-    name: 'Step 5: Contrato para Assinatura',
-    subject: 'VecinoCustom - Contrato de colaboração para assinar',
+    key: 'STEP_5_CONTRACT_WITH_VALUE',
+    name: 'Step 5: Contrato - Com Valor',
+    subject: 'VecinoCustom - O teu contrato está pronto para assinar 📝',
     body: `Olá {{nome}},
 
-A tua peça já está a caminho e o teu contrato de colaboração está pronto para assinatura.
+Boa notícia! A tua peça personalizada está em preparação e o teu contrato de colaboração já está disponível.
 
-Podes assinar digitalmente de forma simples e segura através do teu portal:
+Resumo da parceria:
+• Peça personalizada VecinoCustom (à tua escolha)
+• {{valor}}€ de compensação
+• Cupom exclusivo com 10% desconto para a tua comunidade
+• 20% de comissão em cada venda com o teu cupom
+
+Para assinares o contrato, acede ao teu portal:
 https://vecinocustom-influencer-platform.vercel.app/portal/{{portalToken}}
 
-Após assinares, estará tudo concluído da nossa parte.
+A assinatura é digital e rápida — menos de 1 minuto.
 
 Cumprimentos,
 Equipa VecinoCustom
@@ -193,6 +200,33 @@ Para qualquer questão, responde a este email.
 www.vecinocustom.com`,
     step: 5,
     hasValue: true,
+  },
+  {
+    key: 'STEP_5_CONTRACT_NO_VALUE',
+    name: 'Step 5: Contrato - Apenas Comissão',
+    subject: 'VecinoCustom - O teu contrato está pronto para assinar 📝',
+    body: `Olá {{nome}},
+
+Boa notícia! A tua peça personalizada está em preparação e o teu contrato de colaboração já está disponível.
+
+Resumo da parceria:
+• Peça personalizada VecinoCustom (à tua escolha)
+• Cupom exclusivo com 10% desconto para a tua comunidade
+• 20% de comissão em cada venda com o teu cupom
+
+Para assinares o contrato, acede ao teu portal:
+https://vecinocustom-influencer-platform.vercel.app/portal/{{portalToken}}
+
+A assinatura é digital e rápida — menos de 1 minuto.
+
+Cumprimentos,
+Equipa VecinoCustom
+
+---
+Para qualquer questão, responde a este email.
+www.vecinocustom.com`,
+    step: 5,
+    hasValue: false,
   },
 
   // ─── 7. ENVIADO ──────────────────────────────────────────────────────────────

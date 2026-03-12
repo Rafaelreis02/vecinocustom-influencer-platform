@@ -137,9 +137,10 @@ async function getEmailTemplate(step: number, hasValue: boolean): Promise<any> {
   else if (step === 4) {
     return null;
   }
-  // Step 5: Contrato para assinatura
+  // Step 5: Contrato — distingue com valor vs só comissão (igual ao Step 1)
   else if (step === 5) {
-    template = await prisma.emailTemplate.findUnique({ where: { key: 'STEP_5_CONTRACT' } });
+    const key = hasValue ? 'STEP_5_CONTRACT_WITH_VALUE' : 'STEP_5_CONTRACT_NO_VALUE';
+    template = await prisma.emailTemplate.findUnique({ where: { key } });
   }
   // Step 7: Encomenda enviada (NÓS inserimos tracking)
   else if (step === 7) {

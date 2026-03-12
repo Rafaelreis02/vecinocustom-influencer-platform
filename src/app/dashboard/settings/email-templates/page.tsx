@@ -21,7 +21,7 @@ const STEP_NAMES: Record<number, string> = {
   1: '🤝 Step 1 — Proposta de Parceria',
   3: '✨ Step 3 — Peça em Preparação',
   4: '🎨 Step 4 — Design Review',
-  5: '📝 Step 5 — Contrato',
+  5: '📝 Step 5 — Contrato (enviado quando design é aprovado)',
   7: '📦 Step 7 — Encomenda Enviada',
 };
 

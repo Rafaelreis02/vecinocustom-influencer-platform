@@ -57,8 +57,8 @@ const STEP_CONFIG: Record<number, {
     adminRequiredFields: [],
     nextStep: 5,
     nextStatus: 'CONTRACT_PENDING',
-    emailStep: null, // emails do design enviados via design-messages
-    canAdminAdvance: false,
+    emailStep: 5, // design aprovado → envia STEP_5_CONTRACT_WITH/NO_VALUE
+    canAdminAdvance: true, // admin avança quando design é aprovado
   },
   5: {
     name: 'Contract (Contrato)',
