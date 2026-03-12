@@ -14,16 +14,15 @@ interface EmailTemplate {
   hasValue: boolean;
 }
 
+// Templates ativos no sistema — mapeamento step → nome legível
+// Só estes steps têm emails: 0, 1, 3, 4, 5, 7
 const STEP_NAMES: Record<number, string> = {
-  0: 'Prospecção: Contacto Inicial',
-  1: 'Step 1: Partnership',
-  2: 'Step 2: Shipping',
-  3: 'Step 3: Preparing',
-  4: 'Step 4: Design Review',
-  5: 'Step 5: Contract',
-  6: 'Step 6: Contract Signed',
-  7: 'Step 7: Shipped',
-  9: 'Step 8: Completed',
+  0: '📧 Prospecção — Contacto Inicial',
+  1: '🤝 Step 1 — Proposta de Parceria',
+  3: '✨ Step 3 — Peça em Preparação',
+  4: '🎨 Step 4 — Design Review',
+  5: '📝 Step 5 — Contrato',
+  7: '📦 Step 7 — Encomenda Enviada',
 };
 
 export default function EmailTemplatesPage() {
@@ -268,7 +267,7 @@ export default function EmailTemplatesPage() {
 
       {/* Templates by Step */}
       <div className="space-y-8">
-        {[0, 1, 2, 3, 4, 5, 6, 7, 9].map(step => {
+        {[0, 1, 3, 4, 5, 7].map(step => {
           const stepTemplates = groupedTemplates[step] || [];
           if (stepTemplates.length === 0) return null;
 
@@ -386,19 +385,19 @@ export default function EmailTemplatesPage() {
           Use {'{{variavel}}'} nos templates para inserir dados dinâmicos:
         </p>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs text-blue-600">
-          <code>{'{{nome}}'} - Nome do influencer</code>
-          <code>{'{{valor}}'} - Valor acordado</code>
-          <code>{'{{email}}'} - Email</code>
-          <code>{'{{instagram}}'} - Instagram</code>
-          <code>{'{{whatsapp}}'} - Whatsapp</code>
-          <code>{'{{morada}}'} - Morada</code>
-          <code>{'{{sugestao1}}'} - Sugestão 1</code>
-          <code>{'{{sugestao2}}'} - Sugestão 2</code>
-          <code>{'{{sugestao3}}'} - Sugestão 3</code>
-          <code>{'{{url_produto}}'} - URL produto</code>
-          <code>{'{{url_contrato}}'} - URL contrato</code>
-          <code>{'{{tracking_url}}'} - Tracking</code>
-          <code>{'{{cupom}}'} - Cupom</code>
+          <code>{'{{nome}}'} — Nome do influencer</code>
+          <code>{'{{valor}}'} — Valor acordado (€)</code>
+          <code>{'{{email}}'} — Email</code>
+          <code>{'{{instagram}}'} — Instagram</code>
+          <code>{'{{portalToken}}'} — Link do portal</code>
+          <code>{'{{morada}}'} — Morada de envio</code>
+          <code>{'{{sugestao1}}'} — Sugestão produto 1</code>
+          <code>{'{{sugestao2}}'} — Sugestão produto 2</code>
+          <code>{'{{sugestao3}}'} — Sugestão produto 3</code>
+          <code>{'{{url_produto}}'} — URL produto escolhido</code>
+          <code>{'{{tracking_url}}'} — Link de tracking</code>
+          <code>{'{{cupom}}'} — Código de cupom</code>
+          <code>{'{{mensagem}}'} — Mensagem (Design Review)</code>
         </div>
       </div>
     </div>
