@@ -6,6 +6,7 @@ import { Loader2, XCircle, CheckCircle, FileText } from 'lucide-react';
 import { ProductSearchInput } from './components/ProductSearchInput';
 import { Step4DesignReview } from './Step4DesignReview';
 import { StepDesignReference } from './StepDesignReference';
+import { getStepForStatus, hasActiveWorkflow } from '@/lib/status-step-mapping';
 
 // Constants
 const VALIDATION_ERROR_DISPLAY_DURATION = 4000; // 4 seconds
@@ -180,7 +181,7 @@ export default function PortalPage() {
       }
 
       const data = await res.json();
-      
+
       // Map workflow data to InfluencerData format
       // chosenProduct in old format = selectedProductUrl in workflow
       const mappedData: InfluencerData = {
@@ -188,11 +189,29 @@ export default function PortalPage() {
         chosenProduct: data.selectedProductUrl,
         phone: data.phone || '',
       };
-      
+
       setInfluencerData(mappedData);
-      
-      // Use currentStep directly from workflow
-      setCurrentStep(data.currentStep);
+
+      // Determine correct step based on status mapping
+      // This ensures consistency between status and step
+      const statusBasedStep = getStepForStatus(data.status);
+      const workflowStep = data.currentStep;
+
+      // Use the higher of the two to ensure we don't go backwards
+      // but if workflow is completed, use the workflow step
+      if (data.workflowStatus === 'COMPLETED') {
+        setCurrentStep(workflowStep);
+      } else if (statusBasedStep > 0 && statusBasedStep !== workflowStep) {
+        // There's a mismatch - use status-based step for consistency
+        console.warn('Step/Status mismatch:', {
+          status: data.status,
+          statusBasedStep,
+          workflowStep,
+        });
+        setCurrentStep(statusBasedStep);
+      } else {
+        setCurrentStep(workflowStep);
+      }
       
     } catch (err) {
       console.error('Error fetching data:', err);

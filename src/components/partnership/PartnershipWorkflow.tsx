@@ -8,6 +8,7 @@ import { PartnershipStep3 } from './PartnershipStep3';
 import { PartnershipStep4Reference } from './PartnershipStep4Reference';
 import { PartnershipStep4 } from './PartnershipStep4';
 import { PartnershipStep5 } from './PartnershipStep5';
+import { validateWorkflowConsistency } from '@/lib/status-step-mapping';
 
 interface PartnershipWorkflowProps {
   influencerId: string;
@@ -101,9 +102,24 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
       setLoading(true);
       const res = await fetch(`/api/influencers/${influencerId}/partnerships`);
       const data = await res.json();
-      
+
       if (data.success) {
-        setWorkflow(data.data.activePartnership);
+        const workflow = data.data.activePartnership;
+
+        // Validate consistency between influencer status and workflow step
+        if (workflow && influencerStatus) {
+          const validation = validateWorkflowConsistency(influencerStatus, workflow.currentStep);
+          if (!validation.isValid) {
+            console.warn('Workflow consistency issue:', {
+              influencerStatus,
+              workflowStep: workflow.currentStep,
+              expectedStep: validation.expectedStep,
+              expectedStatus: validation.expectedStatus,
+            });
+          }
+        }
+
+        setWorkflow(workflow);
       } else {
         setError(data.error);
       }
