@@ -2,87 +2,87 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { updateInfluencerStatus } from '@/lib/status-email';
+import { sendWorkflowEmail } from '@/lib/partnership-email';
 import { logger } from '@/lib/logger';
 
 /**
  * REGRA DE OURO:
- * O email só é enviado quando NÓS avançamos um step manualmente.
- * Ações do influencer no portal NÃO disparam email de confirmação para ele próprio.
+ * O admin clica num botão → avança o step → email enviado diretamente.
+ * Não dependemos de transições de status. Botão clicado = email garantido.
  *
- * Steps que NÓS podemos avançar (canAdminAdvance: true):
- *   Step 3 → Confirmamos produto selecionado → email STEP_3_PREPARING
- *   Step 7 → Inserimos tracking → email STEP_7_SHIPPED
+ * Steps que o ADMIN pode avançar (com email associado):
+ *   Step 3 → Produto confirmado → email STEP_3_PREPARING
+ *   Step 6 → Enviado com tracking → email STEP_7_SHIPPED
+ *   Step 7 → Completar parceria → sem email (só marca como concluído)
  *
- * Steps que o INFLUENCER avança no portal (canAdminAdvance: false):
+ * Steps que o INFLUENCER avança no portal (sem intervenção do admin):
  *   Step 1 → Influencer aceita proposta
  *   Step 2 → Influencer preenche morada e sugestões
- *   Step 5 → Influencer assina contrato (via accept-contract API)
- *   Step 6 → (intermediário pós-contrato, gerido internamente)
+ *   Step 5 → Influencer assina contrato (via accept-contract)
  */
 const STEP_CONFIG: Record<number, {
   name: string;
-  status: string;
   adminRequiredFields: string[];
   nextStep: number | null;
   nextStatus: string | null;
+  emailStep: number | null; // step do template a enviar (null = sem email)
   canAdminAdvance: boolean;
 }> = {
   1: {
     name: 'Partnership (Proposta)',
-    status: 'ANALYZING',
     adminRequiredFields: [],
     nextStep: 2,
     nextStatus: 'AGREED',
+    emailStep: null,
     canAdminAdvance: false, // Influencer aceita no portal
   },
   2: {
     name: 'Shipping (Dados de envio)',
-    status: 'AGREED',
     adminRequiredFields: [],
     nextStep: 3,
     nextStatus: 'PRODUCT_SELECTION',
+    emailStep: null,
     canAdminAdvance: false, // Influencer preenche morada no portal
   },
   3: {
     name: 'Preparing (Produto confirmado)',
-    status: 'PRODUCT_SELECTION',
-    adminRequiredFields: ['selectedProductUrl'], // Nós confirmamos o produto
+    adminRequiredFields: ['selectedProductUrl'],
     nextStep: 4,
     nextStatus: 'CONTRACT_PENDING',
-    canAdminAdvance: true, // NÓS avançamos → dispara STEP_3_PREPARING
+    emailStep: 3, // envia STEP_3_PREPARING
+    canAdminAdvance: true,
   },
   4: {
     name: 'Design Review',
-    status: 'CONTRACT_PENDING',
     adminRequiredFields: [],
     nextStep: 5,
-    nextStatus: 'CONTRACT_PENDING', // Mantém status — design é um sub-estado
-    canAdminAdvance: false, // Gerido via design-messages API
+    nextStatus: 'CONTRACT_PENDING',
+    emailStep: null, // emails do design enviados via design-messages
+    canAdminAdvance: false,
   },
   5: {
     name: 'Contract (Contrato)',
-    status: 'CONTRACT_PENDING',
     adminRequiredFields: [],
     nextStep: null,
     nextStatus: null,
+    emailStep: null,
     canAdminAdvance: false, // Influencer assina no portal via accept-contract
   },
   6: {
     name: 'Preparing Shipment (A preparar envio)',
-    status: 'CONTRACT_SIGNED',
-    adminRequiredFields: ['trackingUrl'], // Nós inserimos o tracking
+    adminRequiredFields: ['trackingUrl'],
     nextStep: 7,
     nextStatus: 'SHIPPED',
-    canAdminAdvance: true, // NÓS avançamos → dispara STEP_7_SHIPPED
+    emailStep: 7, // envia STEP_7_SHIPPED
+    canAdminAdvance: true,
   },
   7: {
     name: 'Shipped (Enviado)',
-    status: 'SHIPPED',
     adminRequiredFields: [],
     nextStep: null,
     nextStatus: 'COMPLETED',
-    canAdminAdvance: true, // NÓS marcamos como concluído
+    emailStep: null, // sem email ao completar
+    canAdminAdvance: true,
   },
 };
 
@@ -92,10 +92,7 @@ function validateAdminStep(
 ): { valid: boolean; missing: string[]; canAdvance: boolean } {
   const config = STEP_CONFIG[step];
   if (!config) return { valid: false, missing: [], canAdvance: false };
-
-  if (!config.canAdminAdvance) {
-    return { valid: false, missing: [], canAdvance: false };
-  }
+  if (!config.canAdminAdvance) return { valid: false, missing: [], canAdvance: false };
 
   const missing: string[] = [];
   for (const field of config.adminRequiredFields) {
@@ -108,7 +105,7 @@ function validateAdminStep(
   return { valid: missing.length === 0, missing, canAdvance: true };
 }
 
-// POST /api/partnerships/[id]/advance - Admin avança o workflow para o próximo step
+// POST /api/partnerships/[id]/advance - Admin avança o workflow
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -123,7 +120,17 @@ export async function POST(
 
     const workflow = await prisma.partnershipWorkflow.findUnique({
       where: { id },
-      include: { influencer: true },
+      include: {
+        influencer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            instagramHandle: true,
+            portalToken: true,
+          },
+        },
+      },
     });
 
     if (!workflow) {
@@ -149,7 +156,7 @@ export async function POST(
     if (!validation.canAdvance) {
       return NextResponse.json(
         {
-          error: 'Este step é avançado pelo influencer através do portal, não pelo admin.',
+          error: 'Este step é avançado pelo influencer através do portal.',
           step: currentStep,
           stepName: config.name,
         },
@@ -169,13 +176,15 @@ export async function POST(
       );
     }
 
+    const now = new Date();
+
     // Step final (Step 7: marcar como COMPLETED)
     if (config.nextStep === null) {
       const updatedWorkflow = await prisma.partnershipWorkflow.update({
         where: { id },
         data: {
           status: 'COMPLETED',
-          [`step${currentStep}CompletedAt`]: new Date(),
+          [`step${currentStep}CompletedAt`]: now,
         },
         include: {
           influencer: {
@@ -184,11 +193,10 @@ export async function POST(
         },
       });
 
-      await updateInfluencerStatus(
-        workflow.influencerId,
-        'COMPLETED',
-        session.user.id || 'system'
-      );
+      await prisma.influencer.update({
+        where: { id: workflow.influencerId },
+        data: { status: 'COMPLETED' as any },
+      });
 
       logger.info('[ADVANCE] Workflow completed', { workflowId: id, step: currentStep });
 
@@ -196,11 +204,11 @@ export async function POST(
         success: true,
         message: 'Partnership marcada como concluída.',
         data: updatedWorkflow,
+        emailSent: false,
       });
     }
 
     // Avançar step (gravar estado primeiro, depois enviar email)
-    const now = new Date();
     const updatedWorkflow = await prisma.partnershipWorkflow.update({
       where: { id },
       data: {
@@ -214,26 +222,54 @@ export async function POST(
       },
     });
 
-    // Enviar email via transição de status
-    const statusResult = await updateInfluencerStatus(
-      workflow.influencerId,
-      config.nextStatus!,
-      session.user.id || 'system'
-    );
+    // Atualizar status do influencer
+    if (config.nextStatus) {
+      await prisma.influencer.update({
+        where: { id: workflow.influencerId },
+        data: { status: config.nextStatus as any },
+      });
+    }
 
-    logger.info('[ADVANCE] Step advanced', {
-      workflowId: id,
-      fromStep: currentStep,
-      toStep: config.nextStep,
-      emailSent: statusResult.emailResult?.emailSent,
-    });
+    // Enviar email diretamente se este step tem email associado
+    // Botão clicado = email garantido, sem depender de transições de status
+    let emailSent = false;
+    let emailError: string | null = null;
+
+    if (config.emailStep !== null && workflow.influencer.email) {
+      const emailResult = await sendWorkflowEmail(
+        id,
+        config.emailStep,
+        {
+          nome: workflow.influencer.name,
+          email: workflow.influencer.email,
+          instagram: workflow.influencer.instagramHandle || undefined,
+          portalToken: workflow.influencer.portalToken || undefined,
+          tracking_url: (workflow as any).trackingUrl || undefined,
+          cupom: (workflow as any).couponCode || undefined,
+          url_produto: (workflow as any).selectedProductUrl || undefined,
+          valor: workflow.agreedPrice?.toString() || '0',
+        },
+        session.user.id || 'system'
+      );
+
+      emailSent = emailResult.success;
+      emailError = emailResult.error || null;
+
+      logger.info('[ADVANCE] Email sent', {
+        workflowId: id,
+        step: currentStep,
+        emailStep: config.emailStep,
+        emailSent,
+        emailError,
+      });
+    }
 
     return NextResponse.json({
       success: true,
-      message: `Avançado de ${config.name} para o step ${config.nextStep}.`,
+      message: `Avançado de Step ${currentStep} para Step ${config.nextStep}.`,
       data: updatedWorkflow,
-      emailSent: statusResult.emailResult?.emailSent || false,
-      emailError: statusResult.emailResult?.error || null,
+      emailSent,
+      emailError,
     });
   } catch (error: any) {
     logger.error('[ADVANCE] Error', { error: error.message });

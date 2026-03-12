@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { updateInfluencerStatus } from '@/lib/status-email';
+import { sendWorkflowEmail } from '@/lib/partnership-email';
 import { logger } from '@/lib/logger';
 
 // POST /api/partnerships/create - Create new workflow for an influencer
+// Botão "Criar Parceria" → cria workflow + envia email Step 1 diretamente.
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -23,28 +24,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validate agreedPrice - cannot be null/undefined
     if (agreedPrice === undefined || agreedPrice === null) {
       return NextResponse.json(
         { error: 'agreedPrice is required (can be 0 for commission-only)' },
         { status: 400 }
       );
-
     }
 
-    // Check if influencer exists
+    // Buscar influencer
     const influencer = await prisma.influencer.findUnique({
       where: { id: influencerId },
     });
 
     if (!influencer) {
-      return NextResponse.json(
-        { error: 'Influencer not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Influencer not found' }, { status: 404 });
     }
 
-    // Check if influencer has email
     if (!influencer.email) {
       return NextResponse.json(
         { error: 'Influencer has no email address. Please add an email first.' },
@@ -52,15 +47,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Create new workflow starting at step 1
-    // Allow multiple workflows - don't check for existing active ones
+    const newPrice = parseFloat(agreedPrice);
+
+    // Criar workflow
     const workflow = await prisma.partnershipWorkflow.create({
       data: {
         influencerId,
         currentStep: 1,
         status: 'ACTIVE',
-        agreedPrice: parseFloat(agreedPrice),
-        // Pre-fill contact data from influencer if available
+        agreedPrice: newPrice,
         contactEmail: influencer.email || null,
         contactInstagram: influencer.instagramHandle || null,
       },
@@ -78,44 +73,45 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Update influencer status to ANALYZING (they have a proposal to review)
-    // This will automatically send the Step 1 email via status transition
-    const oldStatus = influencer.status;
-    const statusResult = await updateInfluencerStatus(
-      influencerId,
-      'ANALYZING',
+    // Atualizar status do influencer
+    await prisma.influencer.update({
+      where: { id: influencerId },
+      data: { status: 'ANALYZING' as any },
+    });
+
+    // Enviar email Step 1 diretamente — botão clicado = email garantido
+    const emailResult = await sendWorkflowEmail(
+      workflow.id,
+      1,
+      {
+        nome: influencer.name,
+        valor: newPrice.toString(),
+        email: influencer.email,
+        instagram: influencer.instagramHandle || undefined,
+        portalToken: influencer.portalToken || undefined,
+      },
       session.user.id || 'system'
     );
 
-    if (!statusResult.success) {
-      logger.warn('[PARTNERSHIP CREATE] Status update failed', {
-        workflowId: workflow.id,
-        influencerId,
-        error: statusResult.error,
-      });
-    } else {
-      logger.info('[PARTNERSHIP CREATE] Workflow created and status updated', {
-        workflowId: workflow.id,
-        influencerId,
-        oldStatus: statusResult.oldStatus,
-        newStatus: statusResult.newStatus,
-        emailSent: statusResult.emailResult?.emailSent,
-      });
-    }
+    logger.info('[PARTNERSHIP CREATE] Workflow created', {
+      workflowId: workflow.id,
+      influencerId,
+      agreedPrice: newPrice,
+      emailSent: emailResult.success,
+      emailError: emailResult.error,
+    });
 
     return NextResponse.json(
-      { 
-        success: true, 
+      {
+        success: true,
         data: workflow,
-        statusUpdated: statusResult.success,
-        oldStatus: statusResult.oldStatus,
-        emailSent: statusResult.emailResult?.emailSent || false,
-        emailError: statusResult.emailResult?.error || null,
+        emailSent: emailResult.success,
+        emailError: emailResult.error || null,
       },
       { status: 201 }
     );
   } catch (error: any) {
-    console.error('Error creating workflow:', error);
+    logger.error('[PARTNERSHIP CREATE] Error:', error.message);
     return NextResponse.json(
       { error: 'Failed to create workflow: ' + error.message },
       { status: 500 }
