@@ -114,25 +114,29 @@ export async function POST(
         let emailSubject: string;
         let emailBody: string;
         
+        const portalUrl = `https://vecinocustom-influencer-platform.vercel.app/portal/${influencer.portalToken}`;
+
         if (template) {
           emailSubject = template.subject;
+          // Templates usam {{portalToken}} e {{portalUrl}} — substituir ambos
           emailBody = template.body
             .replace(/{{nome}}/g, influencer.name || '')
-            .replace(/{{portalUrl}}/g, `${process.env.NEXT_PUBLIC_APP_URL || 'https://vecinocustom.com'}/portal/${influencer.portalToken}`)
+            .replace(/{{portalToken}}/g, influencer.portalToken || '')
+            .replace(/{{portalUrl}}/g, portalUrl)
             .replace(/{{mensagem}}/g, content || '');
         } else {
-          // Fallback if template not found
-          emailSubject = isFirstDesign 
+          // Fallback se template não encontrado
+          emailSubject = isFirstDesign
             ? '🎨 O teu design está pronto!'
             : '🎨 Revisão do teu design - Verifica as alterações';
           emailBody = `Olá ${influencer.name || ''},
 
-${isFirstDesign 
+${isFirstDesign
   ? 'Temos uma excelente notícia! O design da tua peça personalizada está pronto. 🎉'
   : 'Fizemos as alterações solicitadas ao teu design! 🎨'}
 
 Podes ver ${isFirstDesign ? 'o mockup' : 'a nova versão'} e aprovar através do teu portal:
-${process.env.NEXT_PUBLIC_APP_URL || 'https://vecinocustom.com'}/portal/${influencer.portalToken}
+${portalUrl}
 
 ${content ? `Mensagem da equipa:\n${content}\n\n` : ''}Cumprimentos,\nEquipa VecinoCustom`;
         }

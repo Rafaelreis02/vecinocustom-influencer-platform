@@ -38,10 +38,17 @@ const STATUS_TRANSITION_EMAILS: Record<string, {
     requiresWorkflow: true,
   },
 
-  // NÓS enviamos nova proposta → Step 1 (contraproposta)
+  // NÓS enviamos nova proposta → Step 1 (contraproposta - primeira vez)
   'ANALYZING→COUNTER_PROPOSAL': {
     step: 1,
     description: 'Nova proposta enviada pelo admin',
+    requiresWorkflow: true,
+  },
+
+  // NÓS enviamos mais uma proposta → Step 1 (já em negociação, nova rodada)
+  'COUNTER_PROPOSAL→COUNTER_PROPOSAL': {
+    step: 1,
+    description: 'Nova proposta enviada (re-negociação)',
     requiresWorkflow: true,
   },
 
@@ -267,21 +274,27 @@ export async function updateInfluencerStatus(
     }
     
     const oldStatus = influencer.status;
-    
-    // Se não mudou, não faz nada
-    if (oldStatus === newStatus) {
+
+    // Se o status não mudou, ainda pode haver email a enviar (ex: re-negociação COUNTER_PROPOSAL→COUNTER_PROPOSAL)
+    // Só saltamos se não houver transição configurada para este par
+    const transitionKey = `${oldStatus}→${newStatus}`;
+    const hasSameStatusTransition = !!STATUS_TRANSITION_EMAILS[transitionKey];
+
+    if (oldStatus === newStatus && !hasSameStatusTransition) {
       return {
         success: true,
         oldStatus,
         newStatus,
       };
     }
-    
-    // Atualizar status (cast para enum do Prisma)
-    await prisma.influencer.update({
-      where: { id: influencerId },
-      data: { status: newStatus as any },
-    });
+
+    // Atualizar status (cast para enum do Prisma) — só se realmente mudou
+    if (oldStatus !== newStatus) {
+      await prisma.influencer.update({
+        where: { id: influencerId },
+        data: { status: newStatus as any },
+      });
+    }
     
     logger.info('[STATUS UPDATE] Status changed', {
       influencerId,
