@@ -1,12 +1,10 @@
 import { google } from 'googleapis';
-import { prisma } from './prisma';
 import { logger } from './logger';
 
 // Gmail API configuration
 const GMAIL_SCOPES = ['https://www.googleapis.com/auth/gmail.send'];
 
 async function getSenderSettings() {
-  // Use environment variables directly
   return {
     senderEmail: process.env.GMAIL_USER || '',
     senderName: 'VecinoCustom',
@@ -32,10 +30,10 @@ export async function getGmailAuth() {
 // Alias for backward compatibility
 export const getAuthClient = getGmailAuth;
 
-// Stub for syncEmails - implement if needed
+// Stub for syncEmails
 export async function syncEmails(auth?: any) {
-  logger.info('[GMAIL] syncEmails called - not implemented');
-  return 0; // Return number of synced emails
+  logger.info('[GMAIL] syncEmails called');
+  return 0;
 }
 
 export async function sendEmail(auth: any, options: {
@@ -46,22 +44,16 @@ export async function sendEmail(auth: any, options: {
   threadId?: string;
   fromName?: string;
 }) {
-  logger.info('[GMAIL] Attempting to send email', {
-    to: options.to,
-    subject: options.subject,
-    bodyLength: options.body?.length || 0,
-  });
+  console.log('[GMAIL-DEBUG] ============================================');
+  console.log('[GMAIL-DEBUG] sendEmail called');
+  console.log('[GMAIL-DEBUG] to:', options.to);
+  console.log('[GMAIL-DEBUG] subject:', options.subject);
+  console.log('[GMAIL-DEBUG] body length:', options.body?.length);
+  console.log('[GMAIL-DEBUG] body preview:', options.body?.substring(0, 100));
 
-  // Validate inputs
-  if (!options.to) {
-    throw new Error('Missing recipient email');
-  }
-  if (!options.subject) {
-    throw new Error('Missing subject');
-  }
-  if (!options.body || options.body.trim() === '') {
-    throw new Error('Missing or empty email body');
-  }
+  if (!options.to) throw new Error('Missing recipient');
+  if (!options.subject) throw new Error('Missing subject');
+  if (!options.body) throw new Error('Missing body');
 
   const gmail = google.gmail({ version: 'v1', auth });
   
@@ -69,20 +61,21 @@ export async function sendEmail(auth: any, options: {
   const senderName = options.fromName || senderSettings.senderName;
   const senderEmail = senderSettings.senderEmail;
   
-  // Build simple email message
+  // Build email message
   const messageParts = [
-    'Content-Type: text/plain; charset="utf-8"',
-    'MIME-Version: 1.0',
-    'Content-Transfer-Encoding: quoted-printable',
-    `To: ${options.to}`,
     `From: ${senderName} <${senderEmail}>`,
+    `To: ${options.to}`,
     `Subject: ${options.subject}`,
     options.inReplyTo ? `In-Reply-To: ${options.inReplyTo}` : '',
+    'MIME-Version: 1.0',
+    'Content-Type: text/plain; charset=utf-8',
     '',
     options.body
   ];
 
   const message = messageParts.filter(Boolean).join('\r\n');
+  
+  console.log('[GMAIL-DEBUG] Message:', message.substring(0, 300));
 
   // Encode to base64url
   const encodedMessage = Buffer.from(message, 'utf-8')
@@ -100,20 +93,12 @@ export async function sendEmail(auth: any, options: {
       },
     });
     
-    logger.info('[GMAIL] Email sent successfully', {
-      to: options.to,
-      subject: options.subject,
-      messageId: res.data.id,
-    });
+    console.log('[GMAIL-DEBUG] SUCCESS! ID:', res.data.id);
+    logger.info('[GMAIL] Email sent', { to: options.to, subject: options.subject });
     
     return res.data;
   } catch (error: any) {
-    logger.error('[GMAIL] Failed to send email', {
-      to: options.to,
-      subject: options.subject,
-      error: error.message,
-    });
+    console.error('[GMAIL-DEBUG] FAILED:', error.message);
     throw error;
   }
 }
-// Deploy fix Thu Mar 12 04:52:37 PM UTC 2026
