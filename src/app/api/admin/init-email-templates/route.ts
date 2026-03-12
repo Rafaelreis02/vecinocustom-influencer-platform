@@ -229,9 +229,15 @@ www.vecinocustom.com`,
 // POST /api/admin/init-email-templates
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Aceitar autenticação via NextAuth session OU via CRON_SECRET header
+    const cronSecret = req.headers.get('x-cron-secret');
+    const isAuthorizedViaCron = cronSecret && cronSecret === process.env.CRON_SECRET;
+
+    if (!isAuthorizedViaCron) {
+      const session = await getServerSession(authOptions);
+      if (!session?.user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
     }
 
     const results = [];
