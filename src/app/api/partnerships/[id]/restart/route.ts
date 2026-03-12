@@ -44,6 +44,7 @@ export async function POST(
         status: 'COMPLETED',
         isRestarted: true,
         currentStep: 9, // Mark as fully completed
+        step9CompletedAt: new Date(),
       },
     });
 

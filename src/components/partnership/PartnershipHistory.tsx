@@ -10,11 +10,8 @@ interface PartnershipHistoryProps {
     status: string;
     agreedPrice: number | null;
     createdAt: string;
-    step5CompletedAt: string | null;
+    step9CompletedAt: string | null;
     isRestarted: boolean;
-    _count: {
-      emails: number;
-    };
   }>;
 }
 
@@ -112,30 +109,19 @@ export function PartnershipHistory({ partnerships }: PartnershipHistoryProps) {
               <div className="px-4 pb-4 border-t border-gray-100">
                 <div className="pt-3 space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-500">ID da Parceria:</span>
-                    <span className="text-gray-900 font-mono">{partnership.id.slice(0, 8)}...</span>
+                    <span className="text-gray-500">Data de Início:</span>
+                    <span className="text-gray-900">{formatDate(partnership.createdAt)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Step Alcançado:</span>
-                    <span className="text-gray-900">
-                      {partnership.currentStep} de 9 ({STEP_NAMES[partnership.currentStep]})
+                    <span className="text-gray-500">Data de Conclusão:</span>
+                    <span className="text-gray-900">{partnership.step9CompletedAt ? formatDate(partnership.step9CompletedAt) : 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Valor da Parceria:</span>
+                    <span className="text-gray-900 font-semibold">
+                      {partnership.agreedPrice !== null ? `${partnership.agreedPrice}€` : 'Comissão apenas'}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Emails Enviados:</span>
-                    <span className="text-gray-900">{partnership._count.emails}</span>
-                  </div>
-                  {partnership.step5CompletedAt && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Concluída em:</span>
-                      <span className="text-gray-900">{formatDate(partnership.step5CompletedAt)}</span>
-                    </div>
-                  )}
-                  {partnership.isRestarted && (
-                    <div className="mt-2 p-2 bg-blue-50 rounded text-xs text-blue-700">
-                      Esta parceria foi recomeçada numa nova parceria.
-                    </div>
-                  )}
                 </div>
               </div>
             )}

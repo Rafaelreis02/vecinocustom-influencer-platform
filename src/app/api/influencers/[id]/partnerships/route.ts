@@ -31,19 +31,14 @@ export async function GET(
 
     const partnerships = await prisma.partnershipWorkflow.findMany({
       where: { influencerId: id },
-      include: {
-        emails: {
-          select: {
-            id: true,
-            step: true,
-            subject: true,
-            sentAt: true,
-          },
-          orderBy: { sentAt: 'desc' },
-        },
-        _count: {
-          select: { emails: true },
-        },
+      select: {
+        id: true,
+        currentStep: true,
+        status: true,
+        agreedPrice: true,
+        createdAt: true,
+        step9CompletedAt: true,
+        isRestarted: true,
       },
       orderBy: { createdAt: 'desc' },
     });

@@ -45,6 +45,7 @@ export async function POST(
         data: { 
           status: 'COMPLETED',
           currentStep: 9,
+          step9CompletedAt: new Date(),
         },
       });
     }
