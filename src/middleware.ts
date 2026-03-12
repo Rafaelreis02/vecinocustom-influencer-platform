@@ -17,7 +17,8 @@ export default withAuth(
           pathname.startsWith('/api/auth') ||
           pathname.startsWith('/api/portal') ||  // Portal API is public (uses token in URL)
           pathname.startsWith('/portal') ||      // Portal pages are public
-          pathname.startsWith('/api/seed')       // SEED API is public (for quick setup)
+          pathname.startsWith('/api/seed') ||    // SEED API is public (for quick setup)
+          pathname === '/api/admin/init-email-templates' // Init templates (protegido por CRON_SECRET no handler)
         ) {
           return true;
         }
