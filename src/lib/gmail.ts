@@ -29,6 +29,15 @@ export async function getGmailAuth() {
   return oauth2Client;
 }
 
+// Alias for backward compatibility
+export const getAuthClient = getGmailAuth;
+
+// Stub for syncEmails - implement if needed
+export async function syncEmails() {
+  logger.info('[GMAIL] syncEmails called - not implemented');
+  return { success: true };
+}
+
 export async function sendEmail(auth: any, options: {
   to: string;
   subject: string;
