@@ -19,8 +19,11 @@ const STEP_NAMES: Record<number, string> = {
   1: 'Step 1: Partnership',
   2: 'Step 2: Shipping',
   3: 'Step 3: Preparing',
-  4: 'Step 4: Contract',
-  5: 'Step 5: Shipped',
+  4: 'Step 4: Design Review',
+  5: 'Step 5: Contract',
+  6: 'Step 6: Contract Signed',
+  7: 'Step 7: Shipped',
+  9: 'Step 8: Completed',
 };
 
 export default function EmailTemplatesPage() {
@@ -265,7 +268,7 @@ export default function EmailTemplatesPage() {
 
       {/* Templates by Step */}
       <div className="space-y-8">
-        {[0, 1, 2, 3, 4, 5].map(step => {
+        {[0, 1, 2, 3, 4, 5, 6, 7, 9].map(step => {
           const stepTemplates = groupedTemplates[step] || [];
           if (stepTemplates.length === 0) return null;
 
