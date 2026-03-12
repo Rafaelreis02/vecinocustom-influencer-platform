@@ -24,7 +24,7 @@ export const PHASES = {
     label: 'Em Curso',
     icon: undefined,
     href: '/dashboard/influencers/closing',
-    statuses: ['AGREED', 'PRODUCT_SELECTION', 'DESIGN_REFERENCE_SUBMITTED', 'DESIGN_REVIEW', 'ALTERATIONS_REQUESTED', 'CONTRACT_PENDING', 'CONTRACT_SIGNED', 'SHIPPED', 'DELIVERED', 'COMPLETED'],
+    statuses: ['AGREED', 'PRODUCT_SELECTION', 'DESIGN_REFERENCE_SUBMITTED', 'DESIGN_REVIEW', 'ALTERATIONS_REQUESTED', 'CONTRACT_PENDING', 'CONTRACT_SIGNED', 'SHIPPED', 'COMPLETED'],
   },
 } as const;
 
@@ -151,14 +151,7 @@ export const INFLUENCER_STATUS_CONFIG = {
     icon: undefined,
     phase: 'CLOSING' as PhaseId,
   },
-  DELIVERED: {
-    label: 'Entregue',
-    color: 'bg-teal-100 text-teal-700 border-teal-300',
-    dotColor: 'bg-teal-500',
-    
-    icon: undefined,
-    phase: 'CLOSING' as PhaseId,
-  },
+  // DELIVERED removed - simplified to 8 steps (Shipped goes directly to Completed)
   COMPLETED: {
     label: 'Concluído',
     color: 'bg-green-100 text-green-700 border-green-300',

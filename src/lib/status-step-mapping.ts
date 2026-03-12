@@ -8,7 +8,7 @@ export const STATUS_TO_STEP: Record<string, number> = {
   'IMPORT_PENDING': 0,       // No workflow yet
   'CONTACTED': 0,            // No workflow yet
   
-  // Partnership flow
+  // Partnership flow (SIMPLIFIED - 8 steps)
   'ANALYZING': 1,                    // Step 1: Partnership
   'COUNTER_PROPOSAL': 1,             // Step 1: Partnership (counter proposal)
   'AGREED': 2,                       // Step 2: Shipping
@@ -19,15 +19,15 @@ export const STATUS_TO_STEP: Record<string, number> = {
   'CONTRACT_PENDING': 5,             // Step 5: Contract
   'CONTRACT_SIGNED': 6,              // Step 6: Contract Signed
   'SHIPPED': 7,                      // Step 7: Shipped
-  'DELIVERED': 8,                    // Step 8: Delivered
-  'COMPLETED': 9,                    // Step 9: Completed
+  'DELIVERED': 7,                    // Step 7: Shipped (simplified - no separate Delivered step)
+  'COMPLETED': 8,                    // Step 8: Completed
   
   // Special statuses
   'CANCELLED': 0,            // No active workflow
   'BLACKLISTED': 0,          // No active workflow
 };
 
-// Maps workflow step to expected influencer status
+// Maps workflow step to expected influencer status (SIMPLIFIED - 8 steps)
 export const STEP_TO_STATUS: Record<number, string> = {
   1: 'ANALYZING',
   2: 'AGREED',
@@ -36,8 +36,7 @@ export const STEP_TO_STATUS: Record<number, string> = {
   5: 'CONTRACT_PENDING',
   6: 'CONTRACT_SIGNED',
   7: 'SHIPPED',
-  8: 'DELIVERED',
-  9: 'COMPLETED',
+  8: 'COMPLETED',
 };
 
 // Check if status has an active workflow
