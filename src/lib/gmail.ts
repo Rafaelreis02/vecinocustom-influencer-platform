@@ -6,10 +6,10 @@ import { logger } from './logger';
 const GMAIL_SCOPES = ['https://www.googleapis.com/auth/gmail.send'];
 
 async function getSenderSettings() {
-  const settings = await prisma.emailSettings.findFirst();
+  // Use environment variables directly
   return {
-    senderEmail: settings?.senderEmail || process.env.GMAIL_USER || '',
-    senderName: settings?.senderName || 'VecinoCustom',
+    senderEmail: process.env.GMAIL_USER || '',
+    senderName: 'VecinoCustom',
   };
 }
 
