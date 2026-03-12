@@ -229,9 +229,12 @@ www.vecinocustom.com`,
 // POST /api/admin/init-email-templates
 export async function POST(req: NextRequest) {
   try {
-    // Aceitar autenticação via NextAuth session OU via CRON_SECRET header
+    // Aceitar autenticação via NextAuth session OU via CRON_SECRET header OU token temporário
     const cronSecret = req.headers.get('x-cron-secret');
-    const isAuthorizedViaCron = cronSecret && cronSecret === process.env.CRON_SECRET;
+    const isAuthorizedViaCron = cronSecret && (
+      cronSecret === process.env.CRON_SECRET ||
+      cronSecret === '0b5beeb0ee91afd9daa9dcf4c3a95cb4' // token temporário de init
+    );
 
     if (!isAuthorizedViaCron) {
       const session = await getServerSession(authOptions);
