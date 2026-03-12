@@ -265,7 +265,7 @@ export async function POST(req: NextRequest) {
   try {
     // Aceitar autenticação via NextAuth session OU via CRON_SECRET header
     const cronSecret = req.headers.get('x-cron-secret');
-    const isAuthorizedViaCron = cronSecret && cronSecret === process.env.CRON_SECRET || cronSecret === 'init-b1ba7bdde4defa4a';
+    const isAuthorizedViaCron = cronSecret && cronSecret === process.env.CRON_SECRET;
 
     if (!isAuthorizedViaCron) {
       const session = await getServerSession(authOptions);
