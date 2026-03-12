@@ -241,7 +241,10 @@ export async function sendEmail(auth: any, options: {
   // Build email content using Gmail API's format
   const utf8Subject = `=?utf-8?B?${Buffer.from(options.subject).toString('base64')}?=`;
   
-  // Simple message structure
+  // Encode body in base64 to ensure special characters are preserved
+  const base64Body = Buffer.from(options.body).toString('base64');
+  
+  // Message structure with base64 encoded body
   const messageParts = [
     `From: ${senderName} <${senderEmail}>`,
     `To: ${options.to}`,
@@ -249,9 +252,9 @@ export async function sendEmail(auth: any, options: {
     options.inReplyTo ? `In-Reply-To: ${options.inReplyTo}` : '',
     'MIME-Version: 1.0',
     'Content-Type: text/plain; charset=utf-8',
-    'Content-Transfer-Encoding: quoted-printable',
+    'Content-Transfer-Encoding: base64',
     '',
-    options.body
+    base64Body
   ];
 
   const message = messageParts.filter(Boolean).join('\n');
