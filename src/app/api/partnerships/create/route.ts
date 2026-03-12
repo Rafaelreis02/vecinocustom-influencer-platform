@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { updateInfluencerStatus } from '@/lib/status-email';
+import { logger } from '@/lib/logger';
 
 // POST /api/partnerships/create - Create new workflow for an influencer
 export async function POST(req: NextRequest) {
@@ -21,20 +23,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validate agreedPrice is required (can be 0 for commission-only partnerships)
-    if (agreedPrice === undefined || agreedPrice === null || agreedPrice === '') {
+    // Validate agreedPrice - cannot be null/undefined
+    if (agreedPrice === undefined || agreedPrice === null) {
       return NextResponse.json(
-        { error: 'agreedPrice is required (can be 0 for commission-only partnerships)' },
+        { error: 'agreedPrice is required (can be 0 for commission-only)' },
         { status: 400 }
       );
-    }
 
-    const parsedPrice = typeof agreedPrice === 'number' ? agreedPrice : parseFloat(agreedPrice);
-    if (isNaN(parsedPrice) || parsedPrice < 0) {
-      return NextResponse.json(
-        { error: 'agreedPrice must be a valid number >= 0' },
-        { status: 400 }
-      );
     }
 
     // Check if influencer exists
@@ -49,6 +44,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Check if influencer has email
+    if (!influencer.email) {
+      return NextResponse.json(
+        { error: 'Influencer has no email address. Please add an email first.' },
+        { status: 400 }
+      );
+    }
+
     // Create new workflow starting at step 1
     // Allow multiple workflows - don't check for existing active ones
     const workflow = await prisma.partnershipWorkflow.create({
@@ -56,7 +59,7 @@ export async function POST(req: NextRequest) {
         influencerId,
         currentStep: 1,
         status: 'ACTIVE',
-        agreedPrice: parsedPrice,
+        agreedPrice: parseFloat(agreedPrice),
         // Pre-fill contact data from influencer if available
         contactEmail: influencer.email || null,
         contactInstagram: influencer.instagramHandle || null,
@@ -69,19 +72,46 @@ export async function POST(req: NextRequest) {
             email: true,
             instagramHandle: true,
             avatarUrl: true,
+            portalToken: true,
           },
         },
       },
     });
 
-    // Update influencer status to COUNTER_PROPOSAL (waiting for influencer response)
-    await prisma.influencer.update({
-      where: { id: influencerId },
-      data: { status: 'COUNTER_PROPOSAL' },
-    });
+    // Update influencer status to ANALYZING (they have a proposal to review)
+    // This will automatically send the Step 1 email via status transition
+    const oldStatus = influencer.status;
+    const statusResult = await updateInfluencerStatus(
+      influencerId,
+      'ANALYZING',
+      session.user.id || 'system'
+    );
+
+    if (!statusResult.success) {
+      logger.warn('[PARTNERSHIP CREATE] Status update failed', {
+        workflowId: workflow.id,
+        influencerId,
+        error: statusResult.error,
+      });
+    } else {
+      logger.info('[PARTNERSHIP CREATE] Workflow created and status updated', {
+        workflowId: workflow.id,
+        influencerId,
+        oldStatus: statusResult.oldStatus,
+        newStatus: statusResult.newStatus,
+        emailSent: statusResult.emailResult?.emailSent,
+      });
+    }
 
     return NextResponse.json(
-      { success: true, data: workflow },
+      { 
+        success: true, 
+        data: workflow,
+        statusUpdated: statusResult.success,
+        oldStatus: statusResult.oldStatus,
+        emailSent: statusResult.emailResult?.emailSent || false,
+        emailError: statusResult.emailResult?.error || null,
+      },
       { status: 201 }
     );
   } catch (error: any) {

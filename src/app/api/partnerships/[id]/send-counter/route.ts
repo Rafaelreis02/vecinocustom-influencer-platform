@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { sendWorkflowEmail } from '@/lib/partnership-email';
+import { updateInfluencerStatus } from '@/lib/status-email';
 
 // POST /api/partnerships/[id]/send-counter - Send new proposal (renegotiate)
 export async function POST(
@@ -46,39 +46,22 @@ export async function POST(
     });
 
     // Update influencer status to COUNTER_PROPOSAL
-    const updatedInfluencer = await prisma.influencer.update({
-      where: { id: workflow.influencerId },
-      data: { status: 'COUNTER_PROPOSAL' },
-    });
-
-    // Get influencer data for email
-    const influencer = await prisma.influencer.findUnique({
-      where: { id: workflow.influencerId },
-      select: { name: true, email: true, portalToken: true },
-    });
-
-    // Send new proposal email
-    if (influencer) {
-      await sendWorkflowEmail(
-        workflow.id,
-        1,
-        {
-          nome: influencer.name,
-          valor: agreedPrice.toString(),
-          email: workflow.contactEmail || influencer.email || undefined,
-          portalToken: influencer.portalToken || undefined,
-        },
-        session.user.id || 'system'
-      );
-    }
+    // This will automatically send the Step 1 email via status transition
+    const statusResult = await updateInfluencerStatus(
+      workflow.influencerId,
+      'COUNTER_PROPOSAL',
+      session.user.id || 'system'
+    );
 
     return NextResponse.json({
       success: true,
       message: 'New proposal sent',
       data: {
         ...updatedWorkflow,
-        influencerStatus: updatedInfluencer.status,
+        influencerStatus: statusResult.newStatus,
       },
+      emailSent: statusResult.emailResult?.emailSent || false,
+      emailError: statusResult.emailResult?.error || null,
     });
   } catch (error: any) {
     console.error('Error sending counterproposal:', error);

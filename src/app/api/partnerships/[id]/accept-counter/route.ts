@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { sendWorkflowEmail } from '@/lib/partnership-email';
+import { updateInfluencerStatus } from '@/lib/status-email';
 
 // POST /api/partnerships/[id]/accept-counter - Accept influencer counterproposal
 export async function POST(
@@ -38,36 +38,22 @@ export async function POST(
     });
 
     // Update influencer status to AGREED
-    await prisma.influencer.update({
-      where: { id: workflow.influencerId },
-      data: { status: 'AGREED' },
-    });
-
-    // Get influencer data for email
-    const influencer = await prisma.influencer.findUnique({
-      where: { id: workflow.influencerId },
-      select: { name: true, email: true, portalToken: true },
-    });
-
-    // Send confirmation email
-    if (influencer) {
-      await sendWorkflowEmail(
-        workflow.id,
-        1,
-        {
-          nome: influencer.name,
-          valor: workflow.agreedPrice?.toString() || '0',
-          email: workflow.contactEmail || influencer.email || undefined,
-          portalToken: influencer.portalToken || undefined,
-        },
-        session.user.id || 'system'
-      );
-    }
+    // This will automatically send the Step 2 email via status transition
+    const statusResult = await updateInfluencerStatus(
+      workflow.influencerId,
+      'AGREED',
+      session.user.id || 'system'
+    );
 
     return NextResponse.json({
       success: true,
       message: 'Counterproposal accepted',
-      data: updatedWorkflow,
+      data: {
+        ...updatedWorkflow,
+        influencerStatus: statusResult.newStatus,
+      },
+      emailSent: statusResult.emailResult?.emailSent || false,
+      emailError: statusResult.emailResult?.error || null,
     });
   } catch (error: any) {
     console.error('Error accepting counterproposal:', error);

@@ -108,62 +108,55 @@ export async function sendWorkflowEmail(
 
 /**
  * Get email template for a specific step
- * Prioritizes WITH_VALUE/NO_VALUE templates based on agreedPrice
+ *
+ * Chaves definitivas do sistema:
+ *   step 0 → INITIAL_CONTACT
+ *   step 1 → STEP_1_PARTNERSHIP_WITH_VALUE | STEP_1_PARTNERSHIP_NO_VALUE
+ *   step 3 → STEP_3_PREPARING
+ *   step 4 → não gerido aqui (Design Review enviado via design-messages API)
+ *   step 5 → STEP_5_CONTRACT
+ *   step 7 → STEP_7_SHIPPED
  */
 async function getEmailTemplate(step: number, hasValue: boolean): Promise<any> {
   let template = null;
-  
-  // Step 1: Partnership
-  if (step === 1) {
+
+  // Step 0: Prospecção inicial
+  if (step === 0) {
+    template = await prisma.emailTemplate.findUnique({ where: { key: 'INITIAL_CONTACT' } });
+  }
+  // Step 1: Proposta de parceria (com ou sem valor monetário)
+  else if (step === 1) {
     const key = hasValue ? 'STEP_1_PARTNERSHIP_WITH_VALUE' : 'STEP_1_PARTNERSHIP_NO_VALUE';
     template = await prisma.emailTemplate.findUnique({ where: { key } });
   }
-  // Step 2: Shipping
-  else if (step === 2) {
-    const key = hasValue ? 'STEP_2_SHIPPING_WITH_VALUE' : 'STEP_2_SHIPPING_NO_VALUE';
-    template = await prisma.emailTemplate.findUnique({ where: { key } });
-  }
-  // Step 3: Preparing - try specific, then generic
+  // Step 3: Peça em preparação (NÓS confirmámos o produto)
   else if (step === 3) {
-    const specificKey = hasValue ? 'STEP_3_PREPARING_WITH_VALUE' : 'STEP_3_PREPARING_NO_VALUE';
-    template = await prisma.emailTemplate.findUnique({ where: { key: specificKey } });
-    if (!template) {
-      template = await prisma.emailTemplate.findUnique({ where: { key: 'STEP_3_PREPARING' } });
-    }
+    template = await prisma.emailTemplate.findUnique({ where: { key: 'STEP_3_PREPARING' } });
   }
-  // Step 4: Design Review - no template here (sent via design-messages API)
+  // Step 4: Design Review — enviado pela design-messages API, não aqui
   else if (step === 4) {
-    // Design review emails are sent separately via sendDesignReviewEmail
     return null;
   }
-  // Step 5: Contract - influencer needs to sign
+  // Step 5: Contrato para assinatura
   else if (step === 5) {
     template = await prisma.emailTemplate.findUnique({ where: { key: 'STEP_5_CONTRACT' } });
   }
-  // Step 6: Contract Signed
-  else if (step === 6) {
-    template = await prisma.emailTemplate.findUnique({ where: { key: 'STEP_6_CONTRACT_SIGNED' } });
-  }
-  // Step 7: Shipped
+  // Step 7: Encomenda enviada (NÓS inserimos tracking)
   else if (step === 7) {
     template = await prisma.emailTemplate.findUnique({ where: { key: 'STEP_7_SHIPPED' } });
   }
-  // Step 9: Completed (not typically sent via advance, but included for completeness)
-  else if (step === 9) {
-    template = await prisma.emailTemplate.findUnique({ where: { key: 'STEP_9_COMPLETED' } });
-  }
-  
-  // Final fallback: any active template for this step
+
+  // Fallback: qualquer template ativo para este step
   if (!template) {
     template = await prisma.emailTemplate.findFirst({
       where: { step, isActive: true },
     });
   }
-  
+
   if (template) {
     logger.info(`[EMAIL] Found template: ${template.key} for step ${step}`);
   } else {
-    logger.error(`[EMAIL] NO TEMPLATE FOUND for step ${step}`);
+    logger.warn(`[EMAIL] No template found for step ${step}`);
   }
 
   return template;
