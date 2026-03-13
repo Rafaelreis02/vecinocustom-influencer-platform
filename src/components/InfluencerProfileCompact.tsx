@@ -319,12 +319,12 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
                           A processar...
                         </>
-                      ) : currentStep === 6 ? (
+                      ) : workflow.currentStep === 6 ? (
                         <>
                           <CheckCircle2 className="h-3.5 w-3.5" />
                           Completar Parceria
                         </>
-                      ) : currentStep === 5 && !workflow?.trackingUrl ? (
+                      ) : workflow.currentStep === 5 && !workflow?.trackingUrl ? (
                         <>
                           <CheckCircle2 className="h-3.5 w-3.5" />
                           Adicionar Tracking
