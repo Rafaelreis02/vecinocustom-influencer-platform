@@ -106,7 +106,12 @@ www.vecinocustom.com`,
 
 Ótimas notícias! Confirmámos a tua peça e já estamos a prepará-la com todo o cuidado.
 
-Em breve enviamos uma prévia do design para aprovares antes da produção final.
+🛍️ Produto escolhido: {{url_produto}}
+
+Para enviares a foto ou referência do que desejas gravar na peça, acede ao teu portal:
+https://vecinocustom-influencer-platform.vercel.app/portal/{{portalToken}}
+
+Assim que recebermos a tua referência, vamos criar o design e enviar-te para aprovação. Poderás aceitar ou pedir alterações.
 
 Fica atento ao teu email!
 
