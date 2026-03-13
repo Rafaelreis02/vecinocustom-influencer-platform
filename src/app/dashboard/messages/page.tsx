@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
-  Mail, Search, RefreshCw, Send, Reply, Trash2, Eye, EyeOff, Flag,
-  ChevronLeft, ChevronRight, Loader2, X, Plus, UserPlus
+  Mail, Search, RefreshCw, Send, ChevronLeft, ChevronRight, Loader2, X, Plus, UserPlus,
+  Flag, Trash2, MoreVertical, Phone, Paperclip
 } from 'lucide-react';
 import { useGlobalToast } from '@/contexts/ToastContext';
-import { getWorkflowStatuses, getStatusConfig } from '@/lib/influencer-status';
+import { getStatusConfig } from '@/lib/influencer-status';
 import { InfluencerPanel } from '@/components/InfluencerPanel';
 
 interface Email {
@@ -26,10 +26,19 @@ interface EmailDetail extends Email {
   htmlBody?: string;
 }
 
+interface ChatMessage {
+  id: string;
+  content: string;
+  isFromMe: boolean;
+  timestamp: string;
+  type: 'text' | 'html';
+}
+
 export default function MessagesPage() {
   const { addToast } = useGlobalToast();
   const [emails, setEmails] = useState<Email[]>([]);
   const [selectedEmail, setSelectedEmail] = useState<EmailDetail | null>(null);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [syncing, setSyncing] = useState(false);
@@ -38,8 +47,9 @@ export default function MessagesPage() {
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const emailsPerPage = 20;
+  const chatEndRef = useRef<HTMLDivElement>(null);
   
-  // Status options for filter
+  // Status options
   const statusOptions = [
     { value: 'SUGGESTION', label: 'Sugestão' },
     { value: 'ANALYZING', label: 'Em Análise' },
@@ -53,13 +63,12 @@ export default function MessagesPage() {
   ];
 
   // Reply
-  const [showReply, setShowReply] = useState(false);
   const [replyText, setReplyText] = useState('');
   const [sendingReply, setSendingReply] = useState(false);
   
   // Influencer Modal
   const [showInfluencerModal, setShowInfluencerModal] = useState(false);
-  const [availableInfluencers, setAvailableInfluencers] = useState<{id: string, name: string, email?: string | null, avatarUrl?: string | null}[]>([]);
+  const [availableInfluencers, setAvailableInfluencers] = useState<any[]>([]);
   const [influencerSearchQuery, setInfluencerSearchQuery] = useState('');
   const [associatingInfluencer, setAssociatingInfluencer] = useState(false);
 
@@ -68,8 +77,30 @@ export default function MessagesPage() {
     const interval = setInterval(fetchEmails, 60000);
     return () => clearInterval(interval);
   }, []);
-  
-  // Close dropdown when clicking outside
+
+  useEffect(() => {
+    if (selectedEmail) {
+      // Convert email to chat format
+      const messages: ChatMessage[] = [{
+        id: selectedEmail.id,
+        content: selectedEmail.htmlBody || selectedEmail.body,
+        isFromMe: false,
+        timestamp: selectedEmail.receivedAt,
+        type: selectedEmail.htmlBody ? 'html' : 'text'
+      }];
+      setChatMessages(messages);
+      scrollToBottom();
+    }
+  }, [selectedEmail]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [chatMessages]);
+
+  const scrollToBottom = () => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       const target = event.target as HTMLElement;
@@ -102,8 +133,6 @@ export default function MessagesPage() {
       const res = await fetch(`/api/emails/${email.id}`);
       const data = await res.json();
       setSelectedEmail(data);
-      setShowReply(false);
-      setReplyText('');
       
       if (!email.isRead) {
         await fetch(`/api/emails/${email.id}`, {
@@ -120,6 +149,18 @@ export default function MessagesPage() {
 
   async function handleSendReply() {
     if (!selectedEmail || !replyText.trim()) return;
+    
+    // Add message to chat immediately
+    const newMessage: ChatMessage = {
+      id: Date.now().toString(),
+      content: replyText,
+      isFromMe: true,
+      timestamp: new Date().toISOString(),
+      type: 'text'
+    };
+    setChatMessages(prev => [...prev, newMessage]);
+    setReplyText('');
+    
     try {
       setSendingReply(true);
       const res = await fetch(`/api/emails/${selectedEmail.id}/reply`, {
@@ -127,11 +168,9 @@ export default function MessagesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: replyText }),
       });
-      if (!res.ok) throw new Error();
       
+      if (!res.ok) throw new Error();
       addToast('Email enviado!', 'success');
-      setShowReply(false);
-      setReplyText('');
       fetchEmails();
     } catch (error) {
       addToast('Erro ao enviar', 'error');
@@ -158,35 +197,19 @@ export default function MessagesPage() {
     try {
       await fetch(`/api/emails/${emailId}/toggle-flag`, { method: 'PATCH' });
       fetchEmails();
+      if (selectedEmail?.id === emailId) {
+        setSelectedEmail(prev => prev ? { ...prev, isFlagged: !prev.isFlagged } : null);
+      }
     } catch (error) {
       addToast('Erro', 'error');
     }
   }
 
-  async function toggleRead(emailId: string, isRead: boolean) {
-    try {
-      await fetch(`/api/emails/${emailId}/mark-read`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isRead: !isRead }),
-      });
-      fetchEmails();
-    } catch (error) {
-      addToast('Erro ao marcar como lido', 'error');
-    }
-  }
-  
   async function openInfluencerModal() {
     try {
       const res = await fetch('/api/influencers?limit=100');
       const data = await res.json();
-      const influencers = data.data || [];
-      setAvailableInfluencers(influencers.map((i: any) => ({ 
-        id: i.id, 
-        name: i.name,
-        email: i.email,
-        avatarUrl: i.avatarUrl
-      })));
+      setAvailableInfluencers(data.data || []);
       setShowInfluencerModal(true);
     } catch (error) {
       addToast('Erro ao carregar influencers', 'error');
@@ -198,7 +221,6 @@ export default function MessagesPage() {
     
     try {
       setAssociatingInfluencer(true);
-      
       const res = await fetch(`/api/emails/${selectedEmail.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -207,7 +229,6 @@ export default function MessagesPage() {
       
       if (!res.ok) throw new Error();
       
-      // Refresh
       await fetchEmails();
       const emailRes = await fetch(`/api/emails/${selectedEmail.id}`);
       if (emailRes.ok) {
@@ -251,14 +272,36 @@ export default function MessagesPage() {
   const totalPages = Math.ceil(filteredList.length / emailsPerPage);
   const currentEmails = filteredList.slice((currentPage - 1) * emailsPerPage, currentPage * emailsPerPage);
 
+  const formatTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString('pt-PT', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    if (date.toDateString() === today.toDateString()) {
+      return 'Hoje';
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return 'Ontem';
+    } else {
+      return date.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' });
+    }
+  };
+
   return (
     <div className="h-[calc(100vh-8rem)] bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden flex">
-      {/* Lista de Emails - Ocupa largura total quando nenhum email selecionado */}
-      <div className={`${selectedEmail ? 'hidden md:flex md:w-[45%] lg:w-[40%]' : 'flex w-full'} flex-col border-r border-gray-100 transition-all duration-300`}>
+      {/* Lista de Conversas */}
+      <div className={`${selectedEmail ? 'hidden md:flex md:w-[380px] lg:w-[400px]' : 'flex w-full'} flex-col border-r border-gray-100 transition-all duration-300`}>
         {/* Header */}
-        <div className="p-4 border-b border-gray-100 space-y-3">
+        <div className="p-4 border-b border-gray-100 space-y-3 bg-white">
           <div className="flex items-center justify-between">
-            <h1 className="text-lg font-semibold text-gray-900">Emails</h1>
+            <h1 className="text-lg font-semibold text-gray-900">Mensagens</h1>
             <button 
               onClick={handleSync}
               disabled={syncing}
@@ -272,7 +315,7 @@ export default function MessagesPage() {
             <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" strokeWidth={1.5} />
             <input
               type="text"
-              placeholder="Pesquisar..."
+              placeholder="Pesquisar conversas..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full rounded-2xl border-0 bg-gray-50 py-3 pl-11 pr-4 text-sm focus:bg-white focus:ring-2 focus:ring-[#0E1E37]/20 transition-all"
@@ -299,14 +342,12 @@ export default function MessagesPage() {
               </button>
             ))}
             
-            {/* Status Filter Dropdown */}
+            {/* Status Filter */}
             <div className="relative status-dropdown-container">
               <button
                 onClick={() => setShowStatusDropdown(!showStatusDropdown)}
                 className={`px-4 py-2 rounded-full text-xs font-medium transition-all flex items-center gap-2 ${
-                  statusFilter !== 'all'
-                    ? 'bg-[#0E1E37] text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  statusFilter !== 'all' ? 'bg-[#0E1E37] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
                 {statusFilter === 'all' ? 'Status' : statusOptions.find(s => s.value === statusFilter)?.label}
@@ -345,8 +386,8 @@ export default function MessagesPage() {
           </div>
         </div>
         
-        {/* Lista */}
-        <div className="flex-1 overflow-y-auto">
+        {/* Lista de Conversas */}
+        <div className="flex-1 overflow-y-auto bg-gray-50/30">
           {loading ? (
             <div className="flex items-center justify-center h-32">
               <Loader2 className="h-6 w-6 animate-spin text-gray-300" strokeWidth={1.5} />
@@ -360,73 +401,55 @@ export default function MessagesPage() {
             currentEmails.map(email => (
               <div
                 key={email.id}
-                className={`group relative px-4 py-2.5 cursor-pointer border-b border-gray-50 hover:bg-gray-50 transition-all ${
-                  selectedEmail?.id === email.id ? 'bg-blue-50/60 border-l-4 border-l-[#0E1E37]' : 'border-l-4 border-l-transparent'
-                } ${!email.isRead ? 'bg-blue-50/10' : ''}`}
+                onClick={() => handleEmailClick(email)}
+                className={`group relative px-4 py-3 cursor-pointer border-b border-gray-100 hover:bg-white transition-all ${
+                  selectedEmail?.id === email.id ? 'bg-white border-l-4 border-l-[#0E1E37]' : 'border-l-4 border-l-transparent bg-white/50'
+                } ${!email.isRead ? 'bg-blue-50/30' : ''}`}
               >
-                <div className="flex items-center gap-3" onClick={() => handleEmailClick(email)}>
+                <div className="flex items-center gap-3">
                   {/* Avatar */}
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0E1E37] to-[#1a2f4f] text-white flex items-center justify-center font-semibold text-sm shrink-0 shadow-sm">
-                    {email.from.charAt(0).toUpperCase()}
+                  <div className="relative">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#0E1E37] to-[#1a2f4f] text-white flex items-center justify-center font-semibold text-sm shrink-0 shadow-sm">
+                      {email.from.charAt(0).toUpperCase()}
+                    </div>
+                    {!email.isRead && (
+                      <div className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-blue-500 rounded-full border-2 border-white" />
+                    )}
                   </div>
                   
                   <div className="flex-1 min-w-0">
-                    {/* Linha 1: Remetente + Badge + Data */}
-                    <div className="flex items-center gap-2 min-w-0">
+                    {/* Linha 1: Remetente + Data */}
+                    <div className="flex items-center justify-between">
                       <span className={`text-[15px] truncate ${!email.isRead ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>
                         {email.from.split('@')[0]}
                       </span>
-                      {email.influencer && (
-                        <span className="shrink-0 px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-semibold rounded-full">
-                          {email.influencer.name}
-                        </span>
-                      )}
-                      <span className="shrink-0 text-[11px] text-gray-400 ml-auto tabular-nums">
-                        {new Date(email.receivedAt).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}
+                      <span className="shrink-0 text-[11px] text-gray-400 tabular-nums">
+                        {formatDate(email.receivedAt)}
                       </span>
                     </div>
                     
-                    {/* Linha 2: Assunto + Indicadores */}
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <p className={`flex-1 text-sm truncate ${!email.isRead ? 'font-medium text-gray-800' : 'text-gray-500'}`}>
-                        {email.subject}
-                      </p>
-                      
-                      {/* Indicadores (quando não há hover) */}
-                      <div className="flex items-center gap-1.5 shrink-0 group-hover:hidden">
-                        {!email.isRead && (
-                          <div className="w-2 h-2 rounded-full bg-blue-500" />
-                        )}
-                        {email.isFlagged && (
-                          <Flag className="h-3 w-3 text-amber-500 fill-amber-500" />
-                        )}
+                    {/* Linha 2: Assunto */}
+                    <p className={`text-sm truncate mt-0.5 ${!email.isRead ? 'font-medium text-gray-800' : 'text-gray-500'}`}>
+                      {email.subject}
+                    </p>
+                    
+                    {/* Linha 3: Badge Influencer */}
+                    {email.influencer && (
+                      <div className="mt-1.5">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-medium rounded-full">
+                          <UserPlus className="h-3 w-3" />
+                          {email.influencer.name}
+                        </span>
                       </div>
-                    </div>
+                    )}
                   </div>
                   
-                  {/* Ações - aparecem no hover */}
-                  <div className="hidden group-hover:flex items-center gap-0.5 shrink-0" onClick={e => e.stopPropagation()}>
-                    {/* Flag */}
-                    <button
-                      onClick={(e) => { e.stopPropagation(); toggleFlag(email.id); }}
-                      className="w-8 h-8 rounded-full hover:bg-gray-200 flex items-center justify-center transition-colors"
-                      title={email.isFlagged ? 'Remover flag' : 'Marcar'}
-                    >
-                      <Flag className={`h-4 w-4 ${email.isFlagged ? 'fill-amber-500 text-amber-500' : 'text-gray-400'}`} strokeWidth={1.5} />
-                    </button>
-                    {/* Read/Unread */}
-                    <button
-                      onClick={(e) => { e.stopPropagation(); toggleRead(email.id, email.isRead); }}
-                      className="w-8 h-8 rounded-full hover:bg-gray-200 flex items-center justify-center transition-colors"
-                      title={email.isRead ? 'Marcar como não lido' : 'Marcar como lido'}
-                    >
-                      {email.isRead ? (
-                        <EyeOff className="h-4 w-4 text-gray-400" strokeWidth={1.5} />
-                      ) : (
-                        <Eye className="h-4 w-4 text-blue-500" strokeWidth={1.5} />
-                      )}
-                    </button>
-                  </div>
+                  {/* Flag */}
+                  {email.isFlagged && (
+                    <div className="shrink-0">
+                      <Flag className="h-4 w-4 text-amber-500 fill-amber-500" />
+                    </div>
+                  )}
                 </div>
               </div>
             ))
@@ -435,7 +458,7 @@ export default function MessagesPage() {
 
         {/* Paginação */}
         {totalPages > 1 && (
-          <div className="p-3 border-t border-gray-100 flex items-center justify-between">
+          <div className="p-3 border-t border-gray-100 flex items-center justify-between bg-white">
             <button
               disabled={currentPage === 1}
               onClick={() => setCurrentPage(p => p - 1)}
@@ -457,7 +480,7 @@ export default function MessagesPage() {
         )}
       </div>
 
-      {/* Detalhe do Email - Drawer */}
+      {/* Chat Interface */}
       {selectedEmail && (
         <>
           {/* Backdrop */}
@@ -466,13 +489,13 @@ export default function MessagesPage() {
             onClick={() => setSelectedEmail(null)}
           />
           
-          {/* Drawer Panel */}
-          <div className="fixed inset-0 md:inset-y-0 md:right-0 md:left-auto md:w-[85%] lg:w-[80%] xl:w-[75%] bg-white z-50 shadow-2xl flex flex-col md:flex-row">
+          {/* Chat Panel */}
+          <div className="fixed inset-0 md:inset-y-0 md:right-0 md:left-auto md:w-[calc(100%-380px)] lg:w-[calc(100%-400px)] bg-white z-50 shadow-2xl flex flex-col md:flex-row">
             
-            {/* Email Content */}
-            <div className="flex-1 flex flex-col h-full overflow-hidden">
-              {/* Header */}
-              <div className="p-4 border-b border-gray-100 flex items-center justify-between shrink-0">
+            {/* Chat Area */}
+            <div className="flex-1 flex flex-col h-full overflow-hidden bg-gray-50">
+              {/* Chat Header */}
+              <div className="px-4 py-3 bg-white border-b border-gray-200 flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => setSelectedEmail(null)}
@@ -480,23 +503,25 @@ export default function MessagesPage() {
                   >
                     <ChevronLeft className="h-5 w-5 text-gray-600" strokeWidth={2} />
                   </button>
-                  <div className="w-10 h-10 rounded-2xl bg-[#0E1E37] text-white flex items-center justify-center font-semibold">
+                  
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0E1E37] to-[#1a2f4f] text-white flex items-center justify-center font-semibold">
                     {selectedEmail.from.charAt(0).toUpperCase()}
                   </div>
+                  
                   <div>
-                    <p className="font-semibold text-gray-900 text-sm">{selectedEmail.from}</p>
-                    <p className="text-xs text-gray-400">
-                      {new Date(selectedEmail.receivedAt).toLocaleString('pt-PT')}
-                    </p>
+                    <p className="font-semibold text-gray-900">{selectedEmail.from.split('@')[0]}</p>
+                    <p className="text-xs text-gray-400">{selectedEmail.from}</p>
                   </div>
                 </div>
                 
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => toggleFlag(selectedEmail.id)}
-                    className="w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400"
+                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+                      selectedEmail.isFlagged ? 'bg-amber-50 text-amber-500' : 'hover:bg-gray-100 text-gray-400'
+                    }`}
                   >
-                    <Flag className={`h-4 w-4 ${selectedEmail.isFlagged ? 'fill-amber-500 text-amber-500' : ''}`} strokeWidth={1.5} />
+                    <Flag className={`h-4 w-4 ${selectedEmail.isFlagged ? 'fill-amber-500' : ''}`} strokeWidth={1.5} />
                   </button>
                   <button
                     onClick={() => deleteEmail(selectedEmail.id)}
@@ -504,106 +529,106 @@ export default function MessagesPage() {
                   >
                     <Trash2 className="h-4 w-4" strokeWidth={1.5} />
                   </button>
-                  <button
-                    onClick={() => setSelectedEmail(null)}
-                    className="hidden md:flex w-10 h-10 rounded-full hover:bg-gray-100 items-center justify-center text-gray-400"
-                  >
-                    <X className="h-4 w-4" strokeWidth={2} />
-                  </button>
                 </div>
               </div>
 
-              {/* Conteúdo */}
-              <div className="flex-1 overflow-y-auto">
-                {/* Subject Header */}
-                <div className="px-6 pt-6 pb-4 border-b border-gray-100">
-                  <h2 className="text-lg font-semibold text-gray-900 leading-snug">{selectedEmail.subject}</h2>
-                  <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
-                    <span>De: {selectedEmail.from}</span>
-                    <span>•</span>
-                    <span>{new Date(selectedEmail.receivedAt).toLocaleString('pt-PT', { 
-                      day: '2-digit', 
-                      month: 'long', 
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}</span>
-                  </div>
-                </div>
-                
-                {/* Email Body */}
-                <div className="p-6">
-                  {selectedEmail.htmlBody ? (
-                    <div 
-                      className="prose prose-sm max-w-none text-gray-700 leading-relaxed email-content"
-                      dangerouslySetInnerHTML={{ __html: selectedEmail.htmlBody }}
-                    />
-                  ) : (
-                    <div className="text-gray-700 leading-relaxed whitespace-pre-wrap font-[15px] email-text">
-                      {selectedEmail.body}
+              {/* Subject Banner */}
+              <div className="px-4 py-2 bg-gray-100 border-b border-gray-200 shrink-0">
+                <p className="text-sm text-gray-600 font-medium truncate">
+                  Assunto: {selectedEmail.subject}
+                </p>
+              </div>
+
+              {/* Chat Messages */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {chatMessages.map((message, index) => (
+                  <div key={message.id} className={`flex ${message.isFromMe ? 'justify-end' : 'justify-start'}`}>
+                    {!message.isFromMe && (
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#0E1E37] to-[#1a2f4f] text-white flex items-center justify-center text-xs font-semibold mr-2 shrink-0 self-end">
+                        {selectedEmail.from.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    
+                    <div className={`max-w-[85%] md:max-w-[70%] ${message.isFromMe ? 'ml-12' : 'mr-12'}`}>
+                      <div className={`px-4 py-3 rounded-2xl ${
+                        message.isFromMe 
+                          ? 'bg-[#0E1E37] text-white rounded-br-md' 
+                          : 'bg-white text-gray-800 rounded-bl-md shadow-sm border border-gray-100'
+                      }`}>
+                        {message.type === 'html' ? (
+                          <div 
+                            className={`prose prose-sm max-w-none ${message.isFromMe ? 'prose-invert' : ''} chat-message-content`}
+                            dangerouslySetInnerHTML={{ __html: message.content }}
+                          />
+                        ) : (
+                          <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                        )}
+                      </div>
+                      
+                      <p className={`text-[10px] mt-1 ${message.isFromMe ? 'text-right text-gray-400' : 'text-gray-400'}`}>
+                        {formatTime(message.timestamp)}
+                      </p>
                     </div>
-                  )}
-                </div>
+                  </div>
+                ))}
+                <div ref={chatEndRef} />
               </div>
 
-              {/* Footer com Responder */}
-              <div className="border-t border-gray-100 p-4 shrink-0">
-                {showReply ? (
-                  <div className="space-y-3">
+              {/* Chat Input */}
+              <div className="p-4 bg-white border-t border-gray-200 shrink-0">
+                <div className="flex items-end gap-2">
+                  <div className="flex-1 bg-gray-100 rounded-2xl px-4 py-2.5">
                     <textarea
                       value={replyText}
                       onChange={(e) => setReplyText(e.target.value)}
-                      placeholder="Escreve a tua resposta..."
-                      className="w-full h-32 p-4 rounded-2xl border-0 bg-gray-50 text-sm focus:bg-white focus:ring-2 focus:ring-[#0E1E37]/20 resize-none transition-all"
+                      placeholder="Escreve uma mensagem..."
+                      className="w-full bg-transparent border-0 resize-none text-[15px] text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-0"
+                      rows={1}
+                      style={{ minHeight: '24px', maxHeight: '120px' }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendReply();
+                        }
+                      }}
                     />
-                    <div className="flex gap-3">
-                      <button
-                        onClick={handleSendReply}
-                        disabled={sendingReply || !replyText.trim()}
-                        className="flex-1 py-3 bg-[#0E1E37] text-white text-sm font-medium rounded-full hover:bg-[#1a2f4f] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                      >
-                        <Send className="h-4 w-4" strokeWidth={2} />
-                        {sendingReply ? 'A enviar...' : 'Enviar (enviar email)'}
-                      </button>
-                      <button
-                        onClick={() => setShowReply(false)}
-                        className="px-6 py-3 bg-gray-100 text-gray-600 text-sm font-medium rounded-full hover:bg-gray-200 transition-all"
-                      >
-                        Cancelar
-                      </button>
-                    </div>
                   </div>
-                ) : (
+                  
                   <button
-                    onClick={() => setShowReply(true)}
-                    className="w-full py-3 bg-gray-100 text-gray-700 text-sm font-medium rounded-full hover:bg-gray-200 transition-all flex items-center justify-center gap-2"
+                    onClick={handleSendReply}
+                    disabled={sendingReply || !replyText.trim()}
+                    className="w-11 h-11 rounded-full bg-[#0E1E37] text-white flex items-center justify-center hover:bg-[#1a2f4f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <Reply className="h-4 w-4" strokeWidth={2} />
-                    Responder
+                    {sendingReply ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <Send className="h-5 w-5" strokeWidth={2} />
+                    )}
                   </button>
-                )}
+                </div>
+                <p className="text-[10px] text-gray-400 mt-2 text-center">
+                  Pressiona Enter para enviar, Shift+Enter para nova linha
+                </p>
               </div>
             </div>
             
-            {/* Influencer Panel - Lateral */}
-            <div className="hidden md:flex w-[300px] lg:w-[350px] border-l border-gray-100 bg-gray-50/30 flex-col shrink-0">
+            {/* Influencer Panel */}
+            <div className="hidden lg:flex w-[320px] border-l border-gray-200 bg-white flex-col shrink-0">
               {selectedEmail.influencer ? (
-                <div className="h-full overflow-y-auto">
-                  <InfluencerPanel influencer={selectedEmail.influencer} />
-                </div>
+                <InfluencerPanel influencer={selectedEmail.influencer} />
               ) : (
                 <div className="h-full flex flex-col items-center justify-center p-6 text-center">
                   <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
                     <UserPlus className="h-8 w-8 text-gray-400" strokeWidth={1.5} />
                   </div>
-                  <p className="text-sm font-medium text-gray-600 mb-1">Sem influencer associado</p>
-                  <p className="text-xs text-gray-400 mb-4">Associa um influencer a este email</p>
+                  <p className="text-sm font-medium text-gray-600 mb-1">Sem influencer</p>
+                  <p className="text-xs text-gray-400 mb-4">Associa um influencer a esta conversa</p>
                   <button
                     onClick={openInfluencerModal}
                     className="px-6 py-2.5 bg-[#0E1E37] text-white text-sm font-medium rounded-full hover:bg-[#1a2f4f] transition-all flex items-center gap-2"
                   >
                     <Plus className="h-4 w-4" strokeWidth={2} />
-                    Associar Influencer
+                    Associar
                   </button>
                 </div>
               )}
@@ -612,49 +637,32 @@ export default function MessagesPage() {
         </>
       )}
       
-      {/* Estilos para conteúdo de email */}
+      {/* Estilos para conteúdo de chat */}
       <style jsx global>{`
-        .email-content {
+        .chat-message-content {
           font-size: 15px;
-          line-height: 1.7;
-          color: #374151;
+          line-height: 1.6;
         }
-        .email-content p,
-        .email-content div {
-          margin-bottom: 1em;
-          line-height: 1.7;
-        }
-        .email-content div:empty,
-        .email-content p:empty {
+        .chat-message-content p,
+        .chat-message-content div {
           margin-bottom: 0.5em;
         }
-        .email-content br {
-          display: block;
-          margin-bottom: 0.5em;
-          content: "";
+        .chat-message-content div:empty,
+        .chat-message-content p:empty {
+          margin-bottom: 0.25em;
         }
-        .email-content a {
-          color: #0E1E37;
+        .chat-message-content a {
           text-decoration: underline;
           word-break: break-all;
         }
-        .email-content blockquote {
-          border-left: 3px solid #e5e7eb;
-          padding-left: 1rem;
+        .chat-message-content.prose-invert a {
+          color: #93c5fd;
+        }
+        .chat-message-content blockquote {
+          border-left: 2px solid currentColor;
+          padding-left: 0.75rem;
           margin-left: 0;
-          color: #6b7280;
-        }
-        .email-content .hmail-signature,
-        .email-content .gmail_signature {
-          margin-top: 2em;
-          padding-top: 1em;
-          border-top: 1px solid #e5e7eb;
-          color: #9ca3af;
-          font-size: 14px;
-        }
-        .email-text {
-          font-size: 15px;
-          line-height: 1.7;
+          opacity: 0.8;
         }
       `}</style>
       
@@ -662,7 +670,6 @@ export default function MessagesPage() {
       {showInfluencerModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col">
-            {/* Header */}
             <div className="p-5 border-b border-gray-100 flex items-center justify-between">
               <h3 className="font-semibold text-gray-900">Associar Influencer</h3>
               <button
@@ -673,13 +680,12 @@ export default function MessagesPage() {
               </button>
             </div>
             
-            {/* Search */}
             <div className="p-4 border-b border-gray-100">
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" strokeWidth={1.5} />
                 <input
                   type="text"
-                  placeholder="Pesquisar influencer..."
+                  placeholder="Pesquisar..."
                   value={influencerSearchQuery}
                   onChange={(e) => setInfluencerSearchQuery(e.target.value)}
                   className="w-full rounded-2xl border-0 bg-gray-50 py-3 pl-11 pr-4 text-sm focus:bg-white focus:ring-2 focus:ring-[#0E1E37]/20 transition-all"
@@ -687,13 +693,9 @@ export default function MessagesPage() {
               </div>
             </div>
             
-            {/* Lista */}
             <div className="flex-1 overflow-y-auto p-2">
               {availableInfluencers
-                .filter(inf => 
-                  inf.name.toLowerCase().includes(influencerSearchQuery.toLowerCase()) ||
-                  (inf.email && inf.email.toLowerCase().includes(influencerSearchQuery.toLowerCase()))
-                )
+                .filter(inf => inf.name.toLowerCase().includes(influencerSearchQuery.toLowerCase()))
                 .map(influencer => (
                   <button
                     key={influencer.id}
@@ -706,13 +708,9 @@ export default function MessagesPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-gray-900 text-sm">{influencer.name}</p>
-                      {influencer.email && (
-                        <p className="text-xs text-gray-400 truncate">{influencer.email}</p>
-                      )}
+                      {influencer.email && <p className="text-xs text-gray-400 truncate">{influencer.email}</p>}
                     </div>
-                    {associatingInfluencer && (
-                      <Loader2 className="h-4 w-4 animate-spin text-gray-400" strokeWidth={1.5} />
-                    )}
+                    {associatingInfluencer && <Loader2 className="h-4 w-4 animate-spin text-gray-400" />}
                   </button>
                 ))}
             </div>
