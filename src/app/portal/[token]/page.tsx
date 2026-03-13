@@ -937,145 +937,146 @@ function Step2({ data, token, onUpdate, onBack, onNext }: StepProps) {
 
   return (
     <div>
-      <h2 className="text-xl font-bold text-[#0E1E37] mb-6 uppercase">Shipping & Suggestions</h2>
+      {/* ✅ Header Minimalista */}
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold text-gray-900 tracking-tight mb-1">Morada & Sugestões</h2>
+        <p className="text-sm text-gray-400">Onde enviamos a tua peça</p>
+      </div>
 
-      {/* Validation Error */}
-      {validationError && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-sm text-red-800">{validationError}</p>
-        </div>
-      )}
-
-      <div className="space-y-4">
-        {/* Shipping Address - Separated Fields */}
+      <div className="space-y-5">
+        {/* ✅ Morada - Minimalista */}
         <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-3 uppercase">Shipping Address</label>
+          <label className="block text-sm font-medium text-gray-500 mb-2 ml-1">Morada de Envio</label>
           
-          {/* Street */}
-          <div className="mb-3">
-            <label className="block text-xs font-semibold text-gray-500 mb-1">Street Address *</label>
+          <div className="space-y-3">
             <input
               type="text"
               value={formData.shippingStreet}
               onChange={(e) => handleChange('shippingStreet', e.target.value)}
               disabled={getFieldDisabled('shippingAddress')}
-              placeholder="e.g., Rua da Paz, 123"
-              className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E1E37] disabled:bg-gray-50 disabled:cursor-not-allowed"
+              placeholder="Rua e número"
+              className="w-full px-4 py-3.5 text-[15px] bg-gray-50 border-0 rounded-2xl 
+                         text-gray-900 placeholder:text-gray-400
+                         focus:outline-none focus:ring-2 focus:ring-[#0E1E37]/20 focus:bg-white
+                         disabled:bg-gray-100 disabled:text-gray-400
+                         transition-all duration-200"
             />
-          </div>
-
-          {/* Postal Code */}
-          <div className="mb-3">
-            <label className="block text-xs font-semibold text-gray-500 mb-1">Postal Code *</label>
-            <input
-              type="text"
-              value={formData.shippingPostalCode}
-              onChange={(e) => handleChange('shippingPostalCode', e.target.value)}
-              disabled={getFieldDisabled('shippingAddress')}
-              placeholder="e.g., 4000-123"
-              className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E1E37] disabled:bg-gray-50 disabled:cursor-not-allowed"
-            />
-          </div>
-
-          {/* Country */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1">Country *</label>
-            <input
-              type="text"
-              value={formData.shippingCountry}
-              onChange={(e) => handleChange('shippingCountry', e.target.value)}
-              disabled={getFieldDisabled('shippingAddress')}
-              placeholder="e.g., Portugal"
-              className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E1E37] disabled:bg-gray-50 disabled:cursor-not-allowed"
-            />
+            
+            <div className="flex gap-3">
+              <input
+                type="text"
+                value={formData.shippingPostalCode}
+                onChange={(e) => handleChange('shippingPostalCode', e.target.value)}
+                disabled={getFieldDisabled('shippingAddress')}
+                placeholder="Código postal"
+                className="w-1/2 px-4 py-3.5 text-[15px] bg-gray-50 border-0 rounded-2xl 
+                           text-gray-900 placeholder:text-gray-400
+                           focus:outline-none focus:ring-2 focus:ring-[#0E1E37]/20 focus:bg-white
+                           disabled:bg-gray-100 disabled:text-gray-400
+                           transition-all duration-200"
+              />
+              <input
+                type="text"
+                value={formData.shippingCountry}
+                onChange={(e) => handleChange('shippingCountry', e.target.value)}
+                disabled={getFieldDisabled('shippingAddress')}
+                placeholder="País"
+                className="flex-1 px-4 py-3.5 text-[15px] bg-gray-50 border-0 rounded-2xl 
+                           text-gray-900 placeholder:text-gray-400
+                           focus:outline-none focus:ring-2 focus:ring-[#0E1E37]/20 focus:bg-white
+                           disabled:bg-gray-100 disabled:text-gray-400
+                           transition-all duration-200"
+              />
+            </div>
           </div>
         </div>
 
-        {/* Product Suggestion 1 */}
-        <ProductSearchInput
-          value={formData.productSuggestion1}
-          searchQuery={searchQuery1}
-          onSearchChange={setSearchQuery1}
-          results={searchResults1}
-          isLoading={isLoading1}
-          onSelect={(product) => {
-            handleChange('productSuggestion1', product.url);
-            setSearchQuery1(product.title);
-            setSearchResults1([]);
-          }}
-          disabled={getFieldDisabled('productSuggestion1')}
-          label="Suggestion 1"
-          required={true}
-        />
+        {/* ✅ Sugestões de Produto - Minimalista */}
+        <div className="pt-2">
+          <label className="block text-sm font-medium text-gray-500 mb-2 ml-1">Sugestões de Produto</label>
+          
+          <ProductSearchInput
+            value={formData.productSuggestion1}
+            searchQuery={searchQuery1}
+            onSearchChange={setSearchQuery1}
+            results={searchResults1}
+            isLoading={isLoading1}
+            onSelect={(product) => {
+              handleChange('productSuggestion1', product.url);
+              setSearchQuery1(product.title);
+              setSearchResults1([]);
+            }}
+            disabled={getFieldDisabled('productSuggestion1')}
+            label="Produto 1"
+            required={true}
+          />
 
-        {/* Product Suggestion 2 */}
-        <ProductSearchInput
-          value={formData.productSuggestion2}
-          searchQuery={searchQuery2}
-          onSearchChange={setSearchQuery2}
-          results={searchResults2}
-          isLoading={isLoading2}
-          onSelect={(product) => {
-            handleChange('productSuggestion2', product.url);
-            setSearchQuery2(product.title);
-            setSearchResults2([]);
-          }}
-          disabled={getFieldDisabled('productSuggestion2')}
-          label="Suggestion 2"
-          required={false}
-        />
+          <ProductSearchInput
+            value={formData.productSuggestion2}
+            searchQuery={searchQuery2}
+            onSearchChange={setSearchQuery2}
+            results={searchResults2}
+            isLoading={isLoading2}
+            onSelect={(product) => {
+              handleChange('productSuggestion2', product.url);
+              setSearchQuery2(product.title);
+              setSearchResults2([]);
+            }}
+            disabled={getFieldDisabled('productSuggestion2')}
+            label="Produto 2 (opcional)"
+            required={false}
+          />
 
-        {/* Product Suggestion 3 */}
-        <ProductSearchInput
-          value={formData.productSuggestion3}
-          searchQuery={searchQuery3}
-          onSearchChange={setSearchQuery3}
-          results={searchResults3}
-          isLoading={isLoading3}
-          onSelect={(product) => {
-            handleChange('productSuggestion3', product.url);
-            setSearchQuery3(product.title);
-            setSearchResults3([]);
-          }}
-          disabled={getFieldDisabled('productSuggestion3')}
-          label="Suggestion 3"
-          required={false}
-        />
+          <ProductSearchInput
+            value={formData.productSuggestion3}
+            searchQuery={searchQuery3}
+            onSearchChange={setSearchQuery3}
+            results={searchResults3}
+            isLoading={isLoading3}
+            onSelect={(product) => {
+              handleChange('productSuggestion3', product.url);
+              setSearchQuery3(product.title);
+              setSearchResults3([]);
+            }}
+            disabled={getFieldDisabled('productSuggestion3')}
+            label="Produto 3 (opcional)"
+            required={false}
+          />
+        </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="mt-6 space-y-3">
-        <button
-          onClick={onBack}
-          disabled={loading}
-          className="w-full py-3 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Review details
-        </button>
+      {/* ✅ Botões - Estilo Apple */}
+      <div className="mt-10 space-y-3">
         <button
           onClick={handleSubmit}
           disabled={loading}
-          className="w-full py-3 bg-[#0E1E37] text-white font-semibold rounded-lg hover:bg-[#1a2f4f] transition disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full py-4 bg-[#0E1E37] text-white text-[15px] font-medium rounded-full hover:bg-[#1a2f4f] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
-          {loading ? 'Processing...' : 'Send details'}
+          {loading ? 'A processar...' : 'Enviar Detalhes'} <ArrowRight className="h-4 w-4" strokeWidth={2} />
+        </button>
+        <button
+          onClick={onBack}
+          disabled={loading}
+          className="w-full py-4 bg-white text-gray-600 text-[15px] font-medium rounded-full hover:bg-gray-50 transition-all duration-200 disabled:opacity-50"
+        >
+          Voltar
         </button>
       </div>
     </div>
   );
 }
 
+// ✅ Step 3 - A Preparar (Minimalista)
 function Step3() {
   return (
-    <div>
-      <h2 className="text-xl font-bold text-[#0E1E37] mb-6 uppercase">Preparing</h2>
-      
-      <div className="p-6 bg-green-50 border-2 border-green-200 rounded-lg text-center">
-        <CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-600" />
-        <h3 className="text-lg font-bold text-green-800 mb-3">We are preparing your piece</h3>
-        <p className="text-sm text-green-700">
-          From now on all communication will be through WhatsApp. We will send over the product we chose along with previews of the pieces.
-        </p>
+    <div className="text-center py-8">
+      <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-[#0E1E37]/5 flex items-center justify-center">
+        <Loader2 className="h-10 w-10 text-[#0E1E37] animate-spin" strokeWidth={1.5} />
       </div>
+      <h2 className="text-lg font-semibold text-gray-900 mb-2 tracking-tight">A Preparar</h2>
+      <p className="text-sm text-gray-400 leading-relaxed max-w-xs mx-auto">
+        A tua peça está a ser preparada. Entraremos em contacto pelo WhatsApp em breve.
+      </p>
     </div>
   );
 }
