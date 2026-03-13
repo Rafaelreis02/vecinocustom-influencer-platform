@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import {
   Mail, Search, RefreshCw, Send, Reply, Trash2, Eye, EyeOff, Flag,
-  ChevronLeft, ChevronRight, Loader2, X, Plus, UserPlus, CheckCircle
+  ChevronLeft, ChevronRight, Loader2, X, Plus, UserPlus
 } from 'lucide-react';
 import { useGlobalToast } from '@/contexts/ToastContext';
 import { getWorkflowStatuses, getStatusConfig } from '@/lib/influencer-status';
@@ -160,6 +160,19 @@ export default function MessagesPage() {
       fetchEmails();
     } catch (error) {
       addToast('Erro', 'error');
+    }
+  }
+
+  async function toggleRead(emailId: string, isRead: boolean) {
+    try {
+      await fetch(`/api/emails/${emailId}/mark-read`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isRead: !isRead }),
+      });
+      fetchEmails();
+    } catch (error) {
+      addToast('Erro ao marcar como lido', 'error');
     }
   }
   
@@ -347,42 +360,71 @@ export default function MessagesPage() {
             currentEmails.map(email => (
               <div
                 key={email.id}
-                onClick={() => handleEmailClick(email)}
-                className={`group p-4 cursor-pointer border-b border-gray-50 hover:bg-gray-50 transition-colors ${
+                className={`group relative p-3 cursor-pointer border-b border-gray-50 hover:bg-gray-50 transition-colors ${
                   selectedEmail?.id === email.id ? 'bg-blue-50/50' : ''
                 } ${!email.isRead ? 'bg-blue-50/20' : ''}`}
               >
-                <div className="flex items-start gap-3">
+                <div className="flex items-center gap-3" onClick={() => handleEmailClick(email)}>
                   {/* Avatar */}
-                  <div className="w-10 h-10 rounded-2xl bg-[#0E1E37] text-white flex items-center justify-center font-semibold text-sm shrink-0">
+                  <div className="w-9 h-9 rounded-xl bg-[#0E1E37] text-white flex items-center justify-center font-semibold text-xs shrink-0">
                     {email.from.charAt(0).toUpperCase()}
                   </div>
                   
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`text-sm ${!email.isRead ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>
+                    {/* Linha 1: Remetente + Badge + Data */}
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm truncate ${!email.isRead ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>
                         {email.from.split('@')[0]}
                       </span>
                       {email.influencer && (
-                        <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-medium rounded-full">
+                        <span className="shrink-0 px-1.5 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-medium rounded">
                           {email.influencer.name}
                         </span>
                       )}
+                      <span className="shrink-0 text-[10px] text-gray-400 ml-auto">
+                        {new Date(email.receivedAt).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}
+                      </span>
                     </div>
                     
+                    {/* Linha 2: Assunto */}
                     <p className={`text-sm truncate ${!email.isRead ? 'font-medium text-gray-800' : 'text-gray-500'}`}>
                       {email.subject}
                     </p>
-                    
-                    <div className="flex items-center gap-2 mt-2">
-                      {email.isFlagged && (
-                        <Flag className="h-3 w-3 text-amber-500 fill-amber-500" />
-                      )}
-                      <span className="text-xs text-gray-400">
-                        {new Date(email.receivedAt).toLocaleDateString('pt-PT')}
-                      </span>
-                    </div>
                   </div>
+                  
+                  {/* Ações - aparecem no hover */}
+                  <div className="hidden group-hover:flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
+                    {/* Flag */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); toggleFlag(email.id); }}
+                      className="w-8 h-8 rounded-full hover:bg-gray-200 flex items-center justify-center transition-colors"
+                      title={email.isFlagged ? 'Remover flag' : 'Marcar'}
+                    >
+                      <Flag className={`h-3.5 w-3.5 ${email.isFlagged ? 'fill-amber-500 text-amber-500' : 'text-gray-400'}`} strokeWidth={1.5} />
+                    </button>
+                    {/* Read/Unread */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); toggleRead(email.id, email.isRead); }}
+                      className="w-8 h-8 rounded-full hover:bg-gray-200 flex items-center justify-center transition-colors"
+                      title={email.isRead ? 'Marcar como não lido' : 'Marcar como lido'}
+                    >
+                      {email.isRead ? (
+                        <EyeOff className="h-3.5 w-3.5 text-gray-400" strokeWidth={1.5} />
+                      ) : (
+                        <Eye className="h-3.5 w-3.5 text-blue-500" strokeWidth={1.5} />
+                      )}
+                    </button>
+                  </div>
+                  
+                  {/* Flag indicator (quando não há hover) */}
+                  {!email.isRead && (
+                    <div className="group-hover:hidden w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+                  )}
+                  {email.isFlagged && email.isRead && (
+                    <div className="group-hover:hidden">
+                      <Flag className="h-3 w-3 text-amber-500 fill-amber-500" />
+                    </div>
+                  )}
                 </div>
               </div>
             ))
