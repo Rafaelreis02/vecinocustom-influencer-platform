@@ -188,15 +188,19 @@ export default function MessagesPage() {
       const res = await fetch(`/api/emails/${selectedEmail.id}/suggest-reply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          language: 'en',
+          tone: 'professional'
+        }),
       });
       
       if (!res.ok) throw new Error();
       const data = await res.json();
       
       setReplyText(data.suggestion);
-      addToast('Resposta gerada!', 'success');
+      addToast('Reply generated!', 'success');
     } catch (error) {
-      addToast('Erro ao gerar resposta', 'error');
+      addToast('Error generating reply', 'error');
     } finally {
       setGeneratingAI(false);
     }
@@ -599,24 +603,12 @@ export default function MessagesPage() {
 
               {/* Chat Input */}
               <div className="p-4 bg-white border-t border-gray-200 shrink-0">
-                {/* AI Button - Elegante, no canto superior direito do input */}
-                {!replyText && !generatingAI && (
-                  <div className="flex justify-end mb-2">
-                    <button
-                      onClick={generateAIResponse}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-violet-600 hover:text-violet-700 hover:bg-violet-50 rounded-full transition-all border border-violet-200 hover:border-violet-300"
-                    >
-                      <Sparkles className="h-3.5 w-3.5" />
-                      Gerar com IA
-                    </button>
-                  </div>
-                )}
-                
+                {/* AI Loading State */}
                 {generatingAI && (
                   <div className="flex justify-center mb-2">
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-violet-50 rounded-full">
                       <Loader2 className="h-3.5 w-3.5 animate-spin text-violet-600" />
-                      <span className="text-xs text-violet-600">A gerar resposta...</span>
+                      <span className="text-xs text-violet-600">Generating reply...</span>
                     </div>
                   </div>
                 )}
@@ -626,8 +618,8 @@ export default function MessagesPage() {
                     <textarea
                       value={replyText}
                       onChange={(e) => setReplyText(e.target.value)}
-                      placeholder="Escreve uma mensagem..."
-                      className="w-full bg-transparent border-0 resize-none text-[15px] text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-0 pr-8"
+                      placeholder="Type a message..."
+                      className="w-full bg-transparent border-0 resize-none text-[15px] text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-0"
                       rows={1}
                       style={{ minHeight: '24px', maxHeight: '120px' }}
                       onKeyDown={(e) => {
@@ -637,18 +629,29 @@ export default function MessagesPage() {
                         }
                       }}
                     />
-                    
-                    {/* AI Button dentro do input quando há texto */}
-                    {replyText && !generatingAI && (
-                      <button
-                        onClick={generateAIResponse}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full hover:bg-gray-200 flex items-center justify-center text-violet-500 hover:text-violet-600 transition-colors"
-                        title="Melhorar com IA"
-                      >
-                        <Wand2 className="h-4 w-4" />
-                      </button>
-                    )}
                   </div>
+                  
+                  {/* AI Button - Bolinha igual ao enviar */}
+                  {!replyText && !generatingAI && (
+                    <button
+                      onClick={generateAIResponse}
+                      className="w-11 h-11 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center hover:bg-violet-200 transition-colors"
+                      title="Generate AI reply"
+                    >
+                      <Sparkles className="h-5 w-5" strokeWidth={2} />
+                    </button>
+                  )}
+                  
+                  {/* AI Improve Button quando há texto */}
+                  {replyText && !generatingAI && (
+                    <button
+                      onClick={generateAIResponse}
+                      className="w-11 h-11 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center hover:bg-violet-200 transition-colors"
+                      title="Improve with AI"
+                    >
+                      <Wand2 className="h-5 w-5" strokeWidth={2} />
+                    </button>
+                  )}
                   
                   <button
                     onClick={handleSendReply}
@@ -663,7 +666,7 @@ export default function MessagesPage() {
                   </button>
                 </div>
                 <p className="text-[10px] text-gray-400 mt-2 text-center">
-                  Pressiona Enter para enviar, Shift+Enter para nova linha
+                  Press Enter to send, Shift+Enter for new line
                 </p>
               </div>
             </div>
