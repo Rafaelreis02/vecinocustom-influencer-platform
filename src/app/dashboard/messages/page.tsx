@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   Mail, Search, RefreshCw, Send, ChevronLeft, ChevronRight, Loader2, X, Plus, UserPlus,
-  Flag, Trash2, MoreVertical, Phone, Paperclip
+  Flag, Trash2, Sparkles, Wand2
 } from 'lucide-react';
 import { useGlobalToast } from '@/contexts/ToastContext';
 import { getStatusConfig } from '@/lib/influencer-status';
@@ -65,6 +65,7 @@ export default function MessagesPage() {
   // Reply
   const [replyText, setReplyText] = useState('');
   const [sendingReply, setSendingReply] = useState(false);
+  const [generatingAI, setGeneratingAI] = useState(false);
   
   // Influencer Modal
   const [showInfluencerModal, setShowInfluencerModal] = useState(false);
@@ -176,6 +177,28 @@ export default function MessagesPage() {
       addToast('Erro ao enviar', 'error');
     } finally {
       setSendingReply(false);
+    }
+  }
+
+  async function generateAIResponse() {
+    if (!selectedEmail) return;
+    
+    try {
+      setGeneratingAI(true);
+      const res = await fetch(`/api/emails/${selectedEmail.id}/ai-suggest`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      
+      setReplyText(data.suggestion);
+      addToast('Resposta gerada!', 'success');
+    } catch (error) {
+      addToast('Erro ao gerar resposta', 'error');
+    } finally {
+      setGeneratingAI(false);
     }
   }
 
@@ -576,6 +599,24 @@ export default function MessagesPage() {
 
               {/* Chat Input */}
               <div className="p-4 bg-white border-t border-gray-200 shrink-0">
+                {/* AI Suggestion Button */}
+                {!replyText && (
+                  <div className="mb-3 flex justify-center">
+                    <button
+                      onClick={generateAIResponse}
+                      disabled={generatingAI}
+                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-500 to-purple-600 text-white text-sm font-medium rounded-full hover:from-violet-600 hover:to-purple-700 transition-all shadow-sm disabled:opacity-50"
+                    >
+                      {generatingAI ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Sparkles className="h-4 w-4" />
+                      )}
+                      {generatingAI ? 'A gerar...' : 'Gerar resposta com IA'}
+                    </button>
+                  </div>
+                )}
+                
                 <div className="flex items-end gap-2">
                   <div className="flex-1 bg-gray-100 rounded-2xl px-4 py-2.5">
                     <textarea
@@ -593,6 +634,18 @@ export default function MessagesPage() {
                       }}
                     />
                   </div>
+                  
+                  {/* Quick AI button when there's text */}
+                  {replyText && (
+                    <button
+                      onClick={generateAIResponse}
+                      disabled={generatingAI}
+                      className="w-10 h-10 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center hover:bg-violet-200 transition-colors disabled:opacity-50"
+                      title="Melhorar com IA"
+                    >
+                      {generatingAI ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+                    </button>
+                  )}
                   
                   <button
                     onClick={handleSendReply}
