@@ -74,9 +74,10 @@ export async function POST(req: NextRequest) {
     });
 
     // Atualizar status do influencer
+    // COUNTER_PROPOSAL = influencer a analisar a nossa proposta
     await prisma.influencer.update({
       where: { id: influencerId },
-      data: { status: 'ANALYZING' as any },
+      data: { status: 'COUNTER_PROPOSAL' as any },
     });
 
     // Enviar email Step 1 diretamente — botão clicado = email garantido
