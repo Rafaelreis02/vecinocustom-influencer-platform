@@ -17,7 +17,7 @@ interface Email {
   isRead: boolean;
   isFlagged: boolean;
   body?: string;
-  influencer?: { id: string; name: string; status?: string; avatarUrl?: string | null } | null;
+  influencer?: { id: string; name: string; email?: string | null; status?: string; avatarUrl?: string | null } | null;
 }
 
 interface EmailDetail extends Email {
