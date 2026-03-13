@@ -6,7 +6,8 @@ import { Loader2, XCircle, CheckCircle, FileText } from 'lucide-react';
 import { ProductSearchInput } from './components/ProductSearchInput';
 import { Step4DesignReview } from './Step4DesignReview';
 import { StepDesignReference } from './StepDesignReference';
-import { getStepForStatus, hasActiveWorkflow } from '@/lib/status-step-mapping';
+// ✅ Sincronização: Usamos apenas currentStep do workflow, não mapeamento de status
+// import { getStepForStatus } from '@/lib/status-step-mapping';
 
 // Constants
 const VALIDATION_ERROR_DISPLAY_DURATION = 4000; // 4 seconds
@@ -192,26 +193,9 @@ export default function PortalPage() {
 
       setInfluencerData(mappedData);
 
-      // Determine correct step based on status mapping
-      // This ensures consistency between status and step
-      const statusBasedStep = getStepForStatus(data.status);
-      const workflowStep = data.currentStep;
-
-      // Use the higher of the two to ensure we don't go backwards
-      // but if workflow is completed, use the workflow step
-      if (data.workflowStatus === 'COMPLETED') {
-        setCurrentStep(workflowStep);
-      } else if (statusBasedStep > 0 && statusBasedStep !== workflowStep) {
-        // There's a mismatch - use status-based step for consistency
-        console.warn('Step/Status mismatch:', {
-          status: data.status,
-          statusBasedStep,
-          workflowStep,
-        });
-        setCurrentStep(statusBasedStep);
-      } else {
-        setCurrentStep(workflowStep);
-      }
+      // ✅ SINCRONIZAÇÃO: Usar sempre o currentStep do workflow como fonte de verdade
+      // Tanto o dashboard admin como o portal do influencer usam o mesmo valor
+      setCurrentStep(data.currentStep);
       
     } catch (err) {
       console.error('Error fetching data:', err);
@@ -221,38 +205,8 @@ export default function PortalPage() {
     }
   };
 
-  // Get current step from influencer status
-  // Note: We need to check the workflow currentStep for steps 5 and 6
-  const getStepFromStatus = (status: string, workflowStep?: number): number => {
-    // Use workflow step if available (now 8 steps)
-    if (workflowStep) {
-      return workflowStep;
-    }
-    
-    // Fallback for old workflows
-    switch (status) {
-      case 'UNKNOWN':
-      case 'COUNTER_PROPOSAL':
-      case 'ANALYZING':
-        return 1;
-      case 'AGREED':
-        return 2;
-      case 'PRODUCT_SELECTION':
-        return 3;
-      case 'DESIGN_REFERENCE_SUBMITTED':
-        return 4; // Show Design Review step (waiting for admin mockups)
-      case 'DESIGN_REVIEW':
-        return 4;
-      case 'CONTRACT_PENDING':
-        return 5;
-      case 'SHIPPED':
-        return 6;
-      case 'COMPLETED':
-        return 7;
-      default:
-        return 1;
-    }
-  };
+  // ✅ NOTA: Sincronização automática - ambos os portais usam currentStep do workflow
+  // Não há necessidade de mapeamento de status para step
 
   if (loading) {
     return (
