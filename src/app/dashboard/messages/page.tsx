@@ -185,7 +185,7 @@ export default function MessagesPage() {
     
     try {
       setGeneratingAI(true);
-      const res = await fetch(`/api/emails/${selectedEmail.id}/ai-suggest`, {
+      const res = await fetch(`/api/emails/${selectedEmail.id}/suggest-reply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -599,31 +599,35 @@ export default function MessagesPage() {
 
               {/* Chat Input */}
               <div className="p-4 bg-white border-t border-gray-200 shrink-0">
-                {/* AI Suggestion Button */}
-                {!replyText && (
-                  <div className="mb-3 flex justify-center">
+                {/* AI Button - Elegante, no canto superior direito do input */}
+                {!replyText && !generatingAI && (
+                  <div className="flex justify-end mb-2">
                     <button
                       onClick={generateAIResponse}
-                      disabled={generatingAI}
-                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-500 to-purple-600 text-white text-sm font-medium rounded-full hover:from-violet-600 hover:to-purple-700 transition-all shadow-sm disabled:opacity-50"
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-violet-600 hover:text-violet-700 hover:bg-violet-50 rounded-full transition-all border border-violet-200 hover:border-violet-300"
                     >
-                      {generatingAI ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Sparkles className="h-4 w-4" />
-                      )}
-                      {generatingAI ? 'A gerar...' : 'Gerar resposta com IA'}
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Gerar com IA
                     </button>
                   </div>
                 )}
                 
+                {generatingAI && (
+                  <div className="flex justify-center mb-2">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-violet-50 rounded-full">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-violet-600" />
+                      <span className="text-xs text-violet-600">A gerar resposta...</span>
+                    </div>
+                  </div>
+                )}
+                
                 <div className="flex items-end gap-2">
-                  <div className="flex-1 bg-gray-100 rounded-2xl px-4 py-2.5">
+                  <div className="flex-1 bg-gray-100 rounded-2xl px-4 py-2.5 relative">
                     <textarea
                       value={replyText}
                       onChange={(e) => setReplyText(e.target.value)}
                       placeholder="Escreve uma mensagem..."
-                      className="w-full bg-transparent border-0 resize-none text-[15px] text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-0"
+                      className="w-full bg-transparent border-0 resize-none text-[15px] text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-0 pr-8"
                       rows={1}
                       style={{ minHeight: '24px', maxHeight: '120px' }}
                       onKeyDown={(e) => {
@@ -633,19 +637,18 @@ export default function MessagesPage() {
                         }
                       }}
                     />
+                    
+                    {/* AI Button dentro do input quando há texto */}
+                    {replyText && !generatingAI && (
+                      <button
+                        onClick={generateAIResponse}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full hover:bg-gray-200 flex items-center justify-center text-violet-500 hover:text-violet-600 transition-colors"
+                        title="Melhorar com IA"
+                      >
+                        <Wand2 className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
-                  
-                  {/* Quick AI button when there's text */}
-                  {replyText && (
-                    <button
-                      onClick={generateAIResponse}
-                      disabled={generatingAI}
-                      className="w-10 h-10 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center hover:bg-violet-200 transition-colors disabled:opacity-50"
-                      title="Melhorar com IA"
-                    >
-                      {generatingAI ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
-                    </button>
-                  )}
                   
                   <button
                     onClick={handleSendReply}
