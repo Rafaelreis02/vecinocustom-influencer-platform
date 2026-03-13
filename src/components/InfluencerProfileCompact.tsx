@@ -39,9 +39,18 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
   
   // Use SWR for auto-sync
   const { influencer, isLoading: loadingInf, mutate: mutateInf } = useInfluencer(influencerId);
-  const { workflow, isLoading: loadingWf, mutate: mutateWf } = useWorkflow(influencerId);
+  const { workflow: swrWorkflow, isLoading: loadingWf, mutate: mutateWf } = useWorkflow(influencerId);
   
   const loading = loadingInf || loadingWf;
+  
+  // Debug log
+  console.log('[InfluencerProfileCompact]', { 
+    influencerId, 
+    workflow: swrWorkflow, 
+    loading, 
+    loadingWf,
+    hasWorkflow: !!swrWorkflow 
+  });
   
   const [isCreatingPartnership, setIsCreatingPartnership] = useState(false);
   const [isAdvancing, setIsAdvancing] = useState(false);
@@ -60,6 +69,9 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
     { id: 6, name: 'Complete', icon: Star, description: 'Done' },
   ];
 
+  // Use swrWorkflow throughout
+  const workflow = swrWorkflow;
+  
   // Auto-sync when data changes
   useEffect(() => {
     if (influencer || workflow) {
