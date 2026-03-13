@@ -27,7 +27,6 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { InfluencerStatusBadge } from '@/components/InfluencerStatusBadge';
-import { useInfluencer, useWorkflow, invalidateInfluencerCache } from '@/hooks/useInfluencerData';
 
 interface InfluencerProfileCompactProps {
   influencerId: string;
