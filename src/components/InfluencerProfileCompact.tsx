@@ -35,22 +35,9 @@ interface InfluencerProfileCompactProps {
 
 export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerProfileCompactProps) {
   const { addToast } = useToast();
-  
-  // Use SWR for auto-sync
-  const { influencer, isLoading: loadingInf, mutate: mutateInf } = useInfluencer(influencerId);
-  const { workflow: swrWorkflow, isLoading: loadingWf, mutate: mutateWf } = useWorkflow(influencerId);
-  
-  const loading = loadingInf || loadingWf;
-  
-  // Debug log
-  console.log('[InfluencerProfileCompact]', { 
-    influencerId, 
-    workflow: swrWorkflow, 
-    loading, 
-    loadingWf,
-    hasWorkflow: !!swrWorkflow 
-  });
-  
+  const [influencer, setInfluencer] = useState<any>(null);
+  const [workflow, setWorkflow] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [isCreatingPartnership, setIsCreatingPartnership] = useState(false);
   const [isAdvancing, setIsAdvancing] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -68,18 +55,42 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
     { id: 6, name: 'Complete', icon: Star, description: 'Done' },
   ];
 
-  // Use swrWorkflow throughout
-  const workflow = swrWorkflow;
-  
-  // Auto-sync when data changes
+  // Fetch data on mount and when influencerId changes
   useEffect(() => {
-    if (influencer || workflow) {
-      onUpdate?.();
+    fetchData();
+  }, [influencerId]);
+
+  const fetchData = async () => {
+    if (!influencerId) return;
+    
+    try {
+      setLoading(true);
+      
+      // Fetch both in parallel
+      const [infRes, wfRes] = await Promise.all([
+        fetch(`/api/influencers/${influencerId}`),
+        fetch(`/api/influencers/${influencerId}/partnerships`)
+      ]);
+      
+      if (infRes.ok) {
+        const infData = await infRes.json();
+        setInfluencer(infData);
+      }
+      
+      if (wfRes.ok) {
+        const wfData = await wfRes.json();
+        console.log('[Workflow API Response]', wfData);
+        setWorkflow(wfData?.activeWorkflow || null);
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
     }
-  }, [influencer, workflow, onUpdate]);
+  };
 
   const handleCreatePartnership = async () => {
-    if (!influencer.email) {
+    if (!influencer?.email) {
       addToast('Influencer has no email', 'error');
       return;
     }
@@ -107,8 +118,7 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
       addToast('Partnership created!', 'success');
       setShowCreateForm(false);
       setAgreedPrice('');
-      // Invalidate cache to trigger re-fetch
-      invalidateInfluencerCache(influencerId);
+      await fetchData();
       onUpdate?.();
     } catch (error) {
       addToast('Error creating partnership', 'error');
@@ -129,8 +139,7 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
       if (!res.ok) throw new Error();
       
       addToast('Step advanced!', 'success');
-      // Invalidate cache to trigger re-fetch
-      invalidateInfluencerCache(influencerId);
+      await fetchData();
       onUpdate?.();
     } catch (error) {
       addToast('Error advancing step', 'error');
@@ -154,6 +163,9 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
       </div>
     );
   }
+
+  const currentStep = workflow?.currentStep || 0;
+  const progress = workflow ? Math.min(((currentStep + 1) / 7) * 100, 100) : 0;
 
   return (
     <div className="h-full flex flex-col bg-white">
@@ -221,16 +233,12 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
           <h4 className="text-xs font-semibold text-gray-700 uppercase">Partnership Workflow</h4>
           {workflow && (
             <span className="text-xs font-medium text-[#0E1E37]">
-              Step {workflow.currentStep + 1}/7
+              Step {currentStep + 1}/7
             </span>
           )}
         </div>
         
-        {loading ? (
-          <div className="flex items-center justify-center py-4">
-            <Loader2 className="h-5 w-5 animate-spin text-gray-300" />
-          </div>
-        ) : !workflow ? (
+        {!workflow ? (
           !showCreateForm ? (
             <button
               onClick={() => setShowCreateForm(true)}
@@ -288,8 +296,8 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
           <div className="space-y-2">
             {/* Current Step */}
             {workflowSteps.map((step) => {
-              const isCompleted = workflow.currentStep > step.id;
-              const isCurrent = workflow.currentStep === step.id;
+              const isCompleted = currentStep > step.id;
+              const isCurrent = currentStep === step.id;
               const Icon = step.icon;
               
               if (!isCompleted && !isCurrent) return null;
@@ -331,12 +339,12 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
                           A processar...
                         </>
-                      ) : workflow.currentStep === 6 ? (
+                      ) : currentStep === 6 ? (
                         <>
                           <CheckCircle2 className="h-3.5 w-3.5" />
                           Completar Parceria
                         </>
-                      ) : workflow.currentStep === 5 && !workflow?.trackingUrl ? (
+                      ) : currentStep === 5 && !workflow?.trackingUrl ? (
                         <>
                           <CheckCircle2 className="h-3.5 w-3.5" />
                           Adicionar Tracking
@@ -358,11 +366,11 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
               <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-[#0E1E37] rounded-full transition-all"
-                  style={{ width: `${Math.min(((workflow.currentStep + 1) / 7) * 100, 100)}%` }}
+                  style={{ width: `${progress}%` }}
                 />
               </div>
               <span className="text-[10px] text-gray-500 font-medium">
-                {Math.round(((workflow.currentStep + 1) / 7) * 100)}%
+                {Math.round(progress)}%
               </span>
             </div>
           </div>
