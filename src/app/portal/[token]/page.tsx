@@ -743,6 +743,8 @@ function Step1({ data, token, onUpdate, onNext, isReviewMode }: StepProps) {
                 onClick={handleCounterproposal}
                 disabled={loading || !priceChanged}
                 className="w-full py-4 bg-white text-[#0E1E37] text-[15px] font-medium rounded-full border border-gray-200 hover:bg-gray-50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'A processar...' : 'Enviar Contraproposta'}
               </button>
             </>
           ) : (
@@ -750,34 +752,34 @@ function Step1({ data, token, onUpdate, onNext, isReviewMode }: StepProps) {
             <button
               onClick={handleSaveAndContinue}
               disabled={loading}
-              className="w-full py-3 bg-[#0E1E37] text-white font-semibold rounded-lg hover:bg-[#1a2f4f] transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-4 bg-[#0E1E37] text-white text-[15px] font-medium rounded-full hover:bg-[#1a2f4f] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {loading ? 'Processing...' : 'Save and continue'}
+              {loading ? 'A processar...' : 'Continuar'} <ArrowRight className="h-4 w-4" strokeWidth={2} />
             </button>
           )}
         </div>
       )}
       
-      {/* Confirmation Modal */}
+      {/* ✅ Modal de Confirmação - Minimalista */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 max-w-sm w-full">
-            <h3 className="text-lg font-bold text-[#0E1E37] mb-3">Accept proposal?</h3>
-            <p className="text-sm text-gray-600 mb-6">
-              By accepting, you agree to the partnership terms.
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-6">
+          <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2 text-center">Aceitar Proposta?</h3>
+            <p className="text-sm text-gray-500 mb-8 text-center leading-relaxed">
+              Ao aceitar, concordas com os termos da parceria.
             </p>
             <div className="flex gap-3">
               <button
                 onClick={() => setShowModal(false)}
-                className="flex-1 py-2 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition"
+                className="flex-1 py-3.5 bg-gray-100 text-gray-700 text-[15px] font-medium rounded-full hover:bg-gray-200 transition-all duration-200"
               >
-                No
+                Cancelar
               </button>
               <button
                 onClick={confirmAccept}
-                className="flex-1 py-2 bg-[#27ae60] text-white font-semibold rounded-lg hover:bg-[#229954] transition"
+                className="flex-1 py-3.5 bg-[#0E1E37] text-white text-[15px] font-medium rounded-full hover:bg-[#1a2f4f] transition-all duration-200"
               >
-                Yes
+                Aceitar
               </button>
             </div>
           </div>
