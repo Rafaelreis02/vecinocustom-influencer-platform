@@ -497,7 +497,7 @@ function InfluencersContent() {
                           ) : (
                             <Send className="h-3 w-3" />
                           )}
-                          <span className="hidden sm:inline">Contactar</span>
+                          <span className="hidden sm:inline">Contactar (enviar email)</span>
                         </button>
                       )}
                     </div>

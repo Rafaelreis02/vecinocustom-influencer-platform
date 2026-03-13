@@ -1050,7 +1050,7 @@ export default function MessagesPage() {
                             className="flex-1 py-2 rounded-lg font-bold text-sm text-white hover:opacity-90 transition disabled:bg-slate-300 flex items-center justify-center gap-2"
                             style={{ backgroundColor: 'rgb(18,24,39)' }}
                           >
-                            <Send className="h-4 w-4" /> {sendingReply ? 'A enviar...' : 'Enviar'}
+                            <Send className="h-4 w-4" /> {sendingReply ? 'A enviar...' : 'Enviar (enviar email)'}
                           </button>
                         </div>
                       </div>
@@ -1379,7 +1379,7 @@ export default function MessagesPage() {
                   style={{ backgroundColor: 'rgb(18,24,39)' }}
                 >
                   <Send className="h-4 w-4" />
-                  {sendingNewEmail ? 'A enviar...' : 'Enviar'}
+                  {sendingNewEmail ? 'A enviar...' : 'Enviar (enviar email)'}
                 </button>
 
                 <button

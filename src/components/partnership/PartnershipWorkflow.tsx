@@ -433,7 +433,7 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
             ) : (
               <CheckCircle2 className="h-4 w-4" />
             )}
-            Iniciar Parceria
+            Iniciar Parceria (enviar email)
           </button>
         </div>
       );
@@ -482,7 +482,7 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
           ) : (
             <CheckCircle2 className="h-4 w-4" />
           )}
-          Iniciar Parceria
+          Iniciar Parceria (enviar email)
         </button>
       </div>
     );
@@ -955,16 +955,16 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
                   ) : currentStep === 7 ? (
                     <>
                       <CheckCircle2 className="h-4 w-4" />
-                      Completar Parceria
+                      Completar Parceria (enviar email)
                     </>
                   ) : currentStep === 6 ? (
                     <>
                       <CheckCircle2 className="h-4 w-4" />
-                      {workflow.trackingUrl ? 'Marcar como Enviado' : 'Adicionar Tracking Primeiro'}
+                      {workflow.trackingUrl ? 'Marcar como Enviado (enviar email)' : 'Adicionar Tracking Primeiro'}
                     </>
                   ) : (
                     <>
-                      Avançar para {STEPS[currentStep]?.name}
+                      Avançar para {STEPS[currentStep]?.name} (enviar email)
                       <ChevronRight className="h-4 w-4" />
                     </>
                   )}
@@ -1066,7 +1066,7 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
                       A enviar...
                     </>
                   ) : (
-                    'Enviar Email e Avançar'
+                    'Confirmar e Enviar Email'
                   )}
                 </button>
               ) : (

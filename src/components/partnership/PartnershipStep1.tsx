@@ -108,7 +108,7 @@ export function PartnershipStep1({ workflow, onUpdate, isLocked, influencerStatu
                   ) : (
                     <CheckCircle className="h-4 w-4" />
                   )}
-                  Aceitar Contraproposta
+                  Aceitar Contraproposta (enviar email)
                 </button>
               )}
               {onSendCounter && (
