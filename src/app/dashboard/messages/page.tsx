@@ -240,8 +240,8 @@ export default function MessagesPage() {
 
   return (
     <div className="h-[calc(100vh-8rem)] bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden flex">
-      {/* Lista de Emails */}
-      <div className={`${selectedEmail ? 'hidden md:flex' : 'flex'} w-full md:w-[45%] lg:w-[40%] flex-col border-r border-gray-100`}>
+      {/* Lista de Emails - Ocupa largura total quando nenhum email selecionado */}
+      <div className={`${selectedEmail ? 'hidden md:flex md:w-[45%] lg:w-[40%]' : 'flex w-full'} flex-col border-r border-gray-100 transition-all duration-300`}>
         {/* Header */}
         <div className="p-4 border-b border-gray-100 space-y-3">
           <div className="flex items-center justify-between">
@@ -547,16 +547,6 @@ export default function MessagesPage() {
             </div>
           </div>
         </>
-      )}
-
-      {/* Empty state */}
-      {!selectedEmail && (
-        <div className="hidden md:flex flex-1 flex-col items-center justify-center text-gray-400">
-          <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mb-4">
-            <Mail className="h-10 w-10 text-gray-300" strokeWidth={1.5} />
-          </div>
-          <p className="text-gray-400 text-sm">Seleciona um email para ler</p>
-        </div>
       )}
       
       {/* Modal para associar influencer */}
