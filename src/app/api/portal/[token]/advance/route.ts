@@ -65,6 +65,33 @@ export async function POST(
       );
     }
 
+    // === FIX: Guardar dados recebidos no workflow PRIMEIRO ===
+    const body = await req.json().catch(() => ({}));
+    
+    // Atualizar workflow com dados do body (se existirem)
+    if (body && Object.keys(body).length > 0) {
+      await prisma.partnershipWorkflow.update({
+        where: { id: workflow.id },
+        data: body,
+      });
+      
+      logger.info('[PORTAL ADVANCE] Updated workflow with data', {
+        workflowId: workflow.id,
+        step: currentStep,
+        fields: Object.keys(body),
+      });
+      
+      // Recarregar workflow para validar com dados atualizados
+      const updatedWorkflow = await prisma.partnershipWorkflow.findUnique({
+        where: { id: workflow.id },
+      });
+      
+      if (updatedWorkflow) {
+        Object.assign(workflow, updatedWorkflow);
+      }
+    }
+    // ========================================================
+
     // Validar campos obrigatórios
     const missing: string[] = [];
     for (const field of STEP_REQUIREMENTS[currentStep] || []) {
