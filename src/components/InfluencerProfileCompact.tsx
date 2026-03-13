@@ -15,18 +15,13 @@ import {
   Loader2,
   MapPin,
   Hash,
+  Plus,
   CheckCircle2,
-  ChevronRight,
-  Send,
-  FileText,
-  Package,
-  Palette,
-  Truck,
-  Star,
-  Plus
+  ChevronRight
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { InfluencerStatusBadge } from '@/components/InfluencerStatusBadge';
+import { STEPS } from '@/lib/workflow-steps';
 
 interface InfluencerProfileCompactProps {
   influencerId: string;
@@ -47,17 +42,8 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
   const [agreedPrice, setAgreedPrice] = useState('');
   const [activeTab, setActiveTab] = useState<'overview' | 'stats' | 'content'>('overview');
 
-  // Workflow steps definition (8 steps total: 0-7)
-  const workflowSteps = [
-    { id: 0, name: 'Proposta', icon: Send, description: 'Envio de proposta' },
-    { id: 1, name: 'Dados', icon: FileText, description: 'Dados de envio' },
-    { id: 2, name: 'Produto', icon: Package, description: 'Confirmação produto' },
-    { id: 3, name: 'Design', icon: Palette, description: 'Revisão design' },
-    { id: 4, name: 'Contrato', icon: FileText, description: 'Assinatura' },
-    { id: 5, name: 'Envio', icon: Truck, description: 'Tracking' },
-    { id: 6, name: 'Completo', icon: Star, description: 'Concluído' },
-    { id: 7, name: 'Entregue', icon: CheckCircle2, description: 'Entregue' },
-  ];
+  // Use same STEPS as PartnershipWorkflow
+  const totalSteps = STEPS.length;
 
   // Fetch data on mount and when influencerId changes
   useEffect(() => {
@@ -164,9 +150,9 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
   }
 
   const currentStep = workflow?.currentStep ?? 0;
-  // currentStep is 0-indexed (0-7), so we display currentStep + 1 to user (1-8)
+  // currentStep is 0-indexed, so we display currentStep + 1 to user
   const displayStep = currentStep + 1;
-  const progress = workflow ? Math.min((displayStep / 8) * 100, 100) : 0;
+  const progress = workflow ? Math.min((displayStep / totalSteps) * 100, 100) : 0;
 
   return (
     <div className="h-full flex flex-col bg-white">
@@ -234,7 +220,7 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
           <h4 className="text-xs font-semibold text-gray-700 uppercase">Partnership Workflow</h4>
           {workflow && (
             <span className="text-xs font-medium text-[#0E1E37]">
-              Step {displayStep}/8
+              Step {displayStep}/{totalSteps}
             </span>
           )}
         </div>
@@ -296,7 +282,7 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
         ) : (
           <div className="space-y-2">
             {/* Current Step */}
-            {workflowSteps.map((step) => {
+            {STEPS.map((step) => {
               const isCompleted = currentStep > step.id;
               const isCurrent = currentStep === step.id;
               const Icon = step.icon;
@@ -340,7 +326,7 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
                           A processar...
                         </>
-                      ) : currentStep === 7 ? (
+                      ) : currentStep === totalSteps - 1 ? (
                         <>
                           <CheckCircle2 className="h-3.5 w-3.5" />
                           Completar Parceria
