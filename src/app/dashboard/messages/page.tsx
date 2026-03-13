@@ -291,6 +291,23 @@ export default function MessagesPage() {
     }
   }
 
+  async function autoDetectInfluencers() {
+    try {
+      addToast('A detetar influencers...', 'info');
+      const res = await fetch('/api/emails/auto-detect-all', { method: 'POST' });
+      const data = await res.json();
+      
+      if (data.linked > 0) {
+        addToast(`${data.linked} email(s) associados automaticamente!`, 'success');
+        fetchEmails();
+      } else {
+        addToast('Nenhum novo email para associar', 'info');
+      }
+    } catch (error) {
+      addToast('Erro na deteção automática', 'error');
+    }
+  }
+
   const filteredList = emails.filter(e => {
     if (filter === 'unread' && e.isRead) return false;
     if (filter === 'flagged' && !e.isFlagged) return false;
@@ -335,13 +352,21 @@ export default function MessagesPage() {
         <div className="p-4 border-b border-gray-100 space-y-3 bg-white">
           <div className="flex items-center justify-between">
             <h1 className="text-lg font-semibold text-gray-900">Mensagens</h1>
-            <button 
-              onClick={handleSync}
-              disabled={syncing}
-              className="w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-500 transition-colors"
-            >
-              <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} strokeWidth={1.5} />
-            </button>
+            <div className="flex items-center gap-1">
+              <button 
+                onClick={autoDetectInfluencers}
+                className="px-3 py-2 text-xs font-medium text-violet-600 hover:bg-violet-50 rounded-full transition-colors border border-violet-200 hover:border-violet-300"
+              >
+                Detetar Influencers
+              </button>
+              <button 
+                onClick={handleSync}
+                disabled={syncing}
+                className="w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-500 transition-colors"
+              >
+                <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} strokeWidth={1.5} />
+              </button>
+            </div>
           </div>
           
           <div className="relative">

@@ -94,7 +94,19 @@ export async function POST(request: Request) {
           }
         }
 
-        // Create email in database
+        // Try to auto-link influencer based on email
+        const senderEmail = from.match(/<([^>]+)>/) ? from.match(/<([^>]+)>/)![1] : from;
+        
+        const matchingInfluencer = await prisma.influencer.findFirst({
+          where: {
+            email: {
+              equals: senderEmail,
+              mode: 'insensitive',
+            },
+          },
+        });
+
+        // Create email in database (with influencer if matched)
         await prisma.email.create({
           data: {
             gmailId: message.id,
@@ -106,6 +118,7 @@ export async function POST(request: Request) {
             receivedAt: date ? new Date(date) : new Date(),
             isRead: !fullMessage.data.labelIds?.includes('UNREAD'),
             isFlagged: fullMessage.data.labelIds?.includes('STARRED') || false,
+            influencerId: matchingInfluencer?.id || null,
           },
         });
 
