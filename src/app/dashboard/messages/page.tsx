@@ -360,47 +360,59 @@ export default function MessagesPage() {
             currentEmails.map(email => (
               <div
                 key={email.id}
-                className={`group relative p-3 cursor-pointer border-b border-gray-50 hover:bg-gray-50 transition-colors ${
-                  selectedEmail?.id === email.id ? 'bg-blue-50/50' : ''
-                } ${!email.isRead ? 'bg-blue-50/20' : ''}`}
+                className={`group relative px-4 py-2.5 cursor-pointer border-b border-gray-50 hover:bg-gray-50 transition-all ${
+                  selectedEmail?.id === email.id ? 'bg-blue-50/60 border-l-4 border-l-[#0E1E37]' : 'border-l-4 border-l-transparent'
+                } ${!email.isRead ? 'bg-blue-50/10' : ''}`}
               >
                 <div className="flex items-center gap-3" onClick={() => handleEmailClick(email)}>
                   {/* Avatar */}
-                  <div className="w-9 h-9 rounded-xl bg-[#0E1E37] text-white flex items-center justify-center font-semibold text-xs shrink-0">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0E1E37] to-[#1a2f4f] text-white flex items-center justify-center font-semibold text-sm shrink-0 shadow-sm">
                     {email.from.charAt(0).toUpperCase()}
                   </div>
                   
                   <div className="flex-1 min-w-0">
                     {/* Linha 1: Remetente + Badge + Data */}
-                    <div className="flex items-center gap-2">
-                      <span className={`text-sm truncate ${!email.isRead ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className={`text-[15px] truncate ${!email.isRead ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>
                         {email.from.split('@')[0]}
                       </span>
                       {email.influencer && (
-                        <span className="shrink-0 px-1.5 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-medium rounded">
+                        <span className="shrink-0 px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-semibold rounded-full">
                           {email.influencer.name}
                         </span>
                       )}
-                      <span className="shrink-0 text-[10px] text-gray-400 ml-auto">
+                      <span className="shrink-0 text-[11px] text-gray-400 ml-auto tabular-nums">
                         {new Date(email.receivedAt).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}
                       </span>
                     </div>
                     
-                    {/* Linha 2: Assunto */}
-                    <p className={`text-sm truncate ${!email.isRead ? 'font-medium text-gray-800' : 'text-gray-500'}`}>
-                      {email.subject}
-                    </p>
+                    {/* Linha 2: Assunto + Indicadores */}
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <p className={`flex-1 text-sm truncate ${!email.isRead ? 'font-medium text-gray-800' : 'text-gray-500'}`}>
+                        {email.subject}
+                      </p>
+                      
+                      {/* Indicadores (quando não há hover) */}
+                      <div className="flex items-center gap-1.5 shrink-0 group-hover:hidden">
+                        {!email.isRead && (
+                          <div className="w-2 h-2 rounded-full bg-blue-500" />
+                        )}
+                        {email.isFlagged && (
+                          <Flag className="h-3 w-3 text-amber-500 fill-amber-500" />
+                        )}
+                      </div>
+                    </div>
                   </div>
                   
                   {/* Ações - aparecem no hover */}
-                  <div className="hidden group-hover:flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
+                  <div className="hidden group-hover:flex items-center gap-0.5 shrink-0" onClick={e => e.stopPropagation()}>
                     {/* Flag */}
                     <button
                       onClick={(e) => { e.stopPropagation(); toggleFlag(email.id); }}
                       className="w-8 h-8 rounded-full hover:bg-gray-200 flex items-center justify-center transition-colors"
                       title={email.isFlagged ? 'Remover flag' : 'Marcar'}
                     >
-                      <Flag className={`h-3.5 w-3.5 ${email.isFlagged ? 'fill-amber-500 text-amber-500' : 'text-gray-400'}`} strokeWidth={1.5} />
+                      <Flag className={`h-4 w-4 ${email.isFlagged ? 'fill-amber-500 text-amber-500' : 'text-gray-400'}`} strokeWidth={1.5} />
                     </button>
                     {/* Read/Unread */}
                     <button
@@ -409,22 +421,12 @@ export default function MessagesPage() {
                       title={email.isRead ? 'Marcar como não lido' : 'Marcar como lido'}
                     >
                       {email.isRead ? (
-                        <EyeOff className="h-3.5 w-3.5 text-gray-400" strokeWidth={1.5} />
+                        <EyeOff className="h-4 w-4 text-gray-400" strokeWidth={1.5} />
                       ) : (
-                        <Eye className="h-3.5 w-3.5 text-blue-500" strokeWidth={1.5} />
+                        <Eye className="h-4 w-4 text-blue-500" strokeWidth={1.5} />
                       )}
                     </button>
                   </div>
-                  
-                  {/* Flag indicator (quando não há hover) */}
-                  {!email.isRead && (
-                    <div className="group-hover:hidden w-2 h-2 rounded-full bg-blue-500 shrink-0" />
-                  )}
-                  {email.isFlagged && email.isRead && (
-                    <div className="group-hover:hidden">
-                      <Flag className="h-3 w-3 text-amber-500 fill-amber-500" />
-                    </div>
-                  )}
                 </div>
               </div>
             ))
@@ -512,17 +514,36 @@ export default function MessagesPage() {
               </div>
 
               {/* Conteúdo */}
-              <div className="flex-1 overflow-y-auto p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-6">{selectedEmail.subject}</h2>
+              <div className="flex-1 overflow-y-auto">
+                {/* Subject Header */}
+                <div className="px-6 pt-6 pb-4 border-b border-gray-100">
+                  <h2 className="text-lg font-semibold text-gray-900 leading-snug">{selectedEmail.subject}</h2>
+                  <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
+                    <span>De: {selectedEmail.from}</span>
+                    <span>•</span>
+                    <span>{new Date(selectedEmail.receivedAt).toLocaleString('pt-PT', { 
+                      day: '2-digit', 
+                      month: 'long', 
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}</span>
+                  </div>
+                </div>
                 
-                {selectedEmail.htmlBody ? (
-                  <div 
-                    className="prose prose-sm max-w-none text-gray-600"
-                    dangerouslySetInnerHTML={{ __html: selectedEmail.htmlBody }}
-                  />
-                ) : (
-                  <p className="text-gray-600 whitespace-pre-wrap leading-relaxed">{selectedEmail.body}</p>
-                )}
+                {/* Email Body */}
+                <div className="p-6">
+                  {selectedEmail.htmlBody ? (
+                    <div 
+                      className="prose prose-sm max-w-none text-gray-700 leading-relaxed email-content"
+                      dangerouslySetInnerHTML={{ __html: selectedEmail.htmlBody }}
+                    />
+                  ) : (
+                    <div className="text-gray-700 leading-relaxed whitespace-pre-wrap font-[15px] email-text">
+                      {selectedEmail.body}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Footer com Responder */}
@@ -590,6 +611,28 @@ export default function MessagesPage() {
           </div>
         </>
       )}
+      
+      {/* Estilos para conteúdo de email */}
+      <style jsx global>{`
+        .email-content p {
+          margin-bottom: 1em;
+          line-height: 1.7;
+        }
+        .email-content a {
+          color: #0E1E37;
+          text-decoration: underline;
+          word-break: break-all;
+        }
+        .email-content blockquote {
+          border-left: 3px solid #e5e7eb;
+          padding-left: 1rem;
+          margin-left: 0;
+          color: #6b7280;
+        }
+        .email-text {
+          font-size: 15px;
+        }
+      `}</style>
       
       {/* Modal para associar influencer */}
       {showInfluencerModal && (
