@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { useGlobalToast } from '@/contexts/ToastContext';
 import { getStatusConfig } from '@/lib/influencer-status';
-import { PartnershipWorkflowCompact } from '@/components/partnership/PartnershipWorkflowCompact';
+import { InfluencerProfileCompact } from '@/components/InfluencerProfileCompact';
 
 interface Email {
   id: string;
@@ -710,13 +710,11 @@ export default function MessagesPage() {
               </div>
             </div>
             
-            {/* Workflow Panel */}
+            {/* Influencer Profile Panel */}
             <div className="hidden lg:flex w-[320px] xl:w-[380px] border-l border-gray-200 flex-col shrink-0">
               {selectedEmail.influencer ? (
-                <PartnershipWorkflowCompact
+                <InfluencerProfileCompact
                   influencerId={selectedEmail.influencer.id}
-                  influencerEmail={selectedEmail.influencer.email}
-                  influencerName={selectedEmail.influencer.name}
                   onUpdate={() => {
                     fetchEmails();
                   }}
@@ -727,7 +725,7 @@ export default function MessagesPage() {
                     <UserPlus className="h-8 w-8 text-gray-400" strokeWidth={1.5} />
                   </div>
                   <p className="text-sm font-medium text-gray-600 mb-1">No influencer linked</p>
-                  <p className="text-xs text-gray-400 mb-4">Associate an influencer to manage workflow</p>
+                  <p className="text-xs text-gray-400 mb-4">Associate an influencer to view profile</p>
                   <button
                     onClick={openInfluencerModal}
                     className="px-6 py-2.5 bg-[#0E1E37] text-white text-sm font-medium rounded-full hover:bg-[#1a2f4f] transition-all flex items-center gap-2"

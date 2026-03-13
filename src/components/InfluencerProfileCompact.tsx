@@ -1,0 +1,324 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import {
+  User,
+  Mail,
+  Instagram,
+  TrendingUp,
+  BarChart3,
+  Video,
+  Award,
+  Calendar,
+  ExternalLink,
+  Loader2,
+  MapPin,
+  Hash
+} from 'lucide-react';
+import { useToast } from '@/components/ui/Toast';
+import { InfluencerStatusBadge } from '@/components/InfluencerStatusBadge';
+
+interface InfluencerProfileCompactProps {
+  influencerId: string;
+  onUpdate?: () => void;
+}
+
+export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerProfileCompactProps) {
+  const { addToast } = useToast();
+  const [influencer, setInfluencer] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'overview' | 'stats' | 'content'>('overview');
+
+  useEffect(() => {
+    fetchInfluencer();
+  }, [influencerId]);
+
+  const fetchInfluencer = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/influencers/${influencerId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setInfluencer(data);
+      }
+    } catch (error) {
+      console.error('Error fetching influencer:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-gray-300" />
+      </div>
+    );
+  }
+
+  if (!influencer) {
+    return (
+      <div className="h-full flex items-center justify-center p-6 text-center">
+        <p className="text-sm text-gray-400">Influencer not found</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full flex flex-col bg-white">
+      {/* Header */}
+      <div className="p-4 border-b border-gray-100">
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-center gap-3">
+            {/* Avatar */}
+            <div className="w-14 h-14 rounded-2xl overflow-hidden bg-gradient-to-br from-[#0E1E37] to-[#1a2f4f] flex items-center justify-center shrink-0">
+              {influencer.avatarUrl ? (
+                <img 
+                  src={influencer.avatarUrl} 
+                  alt={influencer.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="text-white text-xl font-semibold">
+                  {influencer.name?.charAt(0).toUpperCase()}
+                </span>
+              )}
+            </div>
+            
+            {/* Name & Status */}
+            <div className="min-w-0">
+              <h3 className="font-semibold text-gray-900 truncate">{influencer.name}</h3>
+              <InfluencerStatusBadge status={influencer.status} />
+            </div>
+          </div>
+          
+          <Link 
+            href={`/dashboard/influencers/${influencerId}`}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Open full profile"
+          >
+            <ExternalLink className="h-4 w-4 text-gray-400" />
+          </Link>
+        </div>
+
+        {/* Quick Stats */}
+        <div className="grid grid-cols-3 gap-2">
+          <div className="bg-gray-50 rounded-xl p-2 text-center">
+            <p className="text-lg font-semibold text-gray-900">
+              {influencer.engagementRate?.toFixed(1) || '-'}
+            </p>
+            <p className="text-[10px] text-gray-400 uppercase">Eng. Rate</p>
+          </div>
+          <div className="bg-gray-50 rounded-xl p-2 text-center">
+            <p className="text-lg font-semibold text-gray-900">
+              {influencer.followerCount ? (influencer.followerCount / 1000).toFixed(1) + 'K' : '-'}
+            </p>
+            <p className="text-[10px] text-gray-400 uppercase">Followers</p>
+          </div>
+          <div className="bg-gray-50 rounded-xl p-2 text-center">
+            <p className="text-lg font-semibold text-gray-900">
+              {influencer.matchScore || '-'}
+            </p>
+            <p className="text-[10px] text-gray-400 uppercase">Match</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex border-b border-gray-100">
+        {[
+          { id: 'overview', label: 'Overview', icon: User },
+          { id: 'stats', label: 'Stats', icon: BarChart3 },
+          { id: 'content', label: 'Content', icon: Video },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-medium transition-colors ${
+              activeTab === tab.id 
+                ? 'text-[#0E1E37] border-b-2 border-[#0E1E37]' 
+                : 'text-gray-400 hover:text-gray-600'
+            }`}
+          >
+            <tab.icon className="h-3.5 w-3.5" />
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto p-4">
+        {activeTab === 'overview' && (
+          <div className="space-y-4">
+            {/* Contact Info */}
+            <div className="space-y-2">
+              <h4 className="text-xs font-semibold text-gray-400 uppercase">Contact</h4>
+              
+              {influencer.email && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Mail className="h-4 w-4 text-gray-400" />
+                  <span className="text-gray-600 truncate">{influencer.email}</span>
+                </div>
+              )}
+              
+              {influencer.instagramHandle && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Instagram className="h-4 w-4 text-gray-400" />
+                  <span className="text-gray-600">@{influencer.instagramHandle}</span>
+                </div>
+              )}
+              
+              {influencer.tiktokHandle && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Hash className="h-4 w-4 text-gray-400" />
+                  <span className="text-gray-600">@{influencer.tiktokHandle}</span>
+                </div>
+              )}
+              
+              {influencer.location && (
+                <div className="flex items-center gap-2 text-sm">
+                  <MapPin className="h-4 w-4 text-gray-400" />
+                  <span className="text-gray-600">{influencer.location}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Partnership Info */}
+            {influencer.partnerships?.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-xs font-semibold text-gray-400 uppercase">Partnership</h4>
+                <div className="bg-gray-50 rounded-xl p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-gray-600">Current Step</span>
+                    <span className="text-sm font-medium text-[#0E1E37]">
+                      {influencer.partnerships[0].currentStep}/7
+                    </span>
+                  </div>
+                  <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-[#0E1E37] rounded-full"
+                      style={{ width: `${(influencer.partnerships[0].currentStep / 7) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Notes */}
+            {influencer.notes && (
+              <div className="space-y-2">
+                <h4 className="text-xs font-semibold text-gray-400 uppercase">Notes</h4>
+                <p className="text-sm text-gray-600 bg-gray-50 rounded-xl p-3">
+                  {influencer.notes}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'stats' && (
+          <div className="space-y-4">
+            {/* Performance Metrics */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-gray-50 rounded-xl p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <TrendingUp className="h-4 w-4 text-green-500" />
+                  <span className="text-xs text-gray-400">Avg Views</span>
+                </div>
+                <p className="text-lg font-semibold text-gray-900">
+                  {influencer.avgVideoViews ? (influencer.avgVideoViews / 1000).toFixed(1) + 'K' : '-'}
+                </p>
+              </div>
+              
+              <div className="bg-gray-50 rounded-xl p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Award className="h-4 w-4 text-amber-500" />
+                  <span className="text-xs text-gray-400">Fit Score</span>
+                </div>
+                <p className="text-lg font-semibold text-gray-900">
+                  {influencer.fitScore?.toFixed(1) || '-'}
+                </p>
+              </div>
+              
+              <div className="bg-gray-50 rounded-xl p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Calendar className="h-4 w-4 text-blue-500" />
+                  <span className="text-xs text-gray-400">Added</span>
+                </div>
+                <p className="text-sm font-semibold text-gray-900">
+                  {influencer.createdAt 
+                    ? new Date(influencer.createdAt).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })
+                    : '-'
+                  }
+                </p>
+              </div>
+              
+              <div className="bg-gray-50 rounded-xl p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Video className="h-4 w-4 text-purple-500" />
+                  <span className="text-xs text-gray-400">Videos</span>
+                </div>
+                <p className="text-lg font-semibold text-gray-900">
+                  {influencer.videos?.length || 0}
+                </p>
+              </div>
+            </div>
+
+            {/* Categories */}
+            {influencer.categories && influencer.categories.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-xs font-semibold text-gray-400 uppercase">Categories</h4>
+                <div className="flex flex-wrap gap-1">
+                  {influencer.categories.map((cat: string) => (
+                    <span 
+                      key={cat}
+                      className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full"
+                    >
+                      {cat}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'content' && (
+          <div className="space-y-3">
+            {influencer.videos && influencer.videos.length > 0 ? (
+              influencer.videos.slice(0, 5).map((video: any) => (
+                <div key={video.id} className="bg-gray-50 rounded-xl p-3">
+                  <p className="text-sm text-gray-800 line-clamp-2 mb-2">
+                    {video.description || 'No description'}
+                  </p>
+                  <div className="flex items-center gap-3 text-xs text-gray-400">
+                    <span>{(video.views / 1000).toFixed(1)}K views</span>
+                    <span>•</span>
+                    <span>{video.engagementRate?.toFixed(1)}% eng</span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-8">
+                <Video className="h-12 w-12 mx-auto text-gray-200 mb-2" />
+                <p className="text-sm text-gray-400">No videos yet</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="p-4 border-t border-gray-100 bg-gray-50">
+        <Link 
+          href={`/dashboard/influencers/${influencerId}`}
+          className="flex items-center justify-center gap-2 w-full py-2.5 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-50 transition-colors"
+        >
+          View Full Profile
+          <ExternalLink className="h-4 w-4" />
+        </Link>
+      </div>
+    </div>
+  );
+}
