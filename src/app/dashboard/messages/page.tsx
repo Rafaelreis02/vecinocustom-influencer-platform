@@ -614,9 +614,24 @@ export default function MessagesPage() {
       
       {/* Estilos para conteúdo de email */}
       <style jsx global>{`
-        .email-content p {
+        .email-content {
+          font-size: 15px;
+          line-height: 1.7;
+          color: #374151;
+        }
+        .email-content p,
+        .email-content div {
           margin-bottom: 1em;
           line-height: 1.7;
+        }
+        .email-content div:empty,
+        .email-content p:empty {
+          margin-bottom: 0.5em;
+        }
+        .email-content br {
+          display: block;
+          margin-bottom: 0.5em;
+          content: "";
         }
         .email-content a {
           color: #0E1E37;
@@ -629,8 +644,17 @@ export default function MessagesPage() {
           margin-left: 0;
           color: #6b7280;
         }
+        .email-content .hmail-signature,
+        .email-content .gmail_signature {
+          margin-top: 2em;
+          padding-top: 1em;
+          border-top: 1px solid #e5e7eb;
+          color: #9ca3af;
+          font-size: 14px;
+        }
         .email-text {
           font-size: 15px;
+          line-height: 1.7;
         }
       `}</style>
       
