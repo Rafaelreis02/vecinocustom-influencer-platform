@@ -48,7 +48,7 @@ const STEP_CONFIG: Record<number, {
     name: 'Preparing (Produto confirmado)',
     adminRequiredFields: ['selectedProductUrl'],
     nextStep: 4,
-    nextStatus: 'CONTRACT_PENDING',
+    nextStatus: 'DESIGN_REFERENCE_SUBMITTED', // ✅ Vai para Step 4 (influencer envia referência de design)
     emailStep: 3, // envia STEP_3_PREPARING
     canAdminAdvance: true,
   },
