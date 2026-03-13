@@ -6,6 +6,7 @@ import {
   ChevronLeft, ChevronRight, Loader2, X, Plus
 } from 'lucide-react';
 import { useGlobalToast } from '@/contexts/ToastContext';
+import { getWorkflowStatuses, getStatusConfig } from '@/lib/influencer-status';
 
 interface Email {
   id: string;
@@ -32,8 +33,23 @@ export default function MessagesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [syncing, setSyncing] = useState(false);
   const [filter, setFilter] = useState<'all' | 'unread' | 'flagged'>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const emailsPerPage = 20;
+  
+  // Status options for filter
+  const statusOptions = [
+    { value: 'SUGGESTION', label: 'Sugestão' },
+    { value: 'ANALYZING', label: 'Em Análise' },
+    { value: 'COUNTER_PROPOSAL', label: 'Contra-proposta' },
+    { value: 'AGREED', label: 'Aceite' },
+    { value: 'PRODUCT_SELECTION', label: 'Seleção Produto' },
+    { value: 'DESIGN_REFERENCE_SUBMITTED', label: 'Ref. Design' },
+    { value: 'CONTRACT_PENDING', label: 'Pendente Contrato' },
+    { value: 'SHIPPED', label: 'Enviado' },
+    { value: 'COMPLETED', label: 'Concluído' },
+  ];
 
   // Reply
   const [showReply, setShowReply] = useState(false);
@@ -45,6 +61,20 @@ export default function MessagesPage() {
     const interval = setInterval(fetchEmails, 60000);
     return () => clearInterval(interval);
   }, []);
+  
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.status-dropdown-container')) {
+        setShowStatusDropdown(false);
+      }
+    }
+    if (showStatusDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showStatusDropdown]);
 
   async function fetchEmails() {
     try {
@@ -141,6 +171,7 @@ export default function MessagesPage() {
   const filteredList = emails.filter(e => {
     if (filter === 'unread' && e.isRead) return false;
     if (filter === 'flagged' && !e.isFlagged) return false;
+    if (statusFilter !== 'all' && e.influencer?.status !== statusFilter) return false;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       return e.subject.toLowerCase().includes(q) || e.from.toLowerCase().includes(q);
@@ -180,7 +211,7 @@ export default function MessagesPage() {
           </div>
           
           {/* Filtros */}
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {[
               { key: 'all', label: 'Todos' },
               { key: 'unread', label: 'Não lidos' },
@@ -198,6 +229,50 @@ export default function MessagesPage() {
                 {label}
               </button>
             ))}
+            
+            {/* Status Filter Dropdown */}
+            <div className="relative status-dropdown-container">
+              <button
+                onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+                className={`px-4 py-2 rounded-full text-xs font-medium transition-all flex items-center gap-2 ${
+                  statusFilter !== 'all'
+                    ? 'bg-[#0E1E37] text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {statusFilter === 'all' ? 'Status' : statusOptions.find(s => s.value === statusFilter)?.label}
+                <ChevronRight className={`h-3 w-3 transition-transform ${showStatusDropdown ? 'rotate-90' : ''}`} />
+              </button>
+              
+              {showStatusDropdown && (
+                <div className="absolute top-full left-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 py-2 max-h-64 overflow-y-auto">
+                  <button
+                    onClick={() => { setStatusFilter('all'); setShowStatusDropdown(false); }}
+                    className={`w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors ${
+                      statusFilter === 'all' ? 'text-[#0E1E37] font-medium' : 'text-gray-600'
+                    }`}
+                  >
+                    Todos os status
+                  </button>
+                  <div className="h-px bg-gray-100 mx-4 my-1" />
+                  {statusOptions.map((status) => {
+                    const config = getStatusConfig(status.value);
+                    return (
+                      <button
+                        key={status.value}
+                        onClick={() => { setStatusFilter(status.value); setShowStatusDropdown(false); }}
+                        className={`w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors flex items-center gap-2 ${
+                          statusFilter === status.value ? 'text-[#0E1E37] font-medium bg-gray-50' : 'text-gray-600'
+                        }`}
+                      >
+                        <span className={`w-2 h-2 rounded-full ${config.dotColor}`} />
+                        {config.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
         
