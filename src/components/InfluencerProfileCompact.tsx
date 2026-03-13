@@ -34,6 +34,9 @@ interface InfluencerProfileCompactProps {
 }
 
 export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerProfileCompactProps) {
+  // Log immediately when component renders
+  console.log('[RENDER] InfluencerProfileCompact called with influencerId:', influencerId);
+  
   const { addToast } = useToast();
   const [influencer, setInfluencer] = useState<any>(null);
   const [workflow, setWorkflow] = useState<any>(null);
@@ -61,44 +64,24 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
   }, [influencerId]);
 
   const fetchData = async () => {
-    if (!influencerId) {
-      console.log('[ERROR] No influencerId provided');
-      return;
-    }
-    
-    console.log('[FETCH] Starting fetch for influencerId:', influencerId);
+    if (!influencerId) return;
     
     try {
       setLoading(true);
       
-      // Fetch both in parallel
-      const [infRes, wfRes] = await Promise.all([
-        fetch(`/api/influencers/${influencerId}`),
-        fetch(`/api/influencers/${influencerId}/partnerships`)
-      ]);
-      
-      console.log('[FETCH] Influencer response status:', infRes.status);
-      console.log('[FETCH] Workflow response status:', wfRes.status);
-      
+      // Fetch influencer data
+      const infRes = await fetch(`/api/influencers/${influencerId}`);
       if (infRes.ok) {
         const infData = await infRes.json();
-        console.log('[FETCH] Influencer data:', infData);
         setInfluencer(infData);
-      } else {
-        console.error('[ERROR] Failed to fetch influencer:', await infRes.text());
-      }
-      
-      if (wfRes.ok) {
-        const wfData = await wfRes.json();
-        console.log('[FETCH] Workflow API Response:', wfData);
-        console.log('[FETCH] Active workflow:', wfData?.activeWorkflow);
-        console.log('[FETCH] Has workflow:', !!wfData?.activeWorkflow);
-        setWorkflow(wfData?.activeWorkflow || null);
-      } else {
-        console.error('[ERROR] Failed to fetch workflow:', await wfRes.text());
+        
+        // Use the partnerships array from influencer data (not filtered by ACTIVE status)
+        const partnerships = infData.partnerships || [];
+        const mostRecentWorkflow = partnerships.length > 0 ? partnerships[0] : null;
+        setWorkflow(mostRecentWorkflow);
       }
     } catch (error) {
-      console.error('[ERROR] Error fetching data:', error);
+      console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
     }
