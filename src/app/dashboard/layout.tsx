@@ -15,18 +15,20 @@ export default function DashboardLayout({
   const isFullPage = pathname === '/dashboard/messages';
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
-      {/* Sidebar */}
+    <div className="flex h-screen overflow-hidden bg-[#F5F5F7]">
+      {/* Sidebar - Minimalista */}
       <Sidebar mobileOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Main Content */}
       <div className="flex flex-1 flex-col overflow-hidden min-w-0">
-        {/* Header */}
+        {/* Header - Minimalista */}
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
-        {/* Page Content */}
-        <main className={`flex-1 overflow-x-hidden ${isFullPage ? 'overflow-hidden' : 'overflow-y-auto p-4 sm:p-6'}`}>
-          {children}
+        {/* Page Content - Mais espaçamento e padding suave */}
+        <main className={`flex-1 overflow-x-hidden ${isFullPage ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+          <div className="p-6 lg:p-8 max-w-7xl mx-auto">
+            {children}
+          </div>
         </main>
       </div>
     </div>

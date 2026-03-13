@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { StatCard } from '@/components/ui/Card';
 import { DashboardSkeleton } from '@/components/ui/LoadingStates';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { AnalyticsPreview } from './components/AnalyticsPreview';
@@ -12,7 +11,9 @@ import {
   Ticket,
   DollarSign,
   Eye,
-  ArrowRight
+  ArrowRight,
+  TrendingUp,
+  Activity
 } from 'lucide-react';
 
 interface DashboardData {
@@ -59,12 +60,10 @@ export default function DashboardPage() {
         const campaignsData = await campaignsRes.json();
         const couponsData = await couponsRes.json();
 
-        // Ensure we have arrays (APIs might return { data: [...] } or just [...])
         const influencers = Array.isArray(influencersData) ? influencersData : (influencersData.data || []);
         const campaigns = Array.isArray(campaignsData) ? campaignsData : (campaignsData.data || []);
         const coupons = Array.isArray(couponsData) ? couponsData : (couponsData.data || []);
 
-        // Calculate stats
         const totalViews = influencers.reduce((sum: number, inf: any) => {
           const infViews = inf.videos?.reduce((s: number, v: any) => s + (v.views || 0), 0) || 0;
           return sum + infViews;
@@ -75,7 +74,6 @@ export default function DashboardPage() {
         
         const activeCampaigns = campaigns.filter((c: any) => c.status === 'ACTIVE').length;
         
-        // Get top performers (sort by views)
         const topPerformers = influencers
           .map((inf: any) => ({
             id: inf.id,
@@ -85,7 +83,7 @@ export default function DashboardPage() {
             engagementRate: inf.engagementRate,
           }))
           .sort((a: any, b: any) => b.totalViews - a.totalViews)
-          .slice(0, 3);
+          .slice(0, 5);
 
         setData({
           stats: {
@@ -113,19 +111,15 @@ export default function DashboardPage() {
   }, []);
 
   const retry = () => {
-    setData(null);
-    setLoading(true);
-    setError(null);
-    // Re-trigger useEffect
     window.location.reload();
   };
 
   if (loading) {
     return (
       <div className="space-y-8">
-        <div>
-          <h1 className="text-3xl font-semibold text-gray-900">Dashboard</h1>
-          <p className="mt-1 text-sm text-gray-600">Visão geral da plataforma</p>
+        <div className="mb-8">
+          <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Dashboard</h1>
+          <p className="mt-1 text-sm text-gray-400">Visão geral da plataforma</p>
         </div>
         <DashboardSkeleton />
       </div>
@@ -140,20 +134,20 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* ✅ Header Minimalista */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold text-gray-900">Dashboard</h1>
-          <p className="mt-1 text-sm text-gray-600">
+          <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Dashboard</h1>
+          <p className="mt-1 text-sm text-gray-400">
             Visão geral da plataforma
           </p>
         </div>
         <Link
           href="/dashboard/influencers/new"
-          className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-md text-sm font-medium hover:bg-gray-800 transition-colors"
+          className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#0E1E37] text-white text-sm font-medium rounded-full hover:bg-[#1a2f4f] transition-all duration-200 shadow-sm"
         >
           Adicionar Influencer
-          <ArrowRight className="h-4 w-4" />
+          <ArrowRight className="h-4 w-4" strokeWidth={2} />
         </Link>
       </div>
 
@@ -162,24 +156,25 @@ export default function DashboardPage() {
         <AnalyticsPreview />
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      {/* ✅ Stats Cards - Minimalistas */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          title="Total Influencers"
+          title="Influencers"
           value={stats.totalInfluencers.toString()}
           subtitle={`${stats.activeInfluencers} ativos`}
           icon={<Users className="h-5 w-5" />}
+          trend="+12%"
         />
         <StatCard
-          title="Campanhas Ativas"
+          title="Campanhas"
           value={stats.activeCampaigns.toString()}
-          subtitle="Em execução"
+          subtitle="Ativas"
           icon={<Target className="h-5 w-5" />}
         />
         <StatCard
-          title="Cupões Gerados"
+          title="Cupões"
           value={stats.totalCoupons.toString()}
-          subtitle={`${stats.couponUsage} utilizações`}
+          subtitle={`${stats.couponUsage} usados`}
           icon={<Ticket className="h-5 w-5" />}
         />
         <StatCard
@@ -187,40 +182,59 @@ export default function DashboardPage() {
           value={`€${stats.totalRevenue.toLocaleString('pt-PT')}`}
           subtitle="Total"
           icon={<DollarSign className="h-5 w-5" />}
+          trend="+8%"
         />
       </div>
 
-      {/* Main Content */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Top Performers */}
-        <div className="lg:col-span-2 rounded-lg bg-white p-6 border border-gray-200">
+        {/* Top Performers - Card Minimalista */}
+        <div className="lg:col-span-2 bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900">Top Performers</h3>
-            <Link href="/dashboard/influencers" className="text-sm text-gray-600 hover:text-gray-900">
-              Ver todos →
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Top Performers</h3>
+              <p className="text-sm text-gray-400 mt-0.5">Influencers com melhor performance</p>
+            </div>
+            <Link 
+              href="/dashboard/influencers" 
+              className="text-sm font-medium text-[#0E1E37] hover:text-[#1a2f4f] transition-colors flex items-center gap-1"
+            >
+              Ver todos <ArrowRight className="h-4 w-4" strokeWidth={2} />
             </Link>
           </div>
           
           {topPerformers.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">
-              Nenhum influencer com vídeos ainda
-            </p>
+            <div className="text-center py-12">
+              <Activity className="h-12 w-12 mx-auto text-gray-300 mb-3" strokeWidth={1.5} />
+              <p className="text-gray-400 text-sm">
+                Nenhum influencer com vídeos ainda
+              </p>
+            </div>
           ) : (
-            <div className="space-y-3">
-              {topPerformers.map((influencer) => (
+            <div className="space-y-2">
+              {topPerformers.map((influencer, index) => (
                 <Link
                   key={influencer.id}
                   href={`/dashboard/influencers/${influencer.id}`}
-                  className="flex items-center justify-between p-4 rounded-md border border-gray-200 hover:border-gray-900 transition-colors"
+                  className="flex items-center justify-between p-4 rounded-2xl hover:bg-gray-50 transition-colors group"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-black flex items-center justify-center text-white font-semibold">
-                      {influencer.name[0]}
+                  <div className="flex items-center gap-4">
+                    <div className="relative">
+                      <div className="h-12 w-12 rounded-2xl bg-[#0E1E37] flex items-center justify-center text-white font-semibold text-sm">
+                        {influencer.name[0]}
+                      </div>
+                      {index < 3 && (
+                        <div className={`absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white ${
+                          index === 0 ? 'bg-amber-400' : index === 1 ? 'bg-gray-400' : 'bg-orange-400'
+                        }`}>
+                          {index + 1}
+                        </div>
+                      )}
                     </div>
                     <div>
                       <p className="font-medium text-gray-900">{influencer.name}</p>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-gray-400">
                         {influencer.tiktokHandle || 'Sem handle'}
                       </p>
                     </div>
@@ -228,14 +242,14 @@ export default function DashboardPage() {
                   
                   <div className="flex items-center gap-6">
                     <div className="text-right">
-                      <p className="text-sm text-gray-500">Views</p>
+                      <p className="text-xs text-gray-400 uppercase tracking-wide">Views</p>
                       <p className="font-semibold text-gray-900">
                         {formatViews(influencer.totalViews)}
                       </p>
                     </div>
                     {influencer.engagementRate !== null && (
                       <div className="text-right">
-                        <p className="text-sm text-gray-500">Engagement</p>
+                        <p className="text-xs text-gray-400 uppercase tracking-wide">Eng.</p>
                         <p className="font-semibold text-gray-900">
                           {influencer.engagementRate.toFixed(1)}%
                         </p>
@@ -248,49 +262,99 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Stats Card */}
-        <div className="space-y-6">
-          <div className="rounded-lg bg-gray-50 p-6 border border-gray-200">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-sm text-gray-600">Total Views</p>
-              <Eye className="h-4 w-4 text-gray-400" />
+        {/* Side Stats */}
+        <div className="space-y-4">
+          {/* Total Views Card */}
+          <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-10 h-10 rounded-2xl bg-[#0E1E37]/5 flex items-center justify-center">
+                <Eye className="h-5 w-5 text-[#0E1E37]" strokeWidth={1.5} />
+              </div>
+              <TrendingUp className="h-4 w-4 text-green-500" strokeWidth={2} />
             </div>
-            <p className="text-2xl font-semibold text-gray-900 mb-1">
+            <p className="text-3xl font-semibold text-gray-900 mb-1">
               {formatViews(stats.totalViews)}
             </p>
-            <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden mt-3">
+            <p className="text-sm text-gray-400">Total Views</p>
+            
+            <div className="h-2 bg-gray-100 rounded-full overflow-hidden mt-4">
               <div 
-                className="h-full bg-gray-900 rounded-full transition-all"
-                style={{ width: stats.totalViews > 0 ? '75%' : '0%' }}
+                className="h-full bg-[#0E1E37] rounded-full transition-all duration-500"
+                style={{ width: stats.totalViews > 0 ? '70%' : '0%' }}
               />
             </div>
           </div>
 
-          <div className="rounded-lg bg-white p-6 border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Stats</h3>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-700">Média de views</span>
-                <span className="font-semibold text-gray-900">
+          {/* Quick Stats */}
+          <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+            <h3 className="text-base font-semibold text-gray-900 mb-4">Estatísticas</h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-500">Média de views</span>
+                <span className="font-medium text-gray-900">
                   {stats.totalInfluencers > 0 
                     ? formatViews(Math.round(stats.totalViews / stats.totalInfluencers))
                     : '0'
                   }
                 </span>
               </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-700">Revenue médio/cupão</span>
-                <span className="font-semibold text-gray-900">
+              <div className="h-px bg-gray-100" />
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-500">Revenue/cupão</span>
+                <span className="font-medium text-gray-900">
                   €{stats.totalCoupons > 0 
                     ? (stats.totalRevenue / stats.totalCoupons).toFixed(2)
                     : '0.00'
                   }
                 </span>
               </div>
+              <div className="h-px bg-gray-100" />
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-500">Taxa de uso</span>
+                <span className="font-medium text-gray-900">
+                  {stats.totalCoupons > 0 
+                    ? Math.round((stats.couponUsage / stats.totalCoupons) * 100)
+                    : 0
+                  }%
+                </span>
+              </div>
             </div>
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ✅ Stat Card Minimalista
+function StatCard({ 
+  title, 
+  value, 
+  subtitle, 
+  icon,
+  trend 
+}: { 
+  title: string; 
+  value: string; 
+  subtitle: string; 
+  icon: React.ReactNode;
+  trend?: string;
+}) {
+  return (
+    <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+      <div className="flex items-start justify-between mb-3">
+        <div className="w-10 h-10 rounded-2xl bg-[#0E1E37]/5 flex items-center justify-center text-[#0E1E37]">
+          {icon}
+        </div>
+        {trend && (
+          <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">
+            {trend}
+          </span>
+        )}
+      </div>
+      <p className="text-2xl font-semibold text-gray-900 mb-0.5">{value}</p>
+      <p className="text-sm text-gray-400">{title}</p>
+      <p className="text-xs text-gray-400 mt-1">{subtitle}</p>
     </div>
   );
 }
