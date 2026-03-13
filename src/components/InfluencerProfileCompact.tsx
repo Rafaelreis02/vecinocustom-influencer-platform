@@ -15,55 +15,65 @@ interface InfluencerProfileCompactProps {
   onUpdate?: () => void;
 }
 
-// Mapeamento exato dos steps como no PartnershipWorkflow.tsx
-const STEP_CONFIG: Record<number, { name: string; description: string; adminAction: string | null; waitingFor: string }> = {
+// Mapeamento EXATO dos steps - deve corresponder a PartnershipWorkflow.tsx
+// currentStep 0 = Step 1 "Partnership" (ANALYZING) - Admin analisa proposta
+// currentStep 1 = Step 2 "Shipping" (AGREED) - Influencer preenche dados
+const STEP_CONFIG: Record<number, { name: string; description: string; adminAction: string | null; waitingFor: string; actionType: 'advance' | 'accept' | 'none' }> = {
   0: { 
-    name: 'Proposta', 
-    description: 'Criar proposta de parceria', 
-    adminAction: 'Criar Parceria',
-    waitingFor: 'Admin'
+    name: 'Partnership', 
+    description: 'Analisar proposta do influencer', 
+    adminAction: 'Aceitar Proposta',
+    waitingFor: 'Admin',
+    actionType: 'accept'
   },
   1: { 
-    name: 'Análise', 
-    description: 'Analisar proposta do influencer', 
-    adminAction: 'Aceitar/Contrapropor',
-    waitingFor: 'Admin'
-  },
-  2: { 
-    name: 'Dados', 
+    name: 'Shipping', 
     description: 'Influencer preenche dados de envio', 
     adminAction: null,
-    waitingFor: 'Influencer'
+    waitingFor: 'Influencer',
+    actionType: 'none'
   },
-  3: { 
-    name: 'Produto', 
+  2: { 
+    name: 'Preparing', 
     description: 'Confirmar produto escolhido', 
     adminAction: 'Confirmar Produto',
-    waitingFor: 'Admin'
+    waitingFor: 'Admin',
+    actionType: 'advance'
   },
-  4: { 
-    name: 'Design', 
+  3: { 
+    name: 'Design Review', 
     description: 'Enviar prova de design', 
     adminAction: 'Enviar Prova',
-    waitingFor: 'Admin'
+    waitingFor: 'Admin',
+    actionType: 'advance'
   },
-  5: { 
-    name: 'Contrato', 
+  4: { 
+    name: 'Contract', 
     description: 'Gerar e enviar contrato', 
     adminAction: 'Gerar Contrato',
-    waitingFor: 'Admin'
+    waitingFor: 'Admin',
+    actionType: 'advance'
+  },
+  5: { 
+    name: 'Contract Signed', 
+    description: 'Aguardar assinatura', 
+    adminAction: null,
+    waitingFor: 'Influencer',
+    actionType: 'none'
   },
   6: { 
-    name: 'Envio', 
+    name: 'Shipped', 
     description: 'Adicionar tracking de envio', 
     adminAction: 'Adicionar Tracking',
-    waitingFor: 'Admin'
+    waitingFor: 'Admin',
+    actionType: 'advance'
   },
   7: { 
-    name: 'Completo', 
+    name: 'Completed', 
     description: 'Parceria finalizada', 
     adminAction: 'Completar',
-    waitingFor: 'Admin'
+    waitingFor: 'Admin',
+    actionType: 'advance'
   },
 };
 
@@ -75,7 +85,9 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
   const [isCreatingPartnership, setIsCreatingPartnership] = useState(false);
   const [isAdvancing, setIsAdvancing] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showCounterModal, setShowCounterModal] = useState(false);
   const [agreedPrice, setAgreedPrice] = useState('');
+  const [counterPrice, setCounterPrice] = useState('');
   const [activeTab, setActiveTab] = useState<'overview' | 'stats' | 'content'>('overview');
 
   useEffect(() => {
@@ -150,13 +162,74 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
         method: 'POST',
       });
 
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Erro ao avançar');
+      }
       
       addToast('Step avançado!', 'success');
       await fetchData();
       onUpdate?.();
-    } catch (error) {
-      addToast('Erro ao avançar', 'error');
+    } catch (error: any) {
+      addToast(error.message || 'Erro ao avançar', 'error');
+    } finally {
+      setIsAdvancing(false);
+    }
+  };
+
+  const handleAcceptProposal = async () => {
+    if (!workflow) return;
+
+    try {
+      setIsAdvancing(true);
+      const res = await fetch(`/api/partnerships/${workflow.id}/accept-counter`, {
+        method: 'POST',
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Erro ao aceitar');
+      }
+      
+      addToast('Proposta aceite!', 'success');
+      await fetchData();
+      onUpdate?.();
+    } catch (error: any) {
+      addToast(error.message || 'Erro ao aceitar proposta', 'error');
+    } finally {
+      setIsAdvancing(false);
+    }
+  };
+
+  const handleSendCounter = async () => {
+    if (!workflow || !counterPrice) return;
+
+    const price = parseFloat(counterPrice);
+    if (isNaN(price) || price <= 0) {
+      addToast('Insira um valor válido', 'error');
+      return;
+    }
+
+    try {
+      setIsAdvancing(true);
+      const res = await fetch(`/api/partnerships/${workflow.id}/send-counter`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agreedPrice: price }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Erro ao enviar contraproposta');
+      }
+      
+      addToast('Contraproposta enviada!', 'success');
+      setShowCounterModal(false);
+      setCounterPrice('');
+      await fetchData();
+      onUpdate?.();
+    } catch (error: any) {
+      addToast(error.message || 'Erro ao enviar contraproposta', 'error');
     } finally {
       setIsAdvancing(false);
     }
@@ -183,6 +256,16 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
   const totalSteps = 8;
   const displayStep = currentStep + 1;
   const progress = workflow ? Math.min((displayStep / totalSteps) * 100, 100) : 0;
+
+  // DEBUG: Log values for troubleshooting
+  console.log('[InfluencerProfileCompact] Debug:', {
+    influencerId,
+    workflowId: workflow?.id,
+    currentStep,
+    displayStep,
+    workflowStatus: workflow?.status,
+    stepConfig: stepConfig?.name,
+  });
 
   return (
     <div className="h-full flex flex-col bg-white">
@@ -301,8 +384,54 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
                 </span>
               </div>
 
-              {/* Action Button (only if admin action needed) */}
-              {stepConfig.adminAction && stepConfig.waitingFor === 'Admin' && (
+              {/* Action Buttons */}
+              {currentStep === 0 && (
+                // Step 0 (Partnership/Análise) - Mostrar ações específicas
+                workflow?.status === 'COUNTER_PROPOSAL' ? (
+                  // Influencer enviou contraproposta → podemos aceitar
+                  <button
+                    onClick={handleAcceptProposal}
+                    disabled={isAdvancing}
+                    className="w-full py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {isAdvancing ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <CheckCircle2 className="h-4 w-4" />
+                        Aceitar Contraproposta
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  // Nossa proposta → avançar (aceitar) ou contrapropor
+                  <div className="space-y-2">
+                    <button
+                      onClick={handleAdvanceStep}
+                      disabled={isAdvancing}
+                      className="w-full py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {isAdvancing ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          <CheckCircle2 className="h-4 w-4" />
+                          Aceitar Proposta
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => setShowCounterModal(true)}
+                      className="w-full py-2 bg-[#0E1E37] text-white text-sm font-medium rounded-lg hover:bg-[#1a2f4f] flex items-center justify-center gap-2"
+                    >
+                      Enviar Contraproposta
+                    </button>
+                  </div>
+                )
+              )}
+              
+              {currentStep > 0 && stepConfig.adminAction && stepConfig.waitingFor === 'Admin' && (
+                // Outros steps → botão de avançar normal
                 <button
                   onClick={handleAdvanceStep}
                   disabled={isAdvancing}
@@ -465,6 +594,56 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
           <ExternalLink className="h-4 w-4" />
         </Link>
       </div>
+
+      {/* Counter Proposal Modal */}
+      {showCounterModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Enviar Contraproposta</h3>
+            <p className="text-sm text-gray-500 mb-4">Defina o novo valor para a parceria.</p>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Valor (€)</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">€</span>
+                <input
+                  type="number"
+                  value={counterPrice}
+                  onChange={(e) => setCounterPrice(e.target.value)}
+                  placeholder="0"
+                  min="0"
+                  step="0.01"
+                  className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-900 focus:ring-2 focus:ring-[#0E1E37]/20 focus:border-[#0E1E37]"
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowCounterModal(false);
+                  setCounterPrice('');
+                }}
+                className="flex-1 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSendCounter}
+                disabled={isAdvancing || !counterPrice}
+                className="flex-1 py-2 bg-[#0E1E37] text-white text-sm font-medium rounded-lg hover:bg-[#1a2f4f] disabled:opacity-50"
+              >
+                {isAdvancing ? (
+                  <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                ) : (
+                  'Enviar'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
