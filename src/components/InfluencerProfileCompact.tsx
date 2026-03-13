@@ -162,8 +162,10 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
     );
   }
 
-  const currentStep = workflow?.currentStep || 0;
-  const progress = workflow ? Math.min(((currentStep + 1) / 7) * 100, 100) : 0;
+  const currentStep = workflow?.currentStep ?? 0;
+  // currentStep is 0-indexed (0-6), so we display currentStep + 1 to user (1-7)
+  const displayStep = currentStep + 1;
+  const progress = workflow ? Math.min((displayStep / 7) * 100, 100) : 0;
 
   return (
     <div className="h-full flex flex-col bg-white">
@@ -231,7 +233,7 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
           <h4 className="text-xs font-semibold text-gray-700 uppercase">Partnership Workflow</h4>
           {workflow && (
             <span className="text-xs font-medium text-[#0E1E37]">
-              Step {currentStep + 1}/7
+              Step {displayStep}/7
             </span>
           )}
         </div>
