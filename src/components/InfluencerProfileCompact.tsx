@@ -43,9 +43,6 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
   
   const loading = loadingInf || loadingWf;
   
-  // Check if data is being revalidated (background refresh)
-  const isSyncing = !loading && (loadingInf || loadingWf);
-  
   const [isCreatingPartnership, setIsCreatingPartnership] = useState(false);
   const [isAdvancing, setIsAdvancing] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -218,7 +215,11 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
           )}
         </div>
         
-        {!workflow ? (
+        {loading ? (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="h-5 w-5 animate-spin text-gray-300" />
+          </div>
+        ) : !workflow ? (
           !showCreateForm ? (
             <button
               onClick={() => setShowCreateForm(true)}
