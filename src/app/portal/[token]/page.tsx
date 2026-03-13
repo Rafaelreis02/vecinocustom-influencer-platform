@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Loader2, XCircle, CheckCircle, FileText } from 'lucide-react';
+import { Loader2, XCircle, CheckCircle, FileText, AlertCircle, ArrowRight } from 'lucide-react';
 import { ProductSearchInput } from './components/ProductSearchInput';
 import { Step4DesignReview } from './Step4DesignReview';
 import { StepDesignReference } from './StepDesignReference';
@@ -59,6 +59,41 @@ const DDI_OPTIONS = [
   { code: '+1', country: 'US' },
   { code: '+55', country: 'BR' },
 ];
+
+// ✅ Componente Input Field Minimalista - Estilo Apple
+function InputField({
+  label,
+  value,
+  onChange,
+  disabled = false,
+  placeholder = '',
+  type = 'text',
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  placeholder?: string;
+  type?: string;
+}) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-500 mb-2 ml-1">{label}</label>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+        placeholder={placeholder}
+        className="w-full px-4 py-3.5 text-[15px] bg-gray-50 border-0 rounded-2xl 
+                   text-gray-900 placeholder:text-gray-400
+                   focus:outline-none focus:ring-2 focus:ring-[#0E1E37]/20 focus:bg-white
+                   disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed
+                   transition-all duration-200"
+      />
+    </div>
+  );
+}
 
 // Helper functions for address parsing/formatting
 function parseAddress(fullAddress: string | null) {
@@ -158,9 +193,17 @@ export default function PortalPage() {
   const [searchMode, setSearchMode] = useState(false);
   const [isReviewMode, setIsReviewMode] = useState(false);
 
+  // ✅ AUTO-REFRESH: Atualiza dados a cada 5 segundos para manter sincronizado
   useEffect(() => {
     if (token) {
       fetchInfluencerData();
+      
+      // Polling a cada 5 segundos para atualização automática
+      const interval = setInterval(() => {
+        fetchInfluencerData(false); // false = não mostra loading spinner
+      }, 5000);
+      
+      return () => clearInterval(interval);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
@@ -221,16 +264,18 @@ export default function PortalPage() {
 
   if (error || !influencerData) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
-          <XCircle className="h-16 w-16 mx-auto mb-4 text-red-500" />
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Page Not Found</h1>
-          <p className="text-gray-600 mb-6">{error || 'This portal link is invalid or has expired.'}</p>
+      <div className="min-h-screen flex items-center justify-center bg-[#F5F5F7] p-6">
+        <div className="max-w-sm w-full text-center">
+          <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-red-100 flex items-center justify-center">
+            <XCircle className="h-8 w-8 text-red-500" strokeWidth={1.5} />
+          </div>
+          <h1 className="text-xl font-semibold text-gray-900 mb-3 tracking-tight">Link Inválido</h1>
+          <p className="text-gray-500 mb-8 text-sm leading-relaxed">{error || 'Este link do portal é inválido ou expirou.'}</p>
           <button
             onClick={() => router.push('/')}
-            className="px-6 py-3 bg-[#0E1E37] text-white font-semibold rounded-lg hover:bg-[#1a2f4f] transition"
+            className="w-full py-3 bg-[#0E1E37] text-white text-sm font-medium rounded-full hover:bg-[#1a2f4f] transition-all duration-200"
           >
-            Go to Homepage
+            Voltar à página inicial
           </button>
         </div>
       </div>
@@ -238,27 +283,26 @@ export default function PortalPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Portal Content */}
-      <div className="max-w-[480px] mx-auto px-4 py-8">
-        {/* Logo / Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-[#0E1E37] mb-2">VECINOCUSTOM</h1>
-          <p className="text-sm text-gray-600">Influencer Portal</p>
+    <div className="min-h-screen bg-[#F5F5F7]">
+      {/* Portal Content - Estilo Apple Minimalista */}
+      <div className="max-w-[420px] mx-auto px-6 py-12">
+        {/* Logo / Header - Minimalista */}
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[#0E1E37] mb-4 shadow-sm">
+            <span className="text-white text-lg font-bold tracking-wider">V</span>
+          </div>
+          <h1 className="text-lg font-semibold text-gray-900 tracking-tight">VecinoCustom</h1>
+          <p className="text-xs text-gray-400 mt-1 font-medium tracking-wide uppercase">Portal do Influencer</p>
         </div>
 
-        {/* Progress Bar - Hidden on entry screen */}
+        {/* Progress Bar - Minimalista */}
         {!searchMode && <ProgressBar currentStep={currentStep} />}
 
-        {/* Error Banner */}
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-sm text-red-800">{error}</p>
-          </div>
-        )}
+        {/* Toast de Erro - Minimalista */}
+        <Toast message={error} onClose={() => setError(null)} />
 
-        {/* Step Content */}
-        <div className="bg-white rounded-lg shadow-lg p-6">
+        {/* Step Content - Card Minimalista */}
+        <div className="bg-white rounded-3xl shadow-sm border border-gray-100/50 p-6">
           {/* Check if workflow is completed but showing step 8 */}
           {influencerData?.workflowStatus === 'COMPLETED' && currentStep >= 8 ? (
             <Step8Delivered data={influencerData} token={token} onRestart={fetchInfluencerData} />
@@ -325,35 +369,64 @@ export default function PortalPage() {
   );
 }
 
-// Ultra Minimalist Progress Bar - 8 steps simplified
+// ✅ Componente Toast Minimalista para mensagens de erro
+function Toast({ message, onClose }: { message: string | null; onClose: () => void }) {
+  const [isVisible, setIsVisible] = useState(false);
+  
+  useEffect(() => {
+    if (message) {
+      setIsVisible(true);
+      const timer = setTimeout(() => {
+        setIsVisible(false);
+        setTimeout(onClose, 300); // Limpa após animação
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [message, onClose]);
+  
+  if (!message) return null;
+  
+  return (
+    <div className={`fixed top-6 left-1/2 transform -translate-x-1/2 z-50 transition-all duration-300 ${
+      isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'
+    }`}>
+      <div className="bg-[#1C1C1E] text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 min-w-[280px]">
+        <AlertCircle className="h-5 w-5 text-red-400 flex-shrink-0" strokeWidth={1.5} />
+        <p className="text-sm font-medium">{message}</p>
+      </div>
+    </div>
+  );
+}
+
+// ✅ Progress Bar Minimalista - Estilo Apple
 function ProgressBar({ currentStep }: { currentStep: number }) {
-  const totalSteps = 8; // Simplified: removed step 8 (Delivered)
+  const totalSteps = 8;
   const progress = Math.min((currentStep / totalSteps) * 100, 100);
 
   return (
-    <div className="mb-6">
-      {/* Simple Progress Line */}
-      <div className="relative h-1.5 bg-gray-200 rounded-full overflow-hidden">
+    <div className="mb-10">
+      {/* Linha de Progresso Suave */}
+      <div className="relative h-1 bg-gray-200 rounded-full overflow-hidden">
         <div 
-          className="absolute top-0 left-0 h-full bg-black rounded-full transition-all duration-500 ease-out"
+          className="absolute top-0 left-0 h-full bg-[#0E1E37] rounded-full transition-all duration-700 ease-out"
           style={{ width: `${progress}%` }}
         />
       </div>
 
-      {/* Minimal Status */}
-      <div className="flex justify-between items-center mt-3">
-        <span className="text-xs text-gray-500">
-          Step {currentStep} of {totalSteps}
+      {/* Status Minimalista */}
+      <div className="flex justify-between items-center mt-4">
+        <span className="text-xs text-gray-400 font-medium tracking-wide">
+          Etapa {currentStep} de {totalSteps}
         </span>
-        <span className="text-xs font-medium text-gray-900">
-          {Math.round(progress)}% complete
+        <span className="text-xs text-gray-500 font-semibold">
+          {Math.round(progress)}%
         </span>
       </div>
     </div>
   );
 }
 
-// Step 1 - Partnership Details
+// ✅ Step 1 - Dados da Parceria (Minimalista)
 function Step1({ data, token, onUpdate, onNext, isReviewMode }: StepProps) {
   const [formData, setFormData] = useState({
     name: data.name || '',
@@ -374,7 +447,6 @@ function Step1({ data, token, onUpdate, onNext, isReviewMode }: StepProps) {
   const hasPrice = data.agreedPrice && data.agreedPrice > 0;
   const priceChanged = formData.agreedPrice !== originalPrice;
 
-  // Update formData when data changes (e.g., when coming back from Step 2)
   useEffect(() => {
     setFormData({
       name: data.name || '',
@@ -393,19 +465,18 @@ function Step1({ data, token, onUpdate, onNext, isReviewMode }: StepProps) {
     if (validationError) setValidationError(null);
   };
 
-  // Per-field lock logic
   const getFieldDisabled = (fieldName: string): boolean => {
-    if (isReviewMode) return true; // All fields locked in review mode
+    if (isReviewMode) return true;
     return isFieldLocked(fieldName, data, data.status);
   };
 
   const validateForm = () => {
-    if (!formData.name.trim()) return 'Name is required';
-    if (!formData.email.trim()) return 'Email is required';
-    if (!formData.instagramHandle.trim()) return 'Instagram is required';
-    if (!formData.tiktokHandle.trim()) return 'TikTok is required';
-    if (!formData.phone.trim()) return 'WhatsApp is required';
-    if (hasPrice && formData.agreedPrice <= 0) return 'Price must be greater than 0';
+    if (!formData.name.trim()) return 'Nome obrigatório';
+    if (!formData.email.trim()) return 'Email obrigatório';
+    if (!formData.instagramHandle.trim()) return 'Instagram obrigatório';
+    if (!formData.tiktokHandle.trim()) return 'TikTok obrigatório';
+    if (!formData.phone.trim()) return 'WhatsApp obrigatório';
+    if (hasPrice && formData.agreedPrice <= 0) return 'Valor deve ser maior que 0';
     return null;
   };
 
@@ -544,82 +615,68 @@ function Step1({ data, token, onUpdate, onNext, isReviewMode }: StepProps) {
 
   return (
     <div>
-      <h2 className="text-xl font-bold text-[#0E1E37] mb-6 uppercase">Partnership Details</h2>
+      {/* ✅ Header Minimalista */}
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold text-gray-900 tracking-tight mb-1">Dados da Parceria</h2>
+        <p className="text-sm text-gray-400">Confirma os teus dados</p>
+      </div>
       
-      {/* Analyzing Banner */}
+      {/* Analyzing Banner - Minimalista */}
       {isAnalyzing && (
-        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <p className="text-sm text-yellow-800 font-semibold">
-            A sua proposta está em análise
+        <div className="mb-6 p-4 bg-amber-50/50 rounded-2xl border border-amber-100">
+          <p className="text-sm text-amber-700 font-medium">
+            Proposta em análise
           </p>
         </div>
       )}
       
-      {/* Validation Error */}
-      {validationError && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-sm text-red-800">{validationError}</p>
-        </div>
-      )}
-      
-      <div className="space-y-4">
-        {/* Full Name */}
-        <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">Full name *</label>
-          <input
-            type="text"
-            value={formData.name}
-            onChange={(e) => handleChange('name', e.target.value)}
-            disabled={getFieldDisabled('name')}
-            className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E1E37] disabled:bg-gray-50 disabled:cursor-not-allowed"
-          />
-        </div>
+      <div className="space-y-5">
+        {/* ✅ Input Fields - Estilo Apple */}
+        <InputField
+          label="Nome"
+          value={formData.name}
+          onChange={(v) => handleChange('name', v)}
+          disabled={getFieldDisabled('name')}
+          placeholder="O teu nome completo"
+        />
         
-        {/* Email */}
-        <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">E-mail *</label>
-          <input
-            type="email"
-            value={formData.email}
-            onChange={(e) => handleChange('email', e.target.value)}
-            disabled={getFieldDisabled('email')}
-            className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E1E37] disabled:bg-gray-50 disabled:cursor-not-allowed"
-          />
-        </div>
+        <InputField
+          label="Email"
+          type="email"
+          value={formData.email}
+          onChange={(v) => handleChange('email', v)}
+          disabled={getFieldDisabled('email')}
+          placeholder="email@exemplo.com"
+        />
         
-        {/* Instagram */}
-        <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">Instagram *</label>
-          <input
-            type="text"
-            value={formData.instagramHandle}
-            onChange={(e) => handleChange('instagramHandle', e.target.value)}
-            disabled={getFieldDisabled('instagramHandle')}
-            className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E1E37] disabled:bg-gray-50 disabled:cursor-not-allowed"
-          />
-        </div>
+        <InputField
+          label="Instagram"
+          value={formData.instagramHandle}
+          onChange={(v) => handleChange('instagramHandle', v)}
+          disabled={getFieldDisabled('instagramHandle')}
+          placeholder="@utilizador"
+        />
         
-        {/* TikTok */}
-        <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">TikTok *</label>
-          <input
-            type="text"
-            value={formData.tiktokHandle}
-            onChange={(e) => handleChange('tiktokHandle', e.target.value)}
-            disabled={getFieldDisabled('tiktokHandle')}
-            className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E1E37] disabled:bg-gray-50 disabled:cursor-not-allowed"
-          />
-        </div>
+        <InputField
+          label="TikTok"
+          value={formData.tiktokHandle}
+          onChange={(v) => handleChange('tiktokHandle', v)}
+          disabled={getFieldDisabled('tiktokHandle')}
+          placeholder="@utilizador"
+        />
         
-        {/* WhatsApp */}
+        {/* ✅ WhatsApp - Minimalista */}
         <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">WhatsApp *</label>
-          <div className="flex gap-2">
+          <label className="block text-sm font-medium text-gray-500 mb-2 ml-1">WhatsApp</label>
+          <div className="flex gap-3">
             <select
               value={formData.ddiCode}
               onChange={(e) => handleChange('ddiCode', e.target.value)}
               disabled={getFieldDisabled('phone')}
-              className="px-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E1E37] disabled:bg-gray-50 disabled:cursor-not-allowed"
+              className="px-4 py-3.5 text-sm bg-gray-50 border-0 rounded-2xl text-gray-900
+                         focus:outline-none focus:ring-2 focus:ring-[#0E1E37]/20 focus:bg-white
+                         disabled:bg-gray-100 disabled:text-gray-400
+                         transition-all duration-200 appearance-none cursor-pointer"
             >
               {DDI_OPTIONS.map(opt => (
                 <option key={opt.code} value={opt.code}>{opt.country} {opt.code}</option>
@@ -631,58 +688,61 @@ function Step1({ data, token, onUpdate, onNext, isReviewMode }: StepProps) {
               onChange={(e) => handleChange('phone', e.target.value)}
               disabled={getFieldDisabled('phone')}
               placeholder="912345678"
-              className="flex-1 px-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E1E37] disabled:bg-gray-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-3.5 text-[15px] bg-gray-50 border-0 rounded-2xl 
+                         text-gray-900 placeholder:text-gray-400
+                         focus:outline-none focus:ring-2 focus:ring-[#0E1E37]/20 focus:bg-white
+                         disabled:bg-gray-100 disabled:text-gray-400
+                         transition-all duration-200"
             />
           </div>
         </div>
         
-        {/* Value (only if hasPrice) */}
+        {/* ✅ Valor - Minimalista */}
         {hasPrice && (
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">Value *</label>
+            <label className="block text-sm font-medium text-gray-500 mb-2 ml-1">Valor Proposto</label>
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold text-[#0E1E37]">€</span>
+              <span className="absolute left-5 top-1/2 -translate-y-1/2 text-xl font-semibold text-gray-400">€</span>
               <input
                 type="number"
                 value={formData.agreedPrice}
                 onChange={(e) => handleChange('agreedPrice', parseFloat(e.target.value) || 0)}
                 disabled={getFieldDisabled('agreedPrice')}
-                className="w-full pl-12 pr-4 py-4 text-3xl font-bold text-right border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0E1E37] disabled:bg-gray-50 disabled:cursor-not-allowed"
+                className="w-full pl-12 pr-5 py-4 text-2xl font-semibold text-right bg-gray-50 border-0 rounded-2xl 
+                           text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0E1E37]/20 focus:bg-white
+                           disabled:bg-gray-100 disabled:text-gray-400
+                           transition-all duration-200"
               />
             </div>
           </div>
         )}
       </div>
       
-      {/* Action Buttons */}
+      {/* ✅ Botões - Estilo Apple */}
       {isReviewMode ? (
-        // Review mode: only show Next button
-        <div className="mt-6">
+        <div className="mt-10">
           <button
             onClick={onNext}
-            className="w-full py-3 bg-[#0E1E37] text-white font-semibold rounded-lg hover:bg-[#1a2f4f] transition"
+            className="w-full py-4 bg-[#0E1E37] text-white text-[15px] font-medium rounded-full hover:bg-[#1a2f4f] transition-all duration-200 flex items-center justify-center gap-2"
           >
-            Next
+            Continuar <ArrowRight className="h-4 w-4" strokeWidth={2} />
           </button>
         </div>
       ) : !isAnalyzing && (
-        <div className="mt-6 space-y-3">
+        <div className="mt-10 space-y-3">
           {hasPrice ? (
-            // Scenario A: Has price - show Accept and Counterproposal
             <>
               <button
                 onClick={handleAccept}
                 disabled={loading || priceChanged}
-                className="w-full py-3 bg-[#27ae60] text-white font-semibold rounded-lg hover:bg-[#229954] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-4 bg-[#0E1E37] text-white text-[15px] font-medium rounded-full hover:bg-[#1a2f4f] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Processing...' : 'Accept'}
+                {loading ? 'A processar...' : 'Aceitar Proposta'}
               </button>
               <button
                 onClick={handleCounterproposal}
                 disabled={loading || !priceChanged}
-                className="w-full py-3 bg-[#0E1E37] text-white font-semibold rounded-lg hover:bg-[#1a2f4f] transition disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? 'Processing...' : 'Counterproposal'}
+                className="w-full py-4 bg-white text-[#0E1E37] text-[15px] font-medium rounded-full border border-gray-200 hover:bg-gray-50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               </button>
             </>
           ) : (
