@@ -61,7 +61,12 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
   }, [influencerId]);
 
   const fetchData = async () => {
-    if (!influencerId) return;
+    if (!influencerId) {
+      console.log('[ERROR] No influencerId provided');
+      return;
+    }
+    
+    console.log('[FETCH] Starting fetch for influencerId:', influencerId);
     
     try {
       setLoading(true);
@@ -72,18 +77,28 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
         fetch(`/api/influencers/${influencerId}/partnerships`)
       ]);
       
+      console.log('[FETCH] Influencer response status:', infRes.status);
+      console.log('[FETCH] Workflow response status:', wfRes.status);
+      
       if (infRes.ok) {
         const infData = await infRes.json();
+        console.log('[FETCH] Influencer data:', infData);
         setInfluencer(infData);
+      } else {
+        console.error('[ERROR] Failed to fetch influencer:', await infRes.text());
       }
       
       if (wfRes.ok) {
         const wfData = await wfRes.json();
-        console.log('[Workflow API Response]', wfData);
+        console.log('[FETCH] Workflow API Response:', wfData);
+        console.log('[FETCH] Active workflow:', wfData?.activeWorkflow);
+        console.log('[FETCH] Has workflow:', !!wfData?.activeWorkflow);
         setWorkflow(wfData?.activeWorkflow || null);
+      } else {
+        console.error('[ERROR] Failed to fetch workflow:', await wfRes.text());
       }
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('[ERROR] Error fetching data:', error);
     } finally {
       setLoading(false);
     }
