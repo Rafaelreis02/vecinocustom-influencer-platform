@@ -413,125 +413,138 @@ export default function MessagesPage() {
         )}
       </div>
 
-      {/* Detalhe do Email + Influencer Panel */}
+      {/* Detalhe do Email - Drawer */}
       {selectedEmail && (
         <>
-          {/* Email Content */}
-          <div className="fixed md:relative inset-0 md:inset-auto z-50 flex-1 bg-white flex flex-col">
-            {/* Header */}
-            <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setSelectedEmail(null)}
-                  className="md:hidden w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center"
-                >
-                  <ChevronLeft className="h-5 w-5 text-gray-600" strokeWidth={2} />
-                </button>
-                <div className="w-10 h-10 rounded-2xl bg-[#0E1E37] text-white flex items-center justify-center font-semibold">
-                  {selectedEmail.from.charAt(0).toUpperCase()}
-                </div>
-                <div>
-                  <p className="font-semibold text-gray-900 text-sm">{selectedEmail.from}</p>
-                  <p className="text-xs text-gray-400">
-                    {new Date(selectedEmail.receivedAt).toLocaleString('pt-PT')}
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => toggleFlag(selectedEmail.id)}
-                  className="w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400"
-                >
-                  <Flag className={`h-4 w-4 ${selectedEmail.isFlagged ? 'fill-amber-500 text-amber-500' : ''}`} strokeWidth={1.5} />
-                </button>
-                <button
-                  onClick={() => deleteEmail(selectedEmail.id)}
-                  className="w-10 h-10 rounded-full hover:bg-red-50 flex items-center justify-center text-gray-400 hover:text-red-500"
-                >
-                  <Trash2 className="h-4 w-4" strokeWidth={1.5} />
-                </button>
-                <button
-                  onClick={() => setSelectedEmail(null)}
-                  className="hidden md:flex w-10 h-10 rounded-full hover:bg-gray-100 items-center justify-center text-gray-400"
-                >
-                  <X className="h-4 w-4" strokeWidth={2} />
-                </button>
-              </div>
-            </div>
-
-            {/* Conteúdo */}
-            <div className="flex-1 overflow-y-auto p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6">{selectedEmail.subject}</h2>
-              
-              {selectedEmail.htmlBody ? (
-                <div 
-                  className="prose prose-sm max-w-none text-gray-600"
-                  dangerouslySetInnerHTML={{ __html: selectedEmail.htmlBody }}
-                />
-              ) : (
-                <p className="text-gray-600 whitespace-pre-wrap leading-relaxed">{selectedEmail.body}</p>
-              )}
-            </div>
-
-            {/* Footer com Responder */}
-            <div className="border-t border-gray-100 p-4">
-              {showReply ? (
-                <div className="space-y-3">
-                  <textarea
-                    value={replyText}
-                    onChange={(e) => setReplyText(e.target.value)}
-                    placeholder="Escreve a tua resposta..."
-                    className="w-full h-32 p-4 rounded-2xl border-0 bg-gray-50 text-sm focus:bg-white focus:ring-2 focus:ring-[#0E1E37]/20 resize-none transition-all"
-                  />
-                  <div className="flex gap-3">
-                    <button
-                      onClick={handleSendReply}
-                      disabled={sendingReply || !replyText.trim()}
-                      className="flex-1 py-3 bg-[#0E1E37] text-white text-sm font-medium rounded-full hover:bg-[#1a2f4f] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                    >
-                      <Send className="h-4 w-4" strokeWidth={2} />
-                      {sendingReply ? 'A enviar...' : 'Enviar (enviar email)'}
-                    </button>
-                    <button
-                      onClick={() => setShowReply(false)}
-                      className="px-6 py-3 bg-gray-100 text-gray-600 text-sm font-medium rounded-full hover:bg-gray-200 transition-all"
-                    >
-                      Cancelar
-                    </button>
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 hidden md:block"
+            onClick={() => setSelectedEmail(null)}
+          />
+          
+          {/* Drawer Panel */}
+          <div className="fixed inset-0 md:inset-y-0 md:right-0 md:left-auto md:w-[85%] lg:w-[80%] xl:w-[75%] bg-white z-50 shadow-2xl flex flex-col md:flex-row">
+            
+            {/* Email Content */}
+            <div className="flex-1 flex flex-col h-full overflow-hidden">
+              {/* Header */}
+              <div className="p-4 border-b border-gray-100 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setSelectedEmail(null)}
+                    className="w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center"
+                  >
+                    <ChevronLeft className="h-5 w-5 text-gray-600" strokeWidth={2} />
+                  </button>
+                  <div className="w-10 h-10 rounded-2xl bg-[#0E1E37] text-white flex items-center justify-center font-semibold">
+                    {selectedEmail.from.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900 text-sm">{selectedEmail.from}</p>
+                    <p className="text-xs text-gray-400">
+                      {new Date(selectedEmail.receivedAt).toLocaleString('pt-PT')}
+                    </p>
                   </div>
                 </div>
+                
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => toggleFlag(selectedEmail.id)}
+                    className="w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400"
+                  >
+                    <Flag className={`h-4 w-4 ${selectedEmail.isFlagged ? 'fill-amber-500 text-amber-500' : ''}`} strokeWidth={1.5} />
+                  </button>
+                  <button
+                    onClick={() => deleteEmail(selectedEmail.id)}
+                    className="w-10 h-10 rounded-full hover:bg-red-50 flex items-center justify-center text-gray-400 hover:text-red-500"
+                  >
+                    <Trash2 className="h-4 w-4" strokeWidth={1.5} />
+                  </button>
+                  <button
+                    onClick={() => setSelectedEmail(null)}
+                    className="hidden md:flex w-10 h-10 rounded-full hover:bg-gray-100 items-center justify-center text-gray-400"
+                  >
+                    <X className="h-4 w-4" strokeWidth={2} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Conteúdo */}
+              <div className="flex-1 overflow-y-auto p-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-6">{selectedEmail.subject}</h2>
+                
+                {selectedEmail.htmlBody ? (
+                  <div 
+                    className="prose prose-sm max-w-none text-gray-600"
+                    dangerouslySetInnerHTML={{ __html: selectedEmail.htmlBody }}
+                  />
+                ) : (
+                  <p className="text-gray-600 whitespace-pre-wrap leading-relaxed">{selectedEmail.body}</p>
+                )}
+              </div>
+
+              {/* Footer com Responder */}
+              <div className="border-t border-gray-100 p-4 shrink-0">
+                {showReply ? (
+                  <div className="space-y-3">
+                    <textarea
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      placeholder="Escreve a tua resposta..."
+                      className="w-full h-32 p-4 rounded-2xl border-0 bg-gray-50 text-sm focus:bg-white focus:ring-2 focus:ring-[#0E1E37]/20 resize-none transition-all"
+                    />
+                    <div className="flex gap-3">
+                      <button
+                        onClick={handleSendReply}
+                        disabled={sendingReply || !replyText.trim()}
+                        className="flex-1 py-3 bg-[#0E1E37] text-white text-sm font-medium rounded-full hover:bg-[#1a2f4f] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        <Send className="h-4 w-4" strokeWidth={2} />
+                        {sendingReply ? 'A enviar...' : 'Enviar (enviar email)'}
+                      </button>
+                      <button
+                        onClick={() => setShowReply(false)}
+                        className="px-6 py-3 bg-gray-100 text-gray-600 text-sm font-medium rounded-full hover:bg-gray-200 transition-all"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowReply(true)}
+                    className="w-full py-3 bg-gray-100 text-gray-700 text-sm font-medium rounded-full hover:bg-gray-200 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Reply className="h-4 w-4" strokeWidth={2} />
+                    Responder
+                  </button>
+                )}
+              </div>
+            </div>
+            
+            {/* Influencer Panel - Lateral */}
+            <div className="hidden md:flex w-[300px] lg:w-[350px] border-l border-gray-100 bg-gray-50/30 flex-col shrink-0">
+              {selectedEmail.influencer ? (
+                <div className="h-full overflow-y-auto">
+                  <InfluencerPanel influencer={selectedEmail.influencer} />
+                </div>
               ) : (
-                <button
-                  onClick={() => setShowReply(true)}
-                  className="w-full py-3 bg-gray-100 text-gray-700 text-sm font-medium rounded-full hover:bg-gray-200 transition-all flex items-center justify-center gap-2"
-                >
-                  <Reply className="h-4 w-4" strokeWidth={2} />
-                  Responder
-                </button>
+                <div className="h-full flex flex-col items-center justify-center p-6 text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
+                    <UserPlus className="h-8 w-8 text-gray-400" strokeWidth={1.5} />
+                  </div>
+                  <p className="text-sm font-medium text-gray-600 mb-1">Sem influencer associado</p>
+                  <p className="text-xs text-gray-400 mb-4">Associa um influencer a este email</p>
+                  <button
+                    onClick={openInfluencerModal}
+                    className="px-6 py-2.5 bg-[#0E1E37] text-white text-sm font-medium rounded-full hover:bg-[#1a2f4f] transition-all flex items-center gap-2"
+                  >
+                    <Plus className="h-4 w-4" strokeWidth={2} />
+                    Associar Influencer
+                  </button>
+                </div>
               )}
             </div>
-          </div>
-          
-          {/* Influencer Panel - Desktop only */}
-          <div className="hidden lg:flex w-[320px] border-l border-gray-100 bg-gray-50/50 flex-col">
-            {selectedEmail.influencer ? (
-              <InfluencerPanel influencer={selectedEmail.influencer} />
-            ) : (
-              <div className="h-full flex flex-col items-center justify-center p-6 text-center">
-                <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
-                  <UserPlus className="h-8 w-8 text-gray-400" strokeWidth={1.5} />
-                </div>
-                <p className="text-sm font-medium text-gray-600 mb-1">Sem influencer</p>
-                <p className="text-xs text-gray-400 mb-4">Associa um influencer a este email</p>
-                <button
-                  onClick={openInfluencerModal}
-                  className="px-4 py-2 bg-[#0E1E37] text-white text-sm font-medium rounded-full hover:bg-[#1a2f4f] transition-all"
-                >
-                  + Associar Influencer
-                </button>
-              </div>
-            )}
           </div>
         </>
       )}
