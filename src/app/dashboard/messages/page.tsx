@@ -248,13 +248,19 @@ export default function MessagesPage() {
     
     try {
       setAssociatingInfluencer(true);
-      const res = await fetch(`/api/emails/${selectedEmail.id}`, {
-        method: 'PUT',
+      
+      // Call endpoint that associates this influencer to ALL emails from this sender
+      const res = await fetch(`/api/emails/auto-link`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ influencerId }),
+        body: JSON.stringify({ 
+          emailId: selectedEmail.id,
+          influencerId 
+        }),
       });
       
       if (!res.ok) throw new Error();
+      const data = await res.json();
       
       await fetchEmails();
       const emailRes = await fetch(`/api/emails/${selectedEmail.id}`);
@@ -263,11 +269,11 @@ export default function MessagesPage() {
         setSelectedEmail(emailData);
       }
       
-      addToast('Influencer associado!', 'success');
+      addToast(`${data.associated} email(s) associated!`, 'success');
       setShowInfluencerModal(false);
       setInfluencerSearchQuery('');
     } catch (error) {
-      addToast('Erro ao associar', 'error');
+      addToast('Error associating', 'error');
     } finally {
       setAssociatingInfluencer(false);
     }
@@ -434,11 +440,19 @@ export default function MessagesPage() {
                 } ${!email.isRead ? 'bg-blue-50/30' : ''}`}
               >
                 <div className="flex items-center gap-3">
-                  {/* Avatar */}
+                  {/* Avatar - Mostra foto do influencer se associado, senão inicial */}
                   <div className="relative">
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#0E1E37] to-[#1a2f4f] text-white flex items-center justify-center font-semibold text-sm shrink-0 shadow-sm">
-                      {email.from.charAt(0).toUpperCase()}
-                    </div>
+                    {email.influencer?.avatarUrl ? (
+                      <img 
+                        src={email.influencer.avatarUrl} 
+                        alt={email.influencer.name}
+                        className="w-12 h-12 rounded-2xl object-cover shrink-0 shadow-sm"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#0E1E37] to-[#1a2f4f] text-white flex items-center justify-center font-semibold text-sm shrink-0 shadow-sm">
+                        {email.from.charAt(0).toUpperCase()}
+                      </div>
+                    )}
                     {!email.isRead && (
                       <div className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-blue-500 rounded-full border-2 border-white" />
                     )}
