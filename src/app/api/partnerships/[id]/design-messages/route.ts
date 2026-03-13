@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
-import { sendWorkflowEmail } from '@/lib/partnership-email';
+import { google } from 'googleapis';
 
 /**
  * Design Messages — Step 4
@@ -12,7 +12,7 @@ import { sendWorkflowEmail } from '@/lib/partnership-email';
  * 1ª mensagem admin → template DESIGN_REVIEW_FIRST  ("o teu design está pronto")
  * 2ª+ mensagens admin → template DESIGN_REVIEW_REVISION ("fizemos as alterações")
  *
- * Usa sendWorkflowEmail para consistência com o resto do sistema.
+ * FIX: Cria cliente Gmail inline para evitar bug googleapis v171.x
  */
 
 // GET /api/partnerships/[id]/design-messages - Listar mensagens
@@ -102,37 +102,68 @@ export async function POST(
     const adminMessageCount = Number(countResult[0]?.count || 0);
     const isFirstDesign = adminMessageCount === 1;
 
-    // Enviar email via sendWorkflowEmail
-    // Step 4 com isFirstDesign determina o template: DESIGN_REVIEW_FIRST ou DESIGN_REVIEW_REVISION
-    // Passamos 'isFirstDesign' como variável extra para o partnership-email escolher o template certo
+    // === FIX: Criar cliente Gmail inline ===
     let emailSent = false;
     let emailError: string | null = null;
 
-    if (workflow.influencer.email) {
-      // Usar step 4 para 1ª prova, step 40 (fictício) para revisão — 
-      // na verdade passamos a chave direta para o template
+    const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
+
+    if (workflow.influencer.email && refreshToken) {
       const templateKey = isFirstDesign ? 'DESIGN_REVIEW_FIRST' : 'DESIGN_REVIEW_REVISION';
 
       const template = await prisma.emailTemplate.findUnique({ where: { key: templateKey } });
 
       if (template) {
-        // Render manual do template (o sendWorkflowEmail usa step number, não key direta)
-        // Para design-messages usamos sendWorkflowEmail com step especial
-        // Step 4 → partnership-email.ts retorna null (design é enviado aqui)
-        // Então fazemos o render e envio direto mas com a mesma lib Gmail
-        const { getAuthClient, sendEmail } = await import('@/lib/gmail');
-        const portalUrl = `https://vecinocustom-influencer-platform.vercel.app/portal/${workflow.influencer.portalToken}`;
-
-        const subject = template.subject;
-        const body = template.body
-          .replace(/{{nome}}/g, workflow.influencer.name || '')
-          .replace(/{{portalToken}}/g, workflow.influencer.portalToken || '')
-          .replace(/{{portalUrl}}/g, portalUrl)
-          .replace(/{{mensagem}}/g, content || '');
-
         try {
-          const auth = getAuthClient();
-          await sendEmail(auth, { to: workflow.influencer.email, subject, body });
+          // Criar cliente Gmail inline
+          const oauth2Client = new google.auth.OAuth2(
+            process.env.GOOGLE_CLIENT_ID,
+            process.env.GOOGLE_CLIENT_SECRET,
+            `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/auth/gmail/callback`
+          );
+
+          oauth2Client.setCredentials({
+            refresh_token: refreshToken,
+          });
+
+          const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+
+          const senderEmail = process.env.GMAIL_USER || 'brand@vecinocustom.com';
+          const senderName = 'VecinoCustom';
+          const portalUrl = `https://vecinocustom-influencer-platform.vercel.app/portal/${workflow.influencer.portalToken}`;
+
+          const subject = template.subject;
+          const emailBody = template.body
+            .replace(/{{nome}}/g, workflow.influencer.name || '')
+            .replace(/{{portalToken}}/g, workflow.influencer.portalToken || '')
+            .replace(/{{portalUrl}}/g, portalUrl)
+            .replace(/{{mensagem}}/g, content || '');
+
+          // Build email message
+          const emailMessage = [
+            `From: ${senderName} <${senderEmail}>`,
+            `To: ${workflow.influencer.email}`,
+            `Subject: ${subject}`,
+            'Content-Type: text/plain; charset="UTF-8"',
+            'MIME-Version: 1.0',
+            '',
+            emailBody,
+          ].join('\n');
+
+          const encodedMessage = Buffer.from(emailMessage)
+            .toString('base64')
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
+            .replace(/=/g, '');
+
+          // Send email
+          const result = await gmail.users.messages.send({
+            userId: 'me',
+            requestBody: {
+              raw: encodedMessage,
+            },
+          });
+
           emailSent = true;
 
           // Registar email na DB para histórico
@@ -142,7 +173,7 @@ export async function POST(
               step: 4,
               templateKey,
               subject,
-              body,
+              body: emailBody,
               sentBy: session.user.id || 'system',
               variables: { nome: workflow.influencer.name, portalToken: workflow.influencer.portalToken, mensagem: content } as any,
             },
@@ -153,6 +184,7 @@ export async function POST(
             template: templateKey,
             isFirstDesign,
             to: workflow.influencer.email,
+            messageId: result.data.id,
           });
         } catch (err: any) {
           emailError = err.message;
@@ -163,9 +195,14 @@ export async function POST(
         logger.warn('[DESIGN_MESSAGES] Template not found', { templateKey });
       }
     } else {
-      emailError = 'Influencer has no email';
-      logger.warn('[DESIGN_MESSAGES] No influencer email', { workflowId: id });
+      emailError = !workflow.influencer.email ? 'Influencer has no email' : 'Gmail not configured';
+      logger.warn('[DESIGN_MESSAGES] Cannot send email', { 
+        workflowId: id, 
+        hasEmail: !!workflow.influencer.email,
+        hasRefreshToken: !!refreshToken,
+      });
     }
+    // =======================================
 
     return NextResponse.json({
       success: true,

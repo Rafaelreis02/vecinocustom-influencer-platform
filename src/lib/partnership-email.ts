@@ -1,9 +1,11 @@
 /**
  * Partnership Email Service
  * Handles sending emails for partnership workflow steps
+ * 
+ * FIX: Cria cliente Gmail inline para evitar bug googleapis v171.x
  */
 
-import { getAuthClient, sendEmail as sendGmailEmail } from './gmail';
+import { google } from 'googleapis';
 import { prisma } from './prisma';
 import { logger } from './logger';
 
@@ -26,6 +28,7 @@ interface EmailVariables {
 
 /**
  * Send email for a specific workflow step
+ * Cria cliente Gmail inline (fix para googleapis v171.x)
  */
 export async function sendWorkflowEmail(
   workflowId: string,
@@ -35,7 +38,8 @@ export async function sendWorkflowEmail(
 ): Promise<{ success: boolean; emailId?: string; error?: string }> {
   try {
     // Check if Gmail is configured
-    if (!process.env.GOOGLE_REFRESH_TOKEN) {
+    const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
+    if (!refreshToken) {
       logger.warn('[EMAIL] Gmail not configured, skipping email send');
       return { success: false, error: 'Gmail not configured' };
     }
@@ -71,13 +75,47 @@ export async function sendWorkflowEmail(
       return { success: false, error: 'No recipient email found' };
     }
 
-    // Send email via Gmail
-    const auth = getAuthClient();
-    const result = await sendGmailEmail(auth, {
-      to: toEmail,
-      subject,
-      body,
+    // === FIX: Criar cliente Gmail inline (igual ao /api/emails/compose) ===
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/auth/gmail/callback`
+    );
+
+    oauth2Client.setCredentials({
+      refresh_token: refreshToken,
     });
+
+    const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+
+    const senderEmail = process.env.GMAIL_USER || 'brand@vecinocustom.com';
+    const senderName = 'VecinoCustom';
+
+    // Build email message
+    const emailMessage = [
+      `From: ${senderName} <${senderEmail}>`,
+      `To: ${toEmail}`,
+      `Subject: ${subject}`,
+      'Content-Type: text/plain; charset="UTF-8"',
+      'MIME-Version: 1.0',
+      '',
+      body,
+    ].join('\n');
+
+    const encodedMessage = Buffer.from(emailMessage)
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
+
+    // Send email
+    const result = await gmail.users.messages.send({
+      userId: 'me',
+      requestBody: {
+        raw: encodedMessage,
+      },
+    });
+    // =====================================================================
 
     // Record email in database
     await prisma.partnershipEmail.create({
@@ -97,9 +135,10 @@ export async function sendWorkflowEmail(
       step,
       to: toEmail,
       subject,
+      messageId: result.data.id,
     });
 
-    return { success: true, emailId: result.id || undefined };
+    return { success: true, emailId: result.data.id || undefined };
   } catch (error: any) {
     logger.error('[EMAIL] Failed to send', { workflowId, step, error: error.message });
     return { success: false, error: error.message };
