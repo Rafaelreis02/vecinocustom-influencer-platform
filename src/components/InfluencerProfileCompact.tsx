@@ -103,7 +103,7 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
         body: JSON.stringify({
           influencerId,
           agreedPrice: price,
-          commission: 10,
+          commission: 20,
         }),
       });
 
@@ -323,12 +323,15 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
                     <button
                       onClick={handleAdvanceStep}
                       disabled={isAdvancing}
-                      className="w-8 h-8 rounded-full bg-[#0E1E37] text-white flex items-center justify-center hover:bg-[#1a2f4f] transition-colors disabled:opacity-50"
+                      className="px-3 py-1.5 bg-[#0E1E37] text-white text-xs font-medium rounded-lg hover:bg-[#1a2f4f] transition-colors disabled:opacity-50 flex items-center gap-1"
                     >
                       {isAdvancing ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
                       ) : (
-                        <ChevronRight className="h-4 w-4" />
+                        <>
+                          Avançar
+                          <ChevronRight className="h-3.5 w-3.5" />
+                        </>
                       )}
                     </button>
                   )}
