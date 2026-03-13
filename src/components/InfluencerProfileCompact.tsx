@@ -323,10 +323,23 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
                     <button
                       onClick={handleAdvanceStep}
                       disabled={isAdvancing}
-                      className="px-3 py-1.5 bg-[#0E1E37] text-white text-xs font-medium rounded-lg hover:bg-[#1a2f4f] transition-colors disabled:opacity-50 flex items-center gap-1"
+                      className="px-3 py-1.5 bg-[#0E1E37] text-white text-xs font-medium rounded-lg hover:bg-[#1a2f4f] transition-colors disabled:opacity-50 flex items-center gap-1.5"
                     >
                       {isAdvancing ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <>
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          A processar...
+                        </>
+                      ) : currentStep === 6 ? (
+                        <>
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          Completar Parceria
+                        </>
+                      ) : currentStep === 5 && !workflow?.trackingUrl ? (
+                        <>
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          Adicionar Tracking
+                        </>
                       ) : (
                         <>
                           Avançar
