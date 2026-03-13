@@ -41,7 +41,7 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
   const [isCreatingPartnership, setIsCreatingPartnership] = useState(false);
   const [isAdvancing, setIsAdvancing] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [formData, setFormData] = useState({ agreedPrice: '', commission: '10' });
+  const [agreedPrice, setAgreedPrice] = useState('');
   const [activeTab, setActiveTab] = useState<'overview' | 'stats' | 'content'>('overview');
 
   // Workflow steps definition
@@ -89,7 +89,7 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
       return;
     }
 
-    const price = parseFloat(formData.agreedPrice);
+    const price = parseFloat(agreedPrice);
     if (isNaN(price) || price < 0) {
       addToast('Please enter a valid price', 'error');
       return;
@@ -103,7 +103,7 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
         body: JSON.stringify({
           influencerId,
           agreedPrice: price,
-          commission: parseInt(formData.commission) || 10,
+          commission: 10,
         }),
       });
 
@@ -111,7 +111,7 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
       
       addToast('Partnership created!', 'success');
       setShowCreateForm(false);
-      setFormData({ agreedPrice: '', commission: '10' });
+      setAgreedPrice('');
       fetchInfluencer();
       onUpdate?.();
     } catch (error) {
@@ -241,49 +241,44 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
           ) : (
             <div className="space-y-3 bg-white rounded-xl p-3 border-2 border-[#0E1E37]">
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Agreed Price (€)</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Valor Acordado (€)
+                </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">€</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-semibold">€</span>
                   <input
                     type="number"
-                    value={formData.agreedPrice}
-                    onChange={(e) => setFormData({ ...formData, agreedPrice: e.target.value })}
-                    placeholder="0.00"
-                    className="w-full pl-7 pr-3 py-2 bg-gray-50 border-0 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-[#0E1E37]/20"
+                    value={agreedPrice}
+                    onChange={(e) => setAgreedPrice(e.target.value)}
+                    placeholder="0"
+                    min="0"
+                    step="0.01"
+                    className="w-full pl-8 pr-3 py-2.5 bg-gray-50 border-0 rounded-lg text-lg font-semibold text-gray-900 focus:ring-2 focus:ring-[#0E1E37]/20 placeholder:text-gray-300"
                     autoFocus
                   />
                 </div>
-              </div>
-              
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Commission (%)</label>
-                <input
-                  type="number"
-                  value={formData.commission}
-                  onChange={(e) => setFormData({ ...formData, commission: e.target.value })}
-                  placeholder="10"
-                  className="w-full px-3 py-2 bg-gray-50 border-0 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-[#0E1E37]/20"
-                />
+                <p className="text-[10px] text-gray-400 mt-1">
+                  (pode ser 0€ para comissão apenas)
+                </p>
               </div>
               
               <div className="flex gap-2 pt-1">
                 <button
                   onClick={() => setShowCreateForm(false)}
-                  className="flex-1 py-2 bg-gray-100 text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors"
+                  className="flex-1 py-2.5 bg-gray-100 text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors"
                 >
-                  Cancel
+                  Cancelar
                 </button>
                 <button
                   onClick={handleCreatePartnership}
-                  disabled={isCreatingPartnership || !formData.agreedPrice}
-                  className="flex-1 py-2 bg-[#0E1E37] text-white text-sm font-medium rounded-lg hover:bg-[#1a2f4f] transition-colors disabled:opacity-50 flex items-center justify-center gap-1"
+                  disabled={isCreatingPartnership || agreedPrice === ''}
+                  className="flex-1 py-2.5 bg-[#0E1E37] text-white text-sm font-medium rounded-lg hover:bg-[#1a2f4f] transition-colors disabled:opacity-50 flex items-center justify-center gap-1"
                 >
                   {isCreatingPartnership ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <Plus className="h-3.5 w-3.5" />
+                    'Criar Parceria'
                   )}
-                  Create
                 </button>
               </div>
             </div>
