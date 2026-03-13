@@ -19,7 +19,7 @@ import { useRole, UserRole } from '@/hooks/useRole';
 interface NavigationItem {
   name: string;
   href: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
   roles: UserRole[];
 }
 
@@ -40,9 +40,8 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const { role, isAdmin, isLoading } = useRole();
 
-  // Filter navigation based on user role
   const filteredNavigation = navigation.filter((item) => {
-    if (isLoading) return true; // Show all while loading to prevent flicker
+    if (isLoading) return true;
     return role ? item.roles.includes(role) : false;
   });
 
@@ -51,38 +50,43 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
       {/* Mobile Overlay */}
       {mobileOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 md:hidden"
           onClick={onClose}
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar - Minimalista */}
       <div className={clsx(
         "fixed md:static inset-y-0 left-0 z-50 md:z-0",
-        "flex h-screen w-20 flex-col bg-gray-900",
-        "transform transition-transform duration-300 ease-in-out",
+        "flex h-screen w-64 flex-col bg-white border-r border-gray-200/50",
+        "transform transition-transform duration-300 ease-out",
         mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
       )}>
         {/* Logo + Close Button (Mobile) */}
-        <div className="flex h-16 items-center justify-center relative">
-          <Link href="/dashboard" className="flex items-center justify-center">
-            <div className="h-8 w-8 rounded bg-white flex items-center justify-center font-bold text-black text-sm">
+        <div className="flex h-16 items-center justify-between px-6 border-b border-gray-100">
+          <Link href="/dashboard" className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-2xl bg-[#0E1E37] flex items-center justify-center font-bold text-white">
               V
             </div>
+            <div>
+              <span className="text-base font-semibold text-gray-900">VecinoCustom</span>
+              <p className="text-xs text-gray-400">Admin</p>
+            </div>
           </Link>
-          {/* Close button - mobile only */}
           <button
             onClick={onClose}
-            className="md:hidden absolute right-2 p-2 rounded-lg hover:bg-white/10 transition-colors"
+            className="md:hidden w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors"
           >
-            <X className="h-5 w-5 text-gray-400" />
+            <X className="h-5 w-5 text-gray-400" strokeWidth={1.5} />
           </button>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto" aria-label="Main navigation">
+        <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto" aria-label="Main navigation">
+          <p className="px-3 text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">
+            Menu
+          </p>
           {filteredNavigation.map((item) => {
-            // Dashboard uses exact match, others use startsWith
             const isActive = item.href === '/dashboard' 
               ? pathname === item.href 
               : pathname.startsWith(item.href);
@@ -91,15 +95,19 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
               <Link
                 key={item.name}
                 href={item.href}
+                onClick={() => onClose?.()}
                 className={clsx(
-                  'flex flex-col items-center justify-center px-2 py-3 text-[10px] font-medium rounded-md transition-colors',
+                  'flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200',
                   isActive
-                    ? 'bg-white/10 text-white'
-                    : 'text-gray-400 hover:bg-white/5 hover:text-gray-300'
+                    ? 'bg-[#0E1E37] text-white shadow-sm'
+                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                 )}
               >
-                <item.icon className="h-5 w-5 mb-1" />
-                <span className="text-center leading-tight">{item.name}</span>
+                <item.icon className={clsx(
+                  "h-5 w-5",
+                  isActive ? "text-white" : "text-gray-400"
+                )} strokeWidth={1.5} />
+                {item.name}
               </Link>
             );
           })}
@@ -107,41 +115,50 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
 
         {/* Admin-only items */}
         {isAdmin && (
-          <div className="border-t border-gray-800 p-2 space-y-1">
+          <div className="px-4 py-4 border-t border-gray-100">
+            <p className="px-3 text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">
+              Admin
+            </p>
             <Link
               href="/dashboard/users"
               className={clsx(
-                'flex flex-col items-center justify-center px-2 py-3 text-[10px] font-medium rounded-md transition-colors',
+                'flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200',
                 pathname.startsWith('/dashboard/users')
-                  ? 'bg-white/10 text-white'
-                  : 'text-gray-400 hover:bg-white/5 hover:text-gray-300'
+                  ? 'bg-[#0E1E37] text-white shadow-sm'
+                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
               )}
             >
-              <UserCog className="h-5 w-5 mb-1" />
-              <span className="text-center leading-tight">Utilizadores</span>
+              <UserCog className={clsx(
+                "h-5 w-5",
+                pathname.startsWith('/dashboard/users') ? "text-white" : "text-gray-400"
+              )} strokeWidth={1.5} />
+              Utilizadores
             </Link>
           </div>
         )}
 
         {/* Bottom */}
-        <div className="border-t border-gray-800 p-2 space-y-1">
+        <div className="border-t border-gray-100 p-4 space-y-1">
           <Link
             href="/dashboard/settings"
             className={clsx(
-              'flex flex-col items-center justify-center px-2 py-3 text-[10px] font-medium rounded-md transition-colors',
+              'flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200',
               pathname.startsWith('/dashboard/settings')
-                ? 'bg-white/10 text-white'
-                : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+                ? 'bg-[#0E1E37] text-white shadow-sm'
+                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
             )}
           >
-            <Settings className="h-5 w-5 mb-1" />
-            <span className="text-center leading-tight">Definições</span>
+            <Settings className={clsx(
+              "h-5 w-5",
+              pathname.startsWith('/dashboard/settings') ? "text-white" : "text-gray-400"
+            )} strokeWidth={1.5} />
+            Definições
           </Link>
           <button
-            className="w-full flex flex-col items-center justify-center px-2 py-3 text-[10px] font-medium text-gray-500 hover:text-gray-300 hover:bg-white/5 rounded-md transition-colors"
+            className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all duration-200"
           >
-            <LogOut className="h-5 w-5 mb-1" />
-            <span className="text-center leading-tight">Sair</span>
+            <LogOut className="h-5 w-5 text-gray-400" strokeWidth={1.5} />
+            Sair
           </button>
         </div>
       </div>

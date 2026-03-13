@@ -13,16 +13,10 @@ import {
   Target,
   CheckCircle,
   ChevronRight,
-  X,
-  ArrowUpDown,
-  ArrowDown,
-  ArrowUp,
   Send
 } from 'lucide-react';
-import { ToastContainer, useToast } from '@/components/ui/Toast';
-import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog';
+import { useToast } from '@/components/ui/Toast';
 import { ImportInfluencerModal } from '@/components/ImportInfluencerModal';
-import { ProcessingBanner } from '@/components/ProcessingBanner';
 import { PHASES, getStatusConfig } from '@/lib/influencer-status';
 
 const TABS = [
@@ -30,17 +24,17 @@ const TABS = [
     id: 'prospecting', 
     label: 'Prospeção', 
     icon: Search,
-    description: 'Novos influencers para analisar',
+    description: 'Novos influencers',
     color: 'bg-indigo-100 text-indigo-700',
-    activeColor: 'bg-indigo-600 text-white'
+    activeColor: 'bg-[#0E1E37] text-white'
   },
   { 
     id: 'negotiating', 
     label: 'A Negociar', 
     icon: Target,
-    description: 'Em discussão de propostas',
+    description: 'Em discussão',
     color: 'bg-blue-100 text-blue-700',
-    activeColor: 'bg-blue-600 text-white'
+    activeColor: 'bg-[#0E1E37] text-white'
   },
   { 
     id: 'closing', 
@@ -48,7 +42,7 @@ const TABS = [
     icon: CheckCircle,
     description: 'Campanhas ativas',
     color: 'bg-emerald-100 text-emerald-700',
-    activeColor: 'bg-emerald-600 text-white'
+    activeColor: 'bg-[#0E1E37] text-white'
   },
 ];
 
@@ -58,18 +52,10 @@ type Influencer = {
   email: string | null;
   avatarUrl: string | null;
   instagramHandle: string | null;
-  instagramFollowers: number | null;
   tiktokHandle: string | null;
-  tiktokFollowers: number | null;
   status: string;
-  totalViews: number;
-  totalFollowers: number;
-  engagement: number;
   matchScore: number | null;
   fitScore: number | null;
-  campaigns: number;
-  totalRevenue: number;
-  activeCoupons: number;
   createdAt: string;
 };
 
@@ -79,15 +65,7 @@ function InfluencersContent() {
   const [allInfluencers, setAllInfluencers] = useState<Influencer[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { toasts, addToast, removeToast } = useToast();
-  const { dialog, confirm: showConfirm } = useConfirm();
-
-  // Filtros
-  const [statusFilter, setStatusFilter] = useState<string>('ALL');
-  const [sortBy, setSortBy] = useState<'date' | 'fitScore'>('date');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-
-  // Contacting state
+  const { addToast } = useToast();
   const [contactingId, setContactingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -107,28 +85,6 @@ function InfluencersContent() {
       addToast('Erro ao carregar influencers', 'error');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleDelete = async (id: string, name: string) => {
-    const confirmed = await showConfirm({
-      title: 'Apagar Influencer',
-      message: `Tens a certeza que queres apagar ${name}? Esta ação não pode ser desfeita.`,
-      confirmText: 'Apagar',
-      cancelText: 'Cancelar',
-      isDangerous: true,
-    });
-
-    if (!confirmed) return;
-
-    try {
-      const res = await fetch(`/api/influencers/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Failed to delete');
-      
-      setAllInfluencers(prev => prev.filter(inf => inf.id !== id));
-      addToast('Influencer apagado com sucesso', 'success');
-    } catch (error) {
-      addToast('Erro ao apagar influencer', 'error');
     }
   };
 
@@ -154,25 +110,18 @@ function InfluencersContent() {
         throw new Error(data.error || 'Erro ao enviar email');
       }
 
-      // Update local state
       setAllInfluencers(prev => prev.map(inf => 
         inf.id === influencer.id ? { ...inf, status: 'CONTACTED' } : inf
       ));
       
       addToast(`✅ Email enviado para ${influencer.name}`, 'success');
     } catch (error: any) {
-      console.error('Error sending contact email:', error);
-      addToast(error.message || 'Erro ao enviar email de contacto', 'error');
+      addToast(error.message || 'Erro ao enviar email', 'error');
     } finally {
       setContactingId(null);
     }
   };
 
-  const handleSuccess = () => {
-    fetchInfluencers();
-  };
-
-  // Filtrar por tab (fase), pesquisa, status e ordenação
   const currentPhase = TABS.find(t => t.id === activeTab);
   const phaseStatuses = activeTab === 'prospecting'
     ? PHASES.PROSPECTING.statuses
@@ -180,22 +129,10 @@ function InfluencersContent() {
     ? PHASES.NEGOTIATING.statuses
     : PHASES.CLOSING.statuses;
 
-  // Reset status filter quando muda de tab
-  useEffect(() => {
-    setStatusFilter('ALL');
-  }, [activeTab]);
-
   const filteredInfluencers = allInfluencers
     .filter((inf: Influencer) => {
       const infStatus = (inf.status || 'UNKNOWN').toUpperCase();
       return phaseStatuses.map(s => s.toUpperCase()).includes(infStatus);
-    })
-    .filter((inf: Influencer) => {
-      // Filtro por status específico
-      if (statusFilter !== 'ALL') {
-        return (inf.status || 'UNKNOWN').toUpperCase() === statusFilter.toUpperCase();
-      }
-      return true;
     })
     .filter((inf: Influencer) => {
       if (!searchQuery.trim()) return true;
@@ -203,77 +140,38 @@ function InfluencersContent() {
       return (
         inf.name.toLowerCase().includes(q) ||
         (inf.email && inf.email.toLowerCase().includes(q)) ||
-        (inf.instagramHandle && inf.instagramHandle.toLowerCase().includes(q)) ||
-        (inf.tiktokHandle && inf.tiktokHandle.toLowerCase().includes(q))
+        (inf.instagramHandle && inf.instagramHandle.toLowerCase().includes(q))
       );
-    })
-    .sort((a: Influencer, b: Influencer) => {
-      // Ordenação
-      if (sortBy === 'fitScore' && activeTab === 'prospecting') {
-        const scoreA = a.fitScore || 0;
-        const scoreB = b.fitScore || 0;
-        return sortOrder === 'asc' ? scoreA - scoreB : scoreB - scoreA;
-      } else {
-        // Por data (createdAt)
-        const dateA = new Date(a.createdAt || 0).getTime();
-        const dateB = new Date(b.createdAt || 0).getTime();
-        return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
-      }
     });
-
-  // Opções de status para o filtro (baseado na aba atual)
-  const statusOptions = phaseStatuses.map(status => ({
-    value: status,
-    label: getStatusConfig(status).label
-  }));
 
   return (
     <div className="space-y-6">
-      {/* Toast Container */}
-      <ToastContainer toasts={toasts} onClose={removeToast} />
-      
-      {/* Confirm Dialog */}
-      <ConfirmDialog 
-        isOpen={dialog.isOpen}
-        title={dialog.title}
-        message={dialog.message}
-        confirmText={dialog.confirmText}
-        cancelText={dialog.cancelText}
-        isDangerous={dialog.isDangerous}
-        onConfirm={dialog.onConfirm}
-        onCancel={dialog.onCancel}
-      />
-
-      {/* Import Modal */}
       <ImportInfluencerModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onSuccess={handleSuccess}
+        onSuccess={fetchInfluencers}
       />
 
-      {/* Header */}
+      {/* ✅ Header Minimalista */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Influencers</h1>
-          <p className="text-sm text-gray-600 mt-1">
-            Gestão de parcerias e campanhas
+          <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Influencers</h1>
+          <p className="text-sm text-gray-400 mt-1">
+            Gestão de parcerias
           </p>
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-black text-white rounded-lg font-medium hover:bg-gray-800 transition-colors"
+          className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#0E1E37] text-white text-sm font-medium rounded-full hover:bg-[#1a2f4f] transition-all duration-200 shadow-sm"
         >
-          <Plus className="h-4 w-4" />
+          <Plus className="h-4 w-4" strokeWidth={2} />
           Novo Influencer
         </button>
       </div>
 
-      {/* Processing Banner */}
-      <ProcessingBanner />
-
-      {/* Tabs de Fases */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="flex flex-col sm:flex-row border-b border-gray-200">
+      {/* ✅ Tabs Minimalistas */}
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="flex border-b border-gray-100">
           {TABS.map((tab) => {
             const Icon = tab.icon;
             const count = allInfluencers.filter((inf: Influencer) => {
@@ -285,225 +183,151 @@ function InfluencersContent() {
               return statuses.map(s => s.toUpperCase()).includes((inf.status || 'UNKNOWN').toUpperCase());
             }).length;
             
+            const isActive = activeTab === tab.id;
+            
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 flex items-center gap-3 p-4 text-left transition-all hover:bg-gray-50 ${
-                  activeTab === tab.id 
-                    ? 'bg-gray-50 border-b-2 border-black' 
-                    : 'border-b-2 border-transparent'
+                className={`flex-1 flex items-center gap-3 p-4 text-left transition-all ${
+                  isActive ? 'bg-gray-50' : 'hover:bg-gray-50/50'
                 }`}
               >
-                <div className={`p-2 rounded-lg ${
-                  activeTab === tab.id ? tab.activeColor : tab.color
+                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-colors ${
+                  isActive ? tab.activeColor : tab.color
                 }`}>
-                  <Icon className="h-5 w-5" />
+                  <Icon className="h-5 w-5" strokeWidth={1.5} />
                 </div>
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 hidden sm:block">
                   <div className="flex items-center gap-2">
-                    <span className={`font-semibold ${
-                      activeTab === tab.id ? 'text-gray-900' : 'text-gray-700'
-                    }`}>
+                    <span className={`font-semibold text-sm ${isActive ? 'text-gray-900' : 'text-gray-600'}`}>
                       {tab.label}
                     </span>
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                      activeTab === tab.id ? 'bg-black text-white' : 'bg-gray-100 text-gray-600'
+                      isActive ? 'bg-[#0E1E37] text-white' : 'bg-gray-100 text-gray-500'
                     }`}>
                       {count}
                     </span>
                   </div>
-                  <p className="text-xs text-gray-500 mt-0.5 truncate">
+                  <p className="text-xs text-gray-400 mt-0.5">
                     {tab.description}
                   </p>
                 </div>
-                <ChevronRight className={`h-5 w-5 text-gray-400 transition-transform ${
-                  activeTab === tab.id ? 'rotate-90' : ''
-                }`} />
               </button>
             );
           })}
         </div>
 
-        {/* Conteúdo da Tab Ativa */}
-        <div className="p-4 sm:p-6">
-          {/* Search & Filters */}
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            {/* Search */}
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder={`Pesquisar...`}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-md border border-gray-200 bg-white py-2 pl-10 pr-4 text-sm focus:border-gray-900 focus:outline-none transition-colors"
-              />
-            </div>
-
-            {/* Filters */}
-            <div className="flex gap-3 overflow-x-auto pb-2 md:pb-0">
-              {/* Status Filter */}
-              <div className="relative">
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="appearance-none h-10 pl-3 pr-8 rounded-md border border-gray-200 bg-white text-sm text-gray-700 hover:border-gray-300 focus:border-black focus:outline-none cursor-pointer"
-                >
-                  <option value="ALL">Todos os Status</option>
-                  {statusOptions.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-                <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 rotate-90 pointer-events-none" />
-                
-                {statusFilter !== 'ALL' && (
-                  <button 
-                    onClick={() => setStatusFilter('ALL')}
-                    className="absolute -top-1.5 -right-1.5 bg-white rounded-full p-0.5 hover:bg-gray-100 shadow-md border border-gray-300 z-10"
-                    title="Limpar filtro"
-                  >
-                    <X className="w-3.5 h-3.5 text-gray-600" />
-                  </button>
-                )}
-              </div>
-
-              {/* Sort */}
-              <div className="flex items-center bg-white border border-gray-200 rounded-md p-1 h-10">
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as any)}
-                  className="h-full pl-2 pr-1 text-sm bg-transparent border-none focus:ring-0 text-gray-700 cursor-pointer outline-none"
-                >
-                  <option value="date">Data</option>
-                  {activeTab === 'prospecting' && <option value="fitScore">Fit Score</option>}
-                </select>
-                
-                <div className="w-px h-4 bg-gray-200 mx-1" />
-                
-                <button
-                  onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
-                  className="p-1.5 hover:bg-gray-100 rounded-md transition-colors"
-                  title={sortOrder === 'asc' ? 'Ascendente' : 'Descendente'}
-                >
-                  {sortOrder === 'asc' 
-                    ? <ArrowUp className="w-4 h-4 text-gray-600" /> 
-                    : <ArrowDown className="w-4 h-4 text-gray-600" />
-                  }
-                </button>
-              </div>
-            </div>
+        {/* Conteúdo */}
+        <div className="p-6">
+          {/* Search */}
+          <div className="relative mb-6">
+            <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" strokeWidth={1.5} />
+            <input
+              type="text"
+              placeholder="Pesquisar influencers..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full rounded-2xl border-0 bg-gray-50 py-4 pl-12 pr-4 text-[15px] text-gray-900 placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-[#0E1E37]/20 transition-all"
+            />
           </div>
 
           {/* Loading */}
           {loading && (
             <div className="flex items-center justify-center py-16">
-              <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+              <Loader2 className="h-8 w-8 animate-spin text-gray-300" strokeWidth={1.5} />
             </div>
           )}
 
           {/* Empty State */}
           {!loading && filteredInfluencers.length === 0 && (
-            <div className="text-center py-16 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
-              <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900">
-                Nenhum influencer em {currentPhase?.label}
+            <div className="text-center py-16">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+                <Users className="h-8 w-8 text-gray-400" strokeWidth={1.5} />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                Nenhum influencer
               </h3>
-              <p className="text-sm text-gray-500 max-w-xs mx-auto mt-1">
-                {searchQuery 
-                  ? 'Nenhum resultado para a pesquisa.' 
-                  : `Adiciona influencers para começares a gerir esta fase.`}
+              <p className="text-sm text-gray-400">
+                Adiciona influencers para começar
               </p>
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg font-medium hover:bg-gray-800 transition-colors"
-              >
-                <Plus className="h-4 w-4" />
-                Adicionar Influencer
-              </button>
             </div>
           )}
 
-          {/* Lista de Influencers */}
+          {/* Lista */}
           {!loading && filteredInfluencers.length > 0 && (
             <div className="space-y-3">
-              {filteredInfluencers.map((influencer) => (
-                <Link
-                  key={influencer.id}
-                  href={`/dashboard/influencers/${influencer.id}`}
-                  className="rounded-lg bg-white p-3 sm:p-5 border border-gray-200 hover:border-gray-900 transition-colors block"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    {/* Left: Profile */}
-                    <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
-                      <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-black flex items-center justify-center text-white font-semibold text-sm sm:text-base shrink-0 overflow-hidden">
-                        {influencer.avatarUrl ? (
-                          <img src={influencer.avatarUrl} alt={influencer.name} className="h-full w-full object-cover" />
-                        ) : (
-                          influencer.name[0]
+              {filteredInfluencers.map((influencer) => {
+                const statusConfig = getStatusConfig(influencer.status);
+                
+                return (
+                  <Link
+                    key={influencer.id}
+                    href={`/dashboard/influencers/${influencer.id}`}
+                    className="flex items-center gap-4 p-4 rounded-2xl bg-gray-50 hover:bg-gray-100 transition-colors group"
+                  >
+                    {/* Avatar */}
+                    <div className="h-12 w-12 rounded-2xl bg-[#0E1E37] flex items-center justify-center text-white font-semibold shrink-0 overflow-hidden">
+                      {influencer.avatarUrl ? (
+                        <img src={influencer.avatarUrl} alt={influencer.name} className="h-full w-full object-cover" />
+                      ) : (
+                        influencer.name[0]
+                      )}
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-gray-900 text-sm sm:text-base">{influencer.name}</h3>
+                      <div className="flex items-center gap-3 text-xs sm:text-sm text-gray-400 mt-0.5">
+                        {influencer.instagramHandle && (
+                          <span className="flex items-center gap-1">
+                            <Instagram className="h-3.5 w-3.5" strokeWidth={1.5} />
+                            {influencer.instagramHandle}
+                          </span>
+                        )}
+                        {influencer.email && (
+                          <span className="flex items-center gap-1 hidden sm:flex">
+                            <Mail className="h-3.5 w-3.5" strokeWidth={1.5} />
+                            {influencer.email}
+                          </span>
                         )}
                       </div>
+                    </div>
 
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-gray-900 mb-0.5 sm:mb-1 text-sm sm:text-base truncate">{influencer.name}</h3>
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs sm:text-sm text-gray-500">
-                          {influencer.instagramHandle && (
-                            <span className="flex items-center gap-1 min-w-0">
-                              <Instagram className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
-                              <span className="truncate">{influencer.instagramHandle}</span>
-                            </span>
-                          )}
-                          {influencer.email && (
-                            <span className="flex items-center gap-1 min-w-0">
-                              <Mail className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
-                              <span className="truncate">{influencer.email}</span>
-                            </span>
-                          )}
-                        </div>
+                    {/* Score */}
+                    {influencer.matchScore && (
+                      <div className="hidden sm:flex items-center gap-1 px-3 py-1.5 bg-white rounded-full shadow-sm">
+                        <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
+                        <span className="text-xs font-medium">{influencer.matchScore}</span>
                       </div>
+                    )}
+
+                    {/* Status */}
+                    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${statusConfig.color}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${statusConfig.dotColor}`} />
+                      {statusConfig.label}
                     </div>
 
-                    {/* Stats + Actions */}
-                    <div className="flex items-center gap-4">
-                      {/* Match Score */}
-                      {influencer.matchScore && (
-                        <div className="hidden sm:flex items-center gap-1 px-2 py-1 bg-gray-50 rounded-md">
-                          <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
-                          <span className="text-xs font-medium">{influencer.matchScore}</span>
-                        </div>
-                      )}
+                    {/* Contact Button */}
+                    {influencer.status === 'SUGGESTION' && (
+                      <button
+                        onClick={(e) => handleContact(e, influencer)}
+                        disabled={contactingId === influencer.id}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#0E1E37] text-white text-xs font-medium rounded-full hover:bg-[#1a2f4f] transition-colors disabled:opacity-50"
+                      >
+                        {contactingId === influencer.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Send className="h-3.5 w-3.5" strokeWidth={2} />
+                        )}
+                        <span className="hidden sm:inline">Contactar (enviar email)</span>
+                      </button>
+                    )}
 
-                      {/* Status */}
-                      {(() => {
-                        const statusConfig = getStatusConfig(influencer.status);
-                        return (
-                          <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md border text-xs font-medium ${statusConfig.color}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${statusConfig.dotColor}`} />
-                            <span className="hidden sm:inline">{statusConfig.label}</span>
-                          </div>
-                        );
-                      })()}
-
-                      {/* Contact Button - Only for SUGGESTION status */}
-                      {influencer.status === 'SUGGESTION' && (
-                        <button
-                          onClick={(e) => handleContact(e, influencer)}
-                          disabled={contactingId === influencer.id}
-                          className="flex items-center gap-1 px-2 py-1 bg-amber-500 text-white text-xs font-medium rounded-md hover:bg-amber-600 transition-colors disabled:opacity-50"
-                          title="Enviar email de introdução"
-                        >
-                          {contactingId === influencer.id ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <Send className="h-3 w-3" />
-                          )}
-                          <span className="hidden sm:inline">Contactar (enviar email)</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </Link>
-              ))}
+                    <ChevronRight className="h-5 w-5 text-gray-300 group-hover:text-gray-500 transition-colors" strokeWidth={1.5} />
+                  </Link>
+                );
+              })}
             </div>
           )}
         </div>
@@ -512,12 +336,11 @@ function InfluencersContent() {
   );
 }
 
-// Main export with Suspense
 export default function InfluencersPage() {
   return (
     <Suspense fallback={
       <div className="flex items-center justify-center h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+        <Loader2 className="h-8 w-8 animate-spin text-gray-300" strokeWidth={1.5} />
       </div>
     }>
       <InfluencersContent />
