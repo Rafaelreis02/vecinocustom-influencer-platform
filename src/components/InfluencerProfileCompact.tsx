@@ -21,7 +21,6 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { InfluencerStatusBadge } from '@/components/InfluencerStatusBadge';
-import { STEPS } from '@/lib/workflow-steps';
 
 interface InfluencerProfileCompactProps {
   influencerId: string;
@@ -42,7 +41,17 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
   const [agreedPrice, setAgreedPrice] = useState('');
   const [activeTab, setActiveTab] = useState<'overview' | 'stats' | 'content'>('overview');
 
-  // Use same STEPS as PartnershipWorkflow
+  // STEPS must match exactly with PartnershipWorkflow.tsx
+  const STEPS = [
+    { id: 0, name: 'Proposta', description: 'Proposta inicial de parceria' },
+    { id: 1, name: 'Dados', description: 'Informações de envio' },
+    { id: 2, name: 'Produto', description: 'Confirmação do produto' },
+    { id: 3, name: 'Design', description: 'Revisão do design' },
+    { id: 4, name: 'Contrato', description: 'Contrato e assinatura' },
+    { id: 5, name: 'Envio', description: 'Envio e tracking' },
+    { id: 6, name: 'Completo', description: 'Parceria concluída' },
+    { id: 7, name: 'Entregue', description: 'Produto entregue' },
+  ];
   const totalSteps = STEPS.length;
 
   // Fetch data on mount and when influencerId changes
@@ -281,72 +290,42 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
           )
         ) : (
           <div className="space-y-2">
-            {/* Current Step */}
-            {STEPS.map((step) => {
-              const isCompleted = currentStep > step.id;
-              const isCurrent = currentStep === step.id;
-              const Icon = step.icon;
-              
-              if (!isCompleted && !isCurrent) return null;
-              
-              return (
-                <div
-                  key={step.id}
-                  className={`flex items-center gap-3 p-2.5 rounded-xl ${
-                    isCurrent 
-                      ? 'bg-white border-2 border-[#0E1E37] shadow-sm' 
-                      : 'bg-white/50'
-                  }`}
-                >
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                    isCurrent 
-                      ? 'bg-[#0E1E37] text-white' 
-                      : 'bg-green-100 text-green-600'
-                  }`}>
-                    {isCompleted ? (
-                      <CheckCircle2 className="h-4 w-4" />
-                    ) : (
-                      <Icon className="h-4 w-4" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-medium ${isCurrent ? 'text-gray-900' : 'text-gray-600'}`}>
-                      {step.name}
-                    </p>
-                    <p className="text-xs text-gray-400">{step.description}</p>
-                  </div>
-                  {isCurrent && (
-                    <button
-                      onClick={handleAdvanceStep}
-                      disabled={isAdvancing}
-                      className="px-3 py-1.5 bg-[#0E1E37] text-white text-xs font-medium rounded-lg hover:bg-[#1a2f4f] transition-colors disabled:opacity-50 flex items-center gap-1.5"
-                    >
-                      {isAdvancing ? (
-                        <>
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          A processar...
-                        </>
-                      ) : currentStep === totalSteps - 1 ? (
-                        <>
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                          Completar Parceria
-                        </>
-                      ) : currentStep === 5 && !workflow?.trackingUrl ? (
-                        <>
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                          Adicionar Tracking
-                        </>
-                      ) : (
-                        <>
-                          Avançar
-                          <ChevronRight className="h-3.5 w-3.5" />
-                        </>
-                      )}
-                    </button>
-                  )}
-                </div>
-              );
-            })}
+            {/* Current Step Info */}
+            <div className="flex items-center gap-3 p-3 bg-white rounded-xl border-2 border-[#0E1E37]">
+              <div className="w-10 h-10 rounded-xl bg-[#0E1E37] text-white flex items-center justify-center font-semibold">
+                {displayStep}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-gray-900">
+                  {STEPS[currentStep]?.name || 'Unknown'}
+                </p>
+                <p className="text-xs text-gray-400">
+                  {STEPS[currentStep]?.description || ''}
+                </p>
+              </div>
+              <button
+                onClick={handleAdvanceStep}
+                disabled={isAdvancing}
+                className="px-3 py-1.5 bg-[#0E1E37] text-white text-xs font-medium rounded-lg hover:bg-[#1a2f4f] transition-colors disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {isAdvancing ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    A processar...
+                  </>
+                ) : currentStep === totalSteps - 1 ? (
+                  <>
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    Completar
+                  </>
+                ) : (
+                  <>
+                    Avançar
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </>
+                )}
+              </button>
+            </div>
             
             {/* Progress Bar */}
             <div className="flex items-center gap-2 pt-1">
