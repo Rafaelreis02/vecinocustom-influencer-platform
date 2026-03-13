@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { InfluencerStatusBadge } from '@/components/InfluencerStatusBadge';
+import { useInfluencer, useWorkflow, invalidateInfluencerCache } from '@/hooks/useInfluencerData';
 
 interface InfluencerProfileCompactProps {
   influencerId: string;
@@ -35,9 +36,16 @@ interface InfluencerProfileCompactProps {
 
 export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerProfileCompactProps) {
   const { addToast } = useToast();
-  const [influencer, setInfluencer] = useState<any>(null);
-  const [workflow, setWorkflow] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  
+  // Use SWR for auto-sync
+  const { influencer, isLoading: loadingInf, mutate: mutateInf } = useInfluencer(influencerId);
+  const { workflow, isLoading: loadingWf, mutate: mutateWf } = useWorkflow(influencerId);
+  
+  const loading = loadingInf || loadingWf;
+  
+  // Check if data is being revalidated (background refresh)
+  const isSyncing = !loading && (loadingInf || loadingWf);
+  
   const [isCreatingPartnership, setIsCreatingPartnership] = useState(false);
   const [isAdvancing, setIsAdvancing] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -55,33 +63,12 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
     { id: 6, name: 'Complete', icon: Star, description: 'Done' },
   ];
 
+  // Auto-sync when data changes
   useEffect(() => {
-    fetchInfluencer();
-  }, [influencerId]);
-
-  const fetchInfluencer = async () => {
-    try {
-      setLoading(true);
-      const [infRes, workflowRes] = await Promise.all([
-        fetch(`/api/influencers/${influencerId}`),
-        fetch(`/api/influencers/${influencerId}/partnerships`)
-      ]);
-      
-      if (infRes.ok) {
-        const data = await infRes.json();
-        setInfluencer(data);
-      }
-      
-      if (workflowRes.ok) {
-        const data = await workflowRes.json();
-        setWorkflow(data.activeWorkflow || null);
-      }
-    } catch (error) {
-      console.error('Error fetching influencer:', error);
-    } finally {
-      setLoading(false);
+    if (influencer || workflow) {
+      onUpdate?.();
     }
-  };
+  }, [influencer, workflow, onUpdate]);
 
   const handleCreatePartnership = async () => {
     if (!influencer.email) {
@@ -112,7 +99,8 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
       addToast('Partnership created!', 'success');
       setShowCreateForm(false);
       setAgreedPrice('');
-      fetchInfluencer();
+      // Invalidate cache to trigger re-fetch
+      invalidateInfluencerCache(influencerId);
       onUpdate?.();
     } catch (error) {
       addToast('Error creating partnership', 'error');
@@ -133,7 +121,8 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
       if (!res.ok) throw new Error();
       
       addToast('Step advanced!', 'success');
-      fetchInfluencer();
+      // Invalidate cache to trigger re-fetch
+      invalidateInfluencerCache(influencerId);
       onUpdate?.();
     } catch (error) {
       addToast('Error advancing step', 'error');
