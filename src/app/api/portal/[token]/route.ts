@@ -164,6 +164,47 @@ export async function PUT(
       data: updateData,
     });
 
+    // === FIX: Also update workflow with shipping/product data for Step 2 ===
+    // Fields that should be synced to workflow
+    const workflowFields = ['shippingAddress', 'productSuggestion1', 'productSuggestion2', 'productSuggestion3'];
+    const hasWorkflowFields = workflowFields.some(field => body[field] !== undefined);
+    
+    if (hasWorkflowFields) {
+      try {
+        // Find active workflow
+        const workflows = await prisma.partnershipWorkflow.findMany({
+          where: { influencerId: influencer.id },
+          orderBy: { createdAt: 'desc' },
+        });
+        
+        const activeWorkflow = workflows.find(w => w.status === 'ACTIVE' || (w.status as any) === 'ACTIVE');
+        
+        if (activeWorkflow) {
+          const workflowUpdateData: any = {};
+          workflowFields.forEach(field => {
+            if (body[field] !== undefined) {
+              workflowUpdateData[field] = body[field];
+            }
+          });
+          
+          await prisma.partnershipWorkflow.update({
+            where: { id: activeWorkflow.id },
+            data: workflowUpdateData,
+          });
+          
+          logger.info('[PORTAL PUT] Synced fields to workflow', {
+            influencerId: influencer.id,
+            workflowId: activeWorkflow.id,
+            fields: Object.keys(workflowUpdateData),
+          });
+        }
+      } catch (syncError) {
+        // Log but don't fail - influencer was already updated
+        logger.error('[PORTAL PUT] Failed to sync workflow fields', syncError);
+      }
+    }
+    // ======================================================================
+
     return NextResponse.json(
       serializeBigInt({
         success: true,
