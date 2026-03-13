@@ -14,7 +14,16 @@ import {
   ExternalLink,
   Loader2,
   MapPin,
-  Hash
+  Hash,
+  CheckCircle2,
+  ChevronRight,
+  Send,
+  FileText,
+  Package,
+  Palette,
+  Truck,
+  Star,
+  Plus
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { InfluencerStatusBadge } from '@/components/InfluencerStatusBadge';
@@ -27,8 +36,22 @@ interface InfluencerProfileCompactProps {
 export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerProfileCompactProps) {
   const { addToast } = useToast();
   const [influencer, setInfluencer] = useState<any>(null);
+  const [workflow, setWorkflow] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isCreatingPartnership, setIsCreatingPartnership] = useState(false);
+  const [isAdvancing, setIsAdvancing] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'stats' | 'content'>('overview');
+
+  // Workflow steps definition
+  const workflowSteps = [
+    { id: 0, name: 'Proposal', icon: Send, description: 'Send proposal' },
+    { id: 1, name: 'Details', icon: FileText, description: 'Shipping info' },
+    { id: 2, name: 'Product', icon: Package, description: 'Confirm product' },
+    { id: 3, name: 'Design', icon: Palette, description: 'Design review' },
+    { id: 4, name: 'Contract', icon: FileText, description: 'Sign contract' },
+    { id: 5, name: 'Shipped', icon: Truck, description: 'Send tracking' },
+    { id: 6, name: 'Complete', icon: Star, description: 'Done' },
+  ];
 
   useEffect(() => {
     fetchInfluencer();
@@ -37,15 +60,75 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
   const fetchInfluencer = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/influencers/${influencerId}`);
-      if (res.ok) {
-        const data = await res.json();
+      const [infRes, workflowRes] = await Promise.all([
+        fetch(`/api/influencers/${influencerId}`),
+        fetch(`/api/influencers/${influencerId}/partnerships`)
+      ]);
+      
+      if (infRes.ok) {
+        const data = await infRes.json();
         setInfluencer(data);
+      }
+      
+      if (workflowRes.ok) {
+        const data = await workflowRes.json();
+        setWorkflow(data.activeWorkflow || null);
       }
     } catch (error) {
       console.error('Error fetching influencer:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreatePartnership = async () => {
+    if (!influencer.email) {
+      addToast('Influencer has no email', 'error');
+      return;
+    }
+
+    try {
+      setIsCreatingPartnership(true);
+      const res = await fetch('/api/partnerships/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          influencerId,
+          agreedPrice: 0,
+          commission: 10,
+        }),
+      });
+
+      if (!res.ok) throw new Error();
+      
+      addToast('Partnership created!', 'success');
+      fetchInfluencer();
+      onUpdate?.();
+    } catch (error) {
+      addToast('Error creating partnership', 'error');
+    } finally {
+      setIsCreatingPartnership(false);
+    }
+  };
+
+  const handleAdvanceStep = async () => {
+    if (!workflow) return;
+
+    try {
+      setIsAdvancing(true);
+      const res = await fetch(`/api/partnerships/${workflow.id}/advance`, {
+        method: 'POST',
+      });
+
+      if (!res.ok) throw new Error();
+      
+      addToast('Step advanced!', 'success');
+      fetchInfluencer();
+      onUpdate?.();
+    } catch (error) {
+      addToast('Error advancing step', 'error');
+    } finally {
+      setIsAdvancing(false);
     }
   };
 
@@ -125,6 +208,99 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
         </div>
       </div>
 
+      {/* WORKFLOW SECTION - PRINCIPAL */}
+      <div className="px-4 py-3 bg-gradient-to-r from-[#0E1E37]/5 to-blue-50/50 border-b border-gray-100">
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="text-xs font-semibold text-gray-700 uppercase">Partnership Workflow</h4>
+          {workflow && (
+            <span className="text-xs font-medium text-[#0E1E37]">
+              Step {workflow.currentStep + 1}/7
+            </span>
+          )}
+        </div>
+        
+        {!workflow ? (
+          <button
+            onClick={handleCreatePartnership}
+            disabled={isCreatingPartnership}
+            className="w-full py-2.5 bg-[#0E1E37] text-white text-sm font-medium rounded-xl hover:bg-[#1a2f4f] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {isCreatingPartnership ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Plus className="h-4 w-4" />
+            )}
+            Create Partnership
+          </button>
+        ) : (
+          <div className="space-y-2">
+            {/* Current Step */}
+            {workflowSteps.map((step) => {
+              const isCompleted = workflow.currentStep > step.id;
+              const isCurrent = workflow.currentStep === step.id;
+              const Icon = step.icon;
+              
+              if (!isCompleted && !isCurrent) return null;
+              
+              return (
+                <div
+                  key={step.id}
+                  className={`flex items-center gap-3 p-2.5 rounded-xl ${
+                    isCurrent 
+                      ? 'bg-white border-2 border-[#0E1E37] shadow-sm' 
+                      : 'bg-white/50'
+                  }`}
+                >
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                    isCurrent 
+                      ? 'bg-[#0E1E37] text-white' 
+                      : 'bg-green-100 text-green-600'
+                  }`}>
+                    {isCompleted ? (
+                      <CheckCircle2 className="h-4 w-4" />
+                    ) : (
+                      <Icon className="h-4 w-4" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-medium ${isCurrent ? 'text-gray-900' : 'text-gray-600'}`}>
+                      {step.name}
+                    </p>
+                    <p className="text-xs text-gray-400">{step.description}</p>
+                  </div>
+                  {isCurrent && (
+                    <button
+                      onClick={handleAdvanceStep}
+                      disabled={isAdvancing}
+                      className="w-8 h-8 rounded-full bg-[#0E1E37] text-white flex items-center justify-center hover:bg-[#1a2f4f] transition-colors disabled:opacity-50"
+                    >
+                      {isAdvancing ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4" />
+                      )}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+            
+            {/* Progress Bar */}
+            <div className="flex items-center gap-2 pt-1">
+              <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-[#0E1E37] rounded-full transition-all"
+                  style={{ width: `${Math.min(((workflow.currentStep + 1) / 7) * 100, 100)}%` }}
+                />
+              </div>
+              <span className="text-[10px] text-gray-500 font-medium">
+                {Math.round(((workflow.currentStep + 1) / 7) * 100)}%
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Tabs */}
       <div className="flex border-b border-gray-100">
         {[
@@ -183,27 +359,6 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
                 </div>
               )}
             </div>
-
-            {/* Partnership Info */}
-            {influencer.partnerships?.length > 0 && (
-              <div className="space-y-2">
-                <h4 className="text-xs font-semibold text-gray-400 uppercase">Partnership</h4>
-                <div className="bg-gray-50 rounded-xl p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-gray-600">Current Step</span>
-                    <span className="text-sm font-medium text-[#0E1E37]">
-                      {influencer.partnerships[0].currentStep}/7
-                    </span>
-                  </div>
-                  <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-[#0E1E37] rounded-full"
-                      style={{ width: `${(influencer.partnerships[0].currentStep / 7) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Notes */}
             {influencer.notes && (
