@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
-import { getAuthClient, sendEmail } from '@/lib/gmail';
+import { google } from 'googleapis';
 import { InfluencerStatus } from '@prisma/client';
 
 /**
@@ -102,14 +102,60 @@ www.vecinocustom.com`,
       .replace(/{{email}}/g, influencer.email || '')
       .replace(/{{instagram}}/g, influencer.instagramHandle || '');
 
-    // Send email via Gmail
-    const auth = getAuthClient();
-    const targetEmail = influencer.email.trim();
+    // Send email via Gmail - INLINE (same as /api/emails/compose)
+    const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
+    
+    if (!refreshToken) {
+      return NextResponse.json(
+        { 
+          error: 'Gmail não configurado',
+          message: 'Por favor, conecta o Gmail nas Definições (Settings) primeiro',
+          action: 'redirect_to_settings'
+        },
+        { status: 400 }
+      );
+    }
 
-    await sendEmail(auth, {
-      to: targetEmail,
-      subject: emailSubject,
-      body: emailBody,
+    // Setup Gmail client inline (fixes v171.x bug)
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/auth/gmail/callback`
+    );
+
+    oauth2Client.setCredentials({
+      refresh_token: refreshToken,
+    });
+
+    const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+    
+    const senderEmail = process.env.GMAIL_USER || 'brand@vecinocustom.com';
+    const senderName = 'VecinoCustom';
+    const targetEmail = influencer.email.trim();
+    
+    // Build email message
+    const email = [
+      `From: ${senderName} <${senderEmail}>`,
+      `To: ${targetEmail}`,
+      `Subject: ${emailSubject}`,
+      'Content-Type: text/plain; charset="UTF-8"',
+      'MIME-Version: 1.0',
+      '',
+      emailBody,
+    ].join('\n');
+
+    const encodedMessage = Buffer.from(email)
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
+
+    // Send email
+    await gmail.users.messages.send({
+      userId: 'me',
+      requestBody: {
+        raw: encodedMessage,
+      },
     });
 
     // Create contact record
