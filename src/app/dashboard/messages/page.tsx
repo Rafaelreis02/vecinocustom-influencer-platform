@@ -3,10 +3,11 @@
 import { useState, useEffect } from 'react';
 import {
   Mail, Search, RefreshCw, Send, Reply, Trash2, Eye, EyeOff, Flag,
-  ChevronLeft, ChevronRight, Loader2, X, Plus
+  ChevronLeft, ChevronRight, Loader2, X, Plus, UserPlus, CheckCircle
 } from 'lucide-react';
 import { useGlobalToast } from '@/contexts/ToastContext';
 import { getWorkflowStatuses, getStatusConfig } from '@/lib/influencer-status';
+import { InfluencerPanel } from '@/components/InfluencerPanel';
 
 interface Email {
   id: string;
@@ -55,6 +56,12 @@ export default function MessagesPage() {
   const [showReply, setShowReply] = useState(false);
   const [replyText, setReplyText] = useState('');
   const [sendingReply, setSendingReply] = useState(false);
+  
+  // Influencer Modal
+  const [showInfluencerModal, setShowInfluencerModal] = useState(false);
+  const [availableInfluencers, setAvailableInfluencers] = useState<{id: string, name: string, email?: string | null, avatarUrl?: string | null}[]>([]);
+  const [influencerSearchQuery, setInfluencerSearchQuery] = useState('');
+  const [associatingInfluencer, setAssociatingInfluencer] = useState(false);
 
   useEffect(() => {
     fetchEmails();
@@ -153,6 +160,55 @@ export default function MessagesPage() {
       fetchEmails();
     } catch (error) {
       addToast('Erro', 'error');
+    }
+  }
+  
+  async function openInfluencerModal() {
+    try {
+      const res = await fetch('/api/influencers?limit=100');
+      const data = await res.json();
+      const influencers = data.data || [];
+      setAvailableInfluencers(influencers.map((i: any) => ({ 
+        id: i.id, 
+        name: i.name,
+        email: i.email,
+        avatarUrl: i.avatarUrl
+      })));
+      setShowInfluencerModal(true);
+    } catch (error) {
+      addToast('Erro ao carregar influencers', 'error');
+    }
+  }
+  
+  async function associateInfluencer(influencerId: string) {
+    if (!selectedEmail) return;
+    
+    try {
+      setAssociatingInfluencer(true);
+      
+      const res = await fetch(`/api/emails/${selectedEmail.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ influencerId }),
+      });
+      
+      if (!res.ok) throw new Error();
+      
+      // Refresh
+      await fetchEmails();
+      const emailRes = await fetch(`/api/emails/${selectedEmail.id}`);
+      if (emailRes.ok) {
+        const emailData = await emailRes.json();
+        setSelectedEmail(emailData);
+      }
+      
+      addToast('Influencer associado!', 'success');
+      setShowInfluencerModal(false);
+      setInfluencerSearchQuery('');
+    } catch (error) {
+      addToast('Erro ao associar', 'error');
+    } finally {
+      setAssociatingInfluencer(false);
     }
   }
 
@@ -357,103 +413,127 @@ export default function MessagesPage() {
         )}
       </div>
 
-      {/* Detalhe do Email */}
+      {/* Detalhe do Email + Influencer Panel */}
       {selectedEmail && (
-        <div className="fixed md:relative inset-0 md:inset-auto z-50 flex-1 bg-white flex flex-col">
-          {/* Header */}
-          <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setSelectedEmail(null)}
-                className="md:hidden w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center"
-              >
-                <ChevronLeft className="h-5 w-5 text-gray-600" strokeWidth={2} />
-              </button>
-              <div className="w-10 h-10 rounded-2xl bg-[#0E1E37] text-white flex items-center justify-center font-semibold">
-                {selectedEmail.from.charAt(0).toUpperCase()}
-              </div>
-              <div>
-                <p className="font-semibold text-gray-900 text-sm">{selectedEmail.from}</p>
-                <p className="text-xs text-gray-400">
-                  {new Date(selectedEmail.receivedAt).toLocaleString('pt-PT')}
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => toggleFlag(selectedEmail.id)}
-                className="w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400"
-              >
-                <Flag className={`h-4 w-4 ${selectedEmail.isFlagged ? 'fill-amber-500 text-amber-500' : ''}`} strokeWidth={1.5} />
-              </button>
-              <button
-                onClick={() => deleteEmail(selectedEmail.id)}
-                className="w-10 h-10 rounded-full hover:bg-red-50 flex items-center justify-center text-gray-400 hover:text-red-500"
-              >
-                <Trash2 className="h-4 w-4" strokeWidth={1.5} />
-              </button>
-              <button
-                onClick={() => setSelectedEmail(null)}
-                className="hidden md:flex w-10 h-10 rounded-full hover:bg-gray-100 items-center justify-center text-gray-400"
-              >
-                <X className="h-4 w-4" strokeWidth={2} />
-              </button>
-            </div>
-          </div>
-
-          {/* Conteúdo */}
-          <div className="flex-1 overflow-y-auto p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">{selectedEmail.subject}</h2>
-            
-            {selectedEmail.htmlBody ? (
-              <div 
-                className="prose prose-sm max-w-none text-gray-600"
-                dangerouslySetInnerHTML={{ __html: selectedEmail.htmlBody }}
-              />
-            ) : (
-              <p className="text-gray-600 whitespace-pre-wrap leading-relaxed">{selectedEmail.body}</p>
-            )}
-          </div>
-
-          {/* Footer com Responder */}
-          <div className="border-t border-gray-100 p-4">
-            {showReply ? (
-              <div className="space-y-3">
-                <textarea
-                  value={replyText}
-                  onChange={(e) => setReplyText(e.target.value)}
-                  placeholder="Escreve a tua resposta..."
-                  className="w-full h-32 p-4 rounded-2xl border-0 bg-gray-50 text-sm focus:bg-white focus:ring-2 focus:ring-[#0E1E37]/20 resize-none transition-all"
-                />
-                <div className="flex gap-3">
-                  <button
-                    onClick={handleSendReply}
-                    disabled={sendingReply || !replyText.trim()}
-                    className="flex-1 py-3 bg-[#0E1E37] text-white text-sm font-medium rounded-full hover:bg-[#1a2f4f] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                  >
-                    <Send className="h-4 w-4" strokeWidth={2} />
-                    {sendingReply ? 'A enviar...' : 'Enviar (enviar email)'}
-                  </button>
-                  <button
-                    onClick={() => setShowReply(false)}
-                    className="px-6 py-3 bg-gray-100 text-gray-600 text-sm font-medium rounded-full hover:bg-gray-200 transition-all"
-                  >
-                    Cancelar
-                  </button>
+        <>
+          {/* Email Content */}
+          <div className="fixed md:relative inset-0 md:inset-auto z-50 flex-1 bg-white flex flex-col">
+            {/* Header */}
+            <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setSelectedEmail(null)}
+                  className="md:hidden w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center"
+                >
+                  <ChevronLeft className="h-5 w-5 text-gray-600" strokeWidth={2} />
+                </button>
+                <div className="w-10 h-10 rounded-2xl bg-[#0E1E37] text-white flex items-center justify-center font-semibold">
+                  {selectedEmail.from.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900 text-sm">{selectedEmail.from}</p>
+                  <p className="text-xs text-gray-400">
+                    {new Date(selectedEmail.receivedAt).toLocaleString('pt-PT')}
+                  </p>
                 </div>
               </div>
+              
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => toggleFlag(selectedEmail.id)}
+                  className="w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400"
+                >
+                  <Flag className={`h-4 w-4 ${selectedEmail.isFlagged ? 'fill-amber-500 text-amber-500' : ''}`} strokeWidth={1.5} />
+                </button>
+                <button
+                  onClick={() => deleteEmail(selectedEmail.id)}
+                  className="w-10 h-10 rounded-full hover:bg-red-50 flex items-center justify-center text-gray-400 hover:text-red-500"
+                >
+                  <Trash2 className="h-4 w-4" strokeWidth={1.5} />
+                </button>
+                <button
+                  onClick={() => setSelectedEmail(null)}
+                  className="hidden md:flex w-10 h-10 rounded-full hover:bg-gray-100 items-center justify-center text-gray-400"
+                >
+                  <X className="h-4 w-4" strokeWidth={2} />
+                </button>
+              </div>
+            </div>
+
+            {/* Conteúdo */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-6">{selectedEmail.subject}</h2>
+              
+              {selectedEmail.htmlBody ? (
+                <div 
+                  className="prose prose-sm max-w-none text-gray-600"
+                  dangerouslySetInnerHTML={{ __html: selectedEmail.htmlBody }}
+                />
+              ) : (
+                <p className="text-gray-600 whitespace-pre-wrap leading-relaxed">{selectedEmail.body}</p>
+              )}
+            </div>
+
+            {/* Footer com Responder */}
+            <div className="border-t border-gray-100 p-4">
+              {showReply ? (
+                <div className="space-y-3">
+                  <textarea
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    placeholder="Escreve a tua resposta..."
+                    className="w-full h-32 p-4 rounded-2xl border-0 bg-gray-50 text-sm focus:bg-white focus:ring-2 focus:ring-[#0E1E37]/20 resize-none transition-all"
+                  />
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handleSendReply}
+                      disabled={sendingReply || !replyText.trim()}
+                      className="flex-1 py-3 bg-[#0E1E37] text-white text-sm font-medium rounded-full hover:bg-[#1a2f4f] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      <Send className="h-4 w-4" strokeWidth={2} />
+                      {sendingReply ? 'A enviar...' : 'Enviar (enviar email)'}
+                    </button>
+                    <button
+                      onClick={() => setShowReply(false)}
+                      className="px-6 py-3 bg-gray-100 text-gray-600 text-sm font-medium rounded-full hover:bg-gray-200 transition-all"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowReply(true)}
+                  className="w-full py-3 bg-gray-100 text-gray-700 text-sm font-medium rounded-full hover:bg-gray-200 transition-all flex items-center justify-center gap-2"
+                >
+                  <Reply className="h-4 w-4" strokeWidth={2} />
+                  Responder
+                </button>
+              )}
+            </div>
+          </div>
+          
+          {/* Influencer Panel - Desktop only */}
+          <div className="hidden lg:flex w-[320px] border-l border-gray-100 bg-gray-50/50 flex-col">
+            {selectedEmail.influencer ? (
+              <InfluencerPanel influencer={selectedEmail.influencer} />
             ) : (
-              <button
-                onClick={() => setShowReply(true)}
-                className="w-full py-3 bg-gray-100 text-gray-700 text-sm font-medium rounded-full hover:bg-gray-200 transition-all flex items-center justify-center gap-2"
-              >
-                <Reply className="h-4 w-4" strokeWidth={2} />
-                Responder
-              </button>
+              <div className="h-full flex flex-col items-center justify-center p-6 text-center">
+                <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
+                  <UserPlus className="h-8 w-8 text-gray-400" strokeWidth={1.5} />
+                </div>
+                <p className="text-sm font-medium text-gray-600 mb-1">Sem influencer</p>
+                <p className="text-xs text-gray-400 mb-4">Associa um influencer a este email</p>
+                <button
+                  onClick={openInfluencerModal}
+                  className="px-4 py-2 bg-[#0E1E37] text-white text-sm font-medium rounded-full hover:bg-[#1a2f4f] transition-all"
+                >
+                  + Associar Influencer
+                </button>
+              </div>
             )}
           </div>
-        </div>
+        </>
       )}
 
       {/* Empty state */}
@@ -463,6 +543,68 @@ export default function MessagesPage() {
             <Mail className="h-10 w-10 text-gray-300" strokeWidth={1.5} />
           </div>
           <p className="text-gray-400 text-sm">Seleciona um email para ler</p>
+        </div>
+      )}
+      
+      {/* Modal para associar influencer */}
+      {showInfluencerModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col">
+            {/* Header */}
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="font-semibold text-gray-900">Associar Influencer</h3>
+              <button
+                onClick={() => setShowInfluencerModal(false)}
+                className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400"
+              >
+                <X className="h-4 w-4" strokeWidth={2} />
+              </button>
+            </div>
+            
+            {/* Search */}
+            <div className="p-4 border-b border-gray-100">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" strokeWidth={1.5} />
+                <input
+                  type="text"
+                  placeholder="Pesquisar influencer..."
+                  value={influencerSearchQuery}
+                  onChange={(e) => setInfluencerSearchQuery(e.target.value)}
+                  className="w-full rounded-2xl border-0 bg-gray-50 py-3 pl-11 pr-4 text-sm focus:bg-white focus:ring-2 focus:ring-[#0E1E37]/20 transition-all"
+                />
+              </div>
+            </div>
+            
+            {/* Lista */}
+            <div className="flex-1 overflow-y-auto p-2">
+              {availableInfluencers
+                .filter(inf => 
+                  inf.name.toLowerCase().includes(influencerSearchQuery.toLowerCase()) ||
+                  (inf.email && inf.email.toLowerCase().includes(influencerSearchQuery.toLowerCase()))
+                )
+                .map(influencer => (
+                  <button
+                    key={influencer.id}
+                    onClick={() => associateInfluencer(influencer.id)}
+                    disabled={associatingInfluencer}
+                    className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-gray-50 transition-colors text-left"
+                  >
+                    <div className="w-10 h-10 rounded-2xl bg-[#0E1E37] text-white flex items-center justify-center font-semibold text-sm">
+                      {influencer.name[0]}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-900 text-sm">{influencer.name}</p>
+                      {influencer.email && (
+                        <p className="text-xs text-gray-400 truncate">{influencer.email}</p>
+                      )}
+                    </div>
+                    {associatingInfluencer && (
+                      <Loader2 className="h-4 w-4 animate-spin text-gray-400" strokeWidth={1.5} />
+                    )}
+                  </button>
+                ))}
+            </div>
+          </div>
         </div>
       )}
     </div>
