@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { useGlobalToast } from '@/contexts/ToastContext';
 import { getStatusConfig } from '@/lib/influencer-status';
-import { InfluencerPanel } from '@/components/InfluencerPanel';
+import { PartnershipWorkflowCompact } from '@/components/partnership/PartnershipWorkflowCompact';
 
 interface Email {
   id: string;
@@ -710,23 +710,30 @@ export default function MessagesPage() {
               </div>
             </div>
             
-            {/* Influencer Panel */}
-            <div className="hidden lg:flex w-[320px] border-l border-gray-200 bg-white flex-col shrink-0">
+            {/* Workflow Panel */}
+            <div className="hidden lg:flex w-[320px] xl:w-[380px] border-l border-gray-200 flex-col shrink-0">
               {selectedEmail.influencer ? (
-                <InfluencerPanel influencer={selectedEmail.influencer} />
+                <PartnershipWorkflowCompact
+                  influencerId={selectedEmail.influencer.id}
+                  influencerEmail={selectedEmail.influencer.email}
+                  influencerName={selectedEmail.influencer.name}
+                  onUpdate={() => {
+                    fetchEmails();
+                  }}
+                />
               ) : (
-                <div className="h-full flex flex-col items-center justify-center p-6 text-center">
+                <div className="h-full flex flex-col items-center justify-center p-6 text-center bg-gray-50/30">
                   <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
                     <UserPlus className="h-8 w-8 text-gray-400" strokeWidth={1.5} />
                   </div>
-                  <p className="text-sm font-medium text-gray-600 mb-1">Sem influencer</p>
-                  <p className="text-xs text-gray-400 mb-4">Associa um influencer a esta conversa</p>
+                  <p className="text-sm font-medium text-gray-600 mb-1">No influencer linked</p>
+                  <p className="text-xs text-gray-400 mb-4">Associate an influencer to manage workflow</p>
                   <button
                     onClick={openInfluencerModal}
                     className="px-6 py-2.5 bg-[#0E1E37] text-white text-sm font-medium rounded-full hover:bg-[#1a2f4f] transition-all flex items-center gap-2"
                   >
                     <Plus className="h-4 w-4" strokeWidth={2} />
-                    Associar
+                    Associate
                   </button>
                 </div>
               )}
