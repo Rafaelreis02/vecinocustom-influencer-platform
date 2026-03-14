@@ -307,19 +307,34 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
     );
   }
 
-  // Se o influencer.status for ANALYZING ou COUNTER_PROPOSAL, devemos estar no step 0
-  // Mesmo que o workflow.currentStep venha incorreto da API
+  // Mapeamento de status para step - garante sincronização entre status e step
+  const STATUS_TO_STEP: Record<string, number> = {
+    'ANALYZING': 0,
+    'COUNTER_PROPOSAL': 0,
+    'AGREED': 1,
+    'PRODUCT_SELECTION': 2,
+    'DESIGN_REVIEW': 3,
+    'CONTRACT_PENDING': 4,
+    'CONTRACT_SIGNED': 5,
+    'SHIPPED': 6,
+    'COMPLETED': 7,
+  };
+  
+  // Corrige o step baseado no status do influencer
+  // Prioridade: status do influencer > workflow.currentStep
   const getCorrectedStep = () => {
     const workflowStep = workflow?.currentStep ?? -1;
     const influencerStatus = influencer?.status;
     
-    // Se o influencer está em estado de análise, força step 0
-    if (influencerStatus === 'ANALYZING' || influencerStatus === 'COUNTER_PROPOSAL') {
-      if (workflowStep !== 0) {
-        console.warn(`[Step Mismatch] Influencer status is ${influencerStatus} but workflow step is ${workflowStep}. Forcing step 0.`);
-        return 0;
+    // Se temos um status conhecido, usa o mapeamento
+    if (influencerStatus && STATUS_TO_STEP[influencerStatus] !== undefined) {
+      const expectedStep = STATUS_TO_STEP[influencerStatus];
+      if (workflowStep !== expectedStep) {
+        console.warn(`[Step Mismatch] Influencer status is ${influencerStatus} (expected step ${expectedStep}) but workflow step is ${workflowStep}. Forcing correct step.`);
+        return expectedStep;
       }
     }
+    
     return workflowStep;
   };
   
@@ -333,6 +348,7 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
   console.log('[InfluencerProfileCompact] Debug:', {
     influencerId,
     influencerStatus: influencer?.status,
+    expectedStepFromStatus: influencer?.status ? STATUS_TO_STEP[influencer.status] : null,
     workflowId: workflow?.id,
     workflowStep: workflow?.currentStep,
     correctedStep: currentStep,
