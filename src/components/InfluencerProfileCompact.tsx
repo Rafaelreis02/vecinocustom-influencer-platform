@@ -71,11 +71,13 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: Props) {
     console.log('[generateCouponCode] influencer:', influencer);
     if (!influencer) {
       console.log('[generateCouponCode] No influencer, returning default');
-      return 'VECINO_10';
+      return 'VECINO_INF_10';
     }
-    const handle = influencer.instagramHandle || influencer.tiktokHandle || influencer.name || 'INF';
+    // Sincronizado com PartnershipStep3: tiktok primeiro, depois instagram
+    const handle = influencer.tiktokHandle || influencer.instagramHandle || '';
     const clean = handle.replace('@', '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().substring(0, 8);
-    const code = `VECINO_${clean}_10`;
+    const suffix = clean || 'INF';
+    const code = `VECINO_${suffix}_10`;
     console.log('[generateCouponCode] Generated:', code);
     return code;
   };
@@ -168,6 +170,7 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: Props) {
   const handleSaveProduct = async () => {
     console.log('[handleSaveProduct] CLICKED!');
     console.log('[handleSaveProduct] workflow:', workflow?.id);
+    console.log('[handleSaveProduct] influencerId:', influencerId);
     console.log('[handleSaveProduct] productUrl:', productUrl);
     console.log('[handleSaveProduct] couponCode state:', couponCode);
     
@@ -176,9 +179,15 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: Props) {
       return addToast('Workflow não encontrado', 'error');
     }
     
+    if (!influencerId) {
+      console.log('[handleSaveProduct] ERROR: No influencerId');
+      return addToast('ID do influencer não encontrado', 'error');
+    }
+    
     // Coupon code - use entered value or generate
     const codeToUse = couponCode || generateCouponCode();
     console.log('[handleSaveProduct] codeToUse:', codeToUse);
+    console.log('[handleSaveProduct] workflowId being sent:', workflow.id);
     
     try {
       setIsCreatingCoupon(true);
@@ -196,7 +205,7 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: Props) {
       }
       
       // 2. Create coupon in Shopify
-      console.log('[handleSaveProduct] Creating coupon...');
+      console.log('[handleSaveProduct] Creating coupon with workflowId:', workflow.id);
       const couponRes = await fetch(`/api/influencers/${influencerId}/create-coupon`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -206,9 +215,10 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: Props) {
       console.log('[handleSaveProduct] Coupon response:', couponRes.status, couponData);
       if (!couponRes.ok) throw new Error(couponData.error || 'Erro ao criar cupom');
       
-      console.log('[handleSaveProduct] SUCCESS!');
+      console.log('[handleSaveProduct] SUCCESS! Refreshing...');
       addToast('Cupom criado na Shopify!', 'success');
       await refresh();
+      console.log('[handleSaveProduct] Refresh complete. New workflow:', workflow?.couponCode);
     } catch (e: any) {
       console.error('[handleSaveProduct] ERROR:', e.message);
       addToast(e.message, 'error');
