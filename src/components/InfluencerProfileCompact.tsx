@@ -377,42 +377,104 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
                 </div>
               )}
 
-              {/* ── Step 3 (2): Preparing — Admin escolhe produto + cupom ── */}
+              {/* ── Step 3 (2): Preparing — EXATAMENTE como PartnershipStep3 ── */}
               {currentStep === 2 && (
-                <div className="space-y-2">
-                  {/* Produto */}
-                  <div className="bg-purple-50 rounded-lg p-2">
-                    <p className="text-[10px] font-medium text-purple-900 flex items-center gap-1 mb-1">
-                      <Link2 className="h-3 w-3" /> Produto Selecionado
-                    </p>
-                    {workflow?.selectedProductUrl
-                      ? <a href={workflow.selectedProductUrl} target="_blank" rel="noopener noreferrer"
-                          className="text-xs text-blue-600 hover:underline truncate block">{workflow.selectedProductUrl}</a>
-                      : <p className="text-xs text-amber-600">Em falta ⚠️</p>
-                    }
+                <div className="space-y-3">
+                  {/* URL Produto Escolhido */}
+                  <div className="space-y-1">
+                    <label className="block text-xs font-medium text-gray-700">
+                      URL do Produto Escolhido <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <Link2 className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+                      <input
+                        type="url"
+                        value={productUrl}
+                        onChange={(e) => setProductUrl(e.target.value)}
+                        placeholder="https://vecinocustom.com/produto/..."
+                        className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-8 pr-3 text-xs focus:border-[#0E1E37] focus:outline-none"
+                      />
+                    </div>
+                    <p className="text-[10px] text-gray-500">Link do produto selecionado na Shopify</p>
                   </div>
-                  {/* Cupom */}
-                  <div className="bg-purple-50 rounded-lg p-2">
-                    <p className="text-[10px] font-medium text-purple-900 flex items-center gap-1 mb-1">
-                      <Ticket className="h-3 w-3" /> Cupom
-                    </p>
-                    {workflow?.couponCode
-                      ? <div className="flex items-center gap-2">
-                          <span className="text-sm font-mono font-bold text-purple-700">{workflow.couponCode}</span>
-                          <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded">Ativo</span>
+
+                  {/* Coupon Code Section */}
+                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Ticket className="h-4 w-4 text-purple-600" />
+                      <h5 className="font-medium text-purple-900 text-sm">Cupom de Desconto</h5>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 text-xs text-purple-700">
+                      <span className="text-[10px] bg-purple-100 px-1.5 py-0.5 rounded">10% OFF</span>
+                      <span>+ 20% comissão para o influencer</span>
+                    </div>
+
+                    {/* Coupon Code Input */}
+                    <div className="space-y-1">
+                      <label className="block text-xs font-medium text-gray-700">
+                        Código do Cupom <span className="text-red-500">*</span>
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={couponCode || generateCouponCode()}
+                          onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                          disabled={!!workflow?.couponCode}
+                          placeholder="VECINO_NOME_10"
+                          className="flex-1 rounded-lg border border-gray-200 bg-white py-2 px-3 text-xs font-mono uppercase focus:border-[#0E1E37] focus:outline-none disabled:bg-gray-100"
+                        />
+                        {!workflow?.couponCode && (
+                          <button
+                            onClick={() => setCouponCode(generateCouponCode())}
+                            className="px-3 py-2 bg-white border border-purple-300 text-purple-700 text-xs font-medium rounded-lg hover:bg-purple-100"
+                          >
+                            Gerar
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-gray-500">Formato: VECINO_ + nome + _10</p>
+                    </div>
+
+                    {/* Create Coupon Button */}
+                    {!workflow?.couponCode && (
+                      <button
+                        onClick={handleSaveProduct}
+                        disabled={isCreatingCoupon || !productUrl || !couponCode}
+                        className="w-full py-2 bg-purple-600 text-white text-xs font-medium rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {isCreatingCoupon ? (
+                          <><Loader2 className="h-3.5 w-3.5 animate-spin" /> A criar na Shopify...</>
+                        ) : (
+                          <><Ticket className="h-3.5 w-3.5" /> Criar Cupom na Shopify</>
+                        )}
+                      </button>
+                    )}
+
+                    {/* Coupon Created Status */}
+                    {workflow?.couponCode && (
+                      <div className="p-2 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          <div>
+                            <p className="text-xs font-medium text-green-900">Cupom {workflow.couponCode} criado</p>
+                            <p className="text-[10px] text-green-700">Ativo na Shopify</p>
+                          </div>
                         </div>
-                      : <p className="text-xs text-amber-600">Em falta ⚠️</p>
-                    }
+                        <button
+                          onClick={() => setShowProductModal(true)}
+                          className="w-full py-1.5 bg-red-100 text-red-700 text-xs font-medium rounded-lg hover:bg-red-200 flex items-center justify-center gap-1"
+                        >
+                          Revogar Cupom
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  {/* Botão editar */}
-                  <button onClick={() => { setProductUrl(workflow?.selectedProductUrl || ''); setCouponCode(workflow?.couponCode || generateCouponCode()); setShowProductModal(true); }}
-                    className="w-full py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 flex items-center justify-center gap-2">
-                    <Plus className="h-4 w-4" />
-                    {workflow?.selectedProductUrl ? 'Editar Produto/Cupom' : 'Adicionar Produto e Cupom'}
-                  </button>
-                  {/* Avançar (só ativo quando tem produto + cupom) */}
+
+                  {/* Avançar (só ativo quando tem produto + cupom na BD) */}
                   <button onClick={handleAdvance} disabled={isAdvancing || missingFields.length > 0}
-                    className="w-full py-2 bg-[#0E1E37] text-white text-sm font-medium rounded-lg hover:bg-[#1a2f4f] disabled:opacity-50 flex items-center justify-center gap-2">
+                    className="w-full py-2 bg-[#0E1E37] text-white text-sm font-medium rounded-lg hover:bg-[#1a2f4f] disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
                     {isAdvancing ? <Loader2 className="h-4 w-4 animate-spin" /> : <>{ACTION_LABEL[2]} <ChevronRight className="h-4 w-4" /></>}
                   </button>
                   {missingFields.length > 0 && (
