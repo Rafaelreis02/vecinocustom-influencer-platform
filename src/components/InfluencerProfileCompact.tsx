@@ -395,40 +395,42 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
               <div className="flex items-center gap-2 mb-3 flex-wrap">
                 <span className="text-xs text-gray-500">Status:</span>
                 <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-                  {workflow?.status || 'N/A'}
+                  {workflow?.status || influencer?.status || 'N/A'}
                 </span>
                 <span className="text-xs text-gray-500 ml-2">Aguardando:</span>
-                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                  stepConfig.waitingFor === 'Admin' 
-                    ? 'bg-amber-100 text-amber-700' 
-                    : 'bg-blue-100 text-blue-700'
-                }`}>
-                  {stepConfig.waitingFor}
-                </span>
+                {(() => {
+                  // Para step 0, o "Aguardando" depende do status
+                  const status = workflow?.status || influencer?.status;
+                  let waitingFor = stepConfig.waitingFor;
+                  if (currentStep === 0) {
+                    if (status === 'COUNTER_PROPOSAL') waitingFor = 'Influencer';
+                    else if (status === 'ANALYZING') waitingFor = 'Admin';
+                  }
+                  return (
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                      waitingFor === 'Admin' 
+                        ? 'bg-amber-100 text-amber-700' 
+                        : 'bg-blue-100 text-blue-700'
+                    }`}>
+                      {waitingFor}
+                    </span>
+                  );
+                })()}
               </div>
 
               {/* Action Buttons */}
               {currentStep === 0 && (
-                // Step 0 (Partnership/Análise) - Mostrar ações específicas
-                // Usar influencer.status como fallback se workflow.status não estiver definido
+                // Step 0 (Partnership/Análise) - Lógica correta:
+                // ANALYZING = Somos nós que respondemos (aceitar ou contrapropor)
+                // COUNTER_PROPOSAL = Influencer está a analisar a nossa contraproposta
                 (workflow?.status === 'COUNTER_PROPOSAL' || influencer?.status === 'COUNTER_PROPOSAL') ? (
-                  // Influencer enviou contraproposta → podemos aceitar
-                  <button
-                    onClick={handleAcceptProposal}
-                    disabled={isAdvancing}
-                    className="w-full py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-2"
-                  >
-                    {isAdvancing ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <>
-                        <CheckCircle2 className="h-4 w-4" />
-                        Aceitar Contraproposta
-                      </>
-                    )}
-                  </button>
-                ) : (
-                  // Nossa proposta → avançar (aceitar) ou contrapropor
+                  // COUNTER_PROPOSAL: Nós enviamos contraproposta, influencer decide → Aguardamos
+                  <div className="flex items-center justify-center gap-2 py-2 bg-blue-50 rounded-lg text-blue-700 text-sm">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Aguardando resposta do influencer...
+                  </div>
+                ) : (workflow?.status === 'ANALYZING' || influencer?.status === 'ANALYZING') ? (
+                  // ANALYZING: Influencer enviou proposta, nós decidimos → Aceitar ou Contrapropor
                   <div className="space-y-2">
                     <button
                       onClick={handleAdvanceStep}
@@ -442,7 +444,7 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
                           <CheckCircle2 className="h-4 w-4" />
                           Aceitar Proposta
                         </>
-                      )
+                      )}
                     </button>
                     <button
                       onClick={() => setShowCounterModal(true)}
@@ -451,6 +453,22 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
                       Enviar Contraproposta
                     </button>
                   </div>
+                ) : (
+                  // Outro status (sugestão, etc)
+                  <button
+                    onClick={handleAdvanceStep}
+                    disabled={isAdvancing}
+                    className="w-full py-2 bg-[#0E1E37] text-white text-sm font-medium rounded-lg hover:bg-[#1a2f4f] disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {isAdvancing ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        Avançar
+                        <ChevronRight className="h-4 w-4" />
+                      </>
+                    )}
+                  </button>
                 )
               )}
               
