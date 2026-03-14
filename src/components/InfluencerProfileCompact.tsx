@@ -154,23 +154,52 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
   };
 
   const handleAdvanceStep = async () => {
-    if (!workflow) return;
+    if (!workflow) {
+      console.error('[handleAdvanceStep] No workflow available');
+      addToast('Erro: Workflow não encontrado', 'error');
+      return;
+    }
+
+    console.log('[handleAdvanceStep] Starting advance for workflow:', workflow.id, 'currentStep:', currentStep, 'status:', workflow.status);
 
     try {
       setIsAdvancing(true);
-      const res = await fetch(`/api/partnerships/${workflow.id}/advance`, {
+      const url = `/api/partnerships/${workflow.id}/advance`;
+      console.log('[handleAdvanceStep] Calling:', url);
+      
+      const res = await fetch(url, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}), // Enviar body vazio explicitamente
       });
 
+      console.log('[handleAdvanceStep] Response status:', res.status);
+      
+      let data;
+      try {
+        data = await res.json();
+        console.log('[handleAdvanceStep] Response data:', data);
+      } catch (e) {
+        console.error('[handleAdvanceStep] Failed to parse response:', e);
+        throw new Error('Resposta inválida do servidor');
+      }
+
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Erro ao avançar');
+        console.error('[handleAdvanceStep] Error response:', data);
+        throw new Error(data.error || data.message || `Erro ${res.status}`);
       }
       
-      addToast('Step avançado!', 'success');
+      if (!data.success) {
+        console.error('[handleAdvanceStep] API returned success=false:', data);
+        throw new Error(data.error || 'Erro ao avançar step');
+      }
+      
+      console.log('[handleAdvanceStep] Success! New step:', data.data?.currentStep);
+      addToast('Proposta aceite!', 'success');
       await fetchData();
       onUpdate?.();
     } catch (error: any) {
+      console.error('[handleAdvanceStep] Caught error:', error);
       addToast(error.message || 'Erro ao avançar', 'error');
     } finally {
       setIsAdvancing(false);
@@ -178,23 +207,50 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
   };
 
   const handleAcceptProposal = async () => {
-    if (!workflow) return;
+    if (!workflow) {
+      console.error('[handleAcceptProposal] No workflow available');
+      addToast('Erro: Workflow não encontrado', 'error');
+      return;
+    }
+
+    console.log('[handleAcceptProposal] Accepting proposal for workflow:', workflow.id);
 
     try {
       setIsAdvancing(true);
-      const res = await fetch(`/api/partnerships/${workflow.id}/accept-counter`, {
+      const url = `/api/partnerships/${workflow.id}/accept-counter`;
+      console.log('[handleAcceptProposal] Calling:', url);
+      
+      const res = await fetch(url, {
         method: 'POST',
       });
 
+      console.log('[handleAcceptProposal] Response status:', res.status);
+
+      let data;
+      try {
+        data = await res.json();
+        console.log('[handleAcceptProposal] Response data:', data);
+      } catch (e) {
+        console.error('[handleAcceptProposal] Failed to parse response:', e);
+        throw new Error('Resposta inválida do servidor');
+      }
+
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Erro ao aceitar');
+        console.error('[handleAcceptProposal] Error response:', data);
+        throw new Error(data.error || `Erro ${res.status}`);
+      }
+
+      if (!data.success) {
+        console.error('[handleAcceptProposal] API returned success=false:', data);
+        throw new Error(data.error || 'Erro ao aceitar proposta');
       }
       
-      addToast('Proposta aceite!', 'success');
+      console.log('[handleAcceptProposal] Success! New step:', data.data?.currentStep);
+      addToast('Proposta aceite! Email enviado ao influencer.', 'success');
       await fetchData();
       onUpdate?.();
     } catch (error: any) {
+      console.error('[handleAcceptProposal] Caught error:', error);
       addToast(error.message || 'Erro ao aceitar proposta', 'error');
     } finally {
       setIsAdvancing(false);
@@ -391,12 +447,20 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
                 </div>
               </div>
 
-              {/* Status & Waiting For Badge */}
+              {/* Status, Value & Waiting For Badge */}
               <div className="flex items-center gap-2 mb-3 flex-wrap">
                 <span className="text-xs text-gray-500">Status:</span>
                 <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
                   {workflow?.status || influencer?.status || 'N/A'}
                 </span>
+                {workflow?.agreedPrice !== null && workflow?.agreedPrice !== undefined && (
+                  <>
+                    <span className="text-xs text-gray-500 ml-2">Valor:</span>
+                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                      €{workflow.agreedPrice.toFixed(2)}
+                    </span>
+                  </>
+                )}
                 <span className="text-xs text-gray-500 ml-2">Aguardando:</span>
                 {(() => {
                   // Para step 0, o "Aguardando" depende do status
@@ -425,15 +489,28 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
                 // COUNTER_PROPOSAL = Influencer está a analisar a nossa contraproposta
                 (workflow?.status === 'COUNTER_PROPOSAL' || influencer?.status === 'COUNTER_PROPOSAL') ? (
                   // COUNTER_PROPOSAL: Nós enviamos contraproposta, influencer decide → Aguardamos
-                  <div className="flex items-center justify-center gap-2 py-2 bg-blue-50 rounded-lg text-blue-700 text-sm">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Aguardando resposta do influencer...
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-center gap-2 py-2 bg-blue-50 rounded-lg text-blue-700 text-sm">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Aguardando resposta do influencer...
+                    </div>
+                    {workflow?.agreedPrice !== null && workflow?.agreedPrice !== undefined && (
+                      <p className="text-xs text-center text-gray-500">
+                        Valor proposto: <span className="font-semibold text-gray-700">€{workflow.agreedPrice.toFixed(2)}</span>
+                      </p>
+                    )}
                   </div>
                 ) : (workflow?.status === 'ANALYZING' || influencer?.status === 'ANALYZING') ? (
                   // ANALYZING: Influencer enviou proposta, nós decidimos → Aceitar ou Contrapropor
-                  <div className="space-y-2">
+                  <div className="space-y-3">
+                    {workflow?.agreedPrice !== null && workflow?.agreedPrice !== undefined && (
+                      <div className="bg-gray-50 rounded-lg p-2 text-center">
+                        <span className="text-xs text-gray-500">Valor proposto pelo influencer:</span>
+                        <p className="text-lg font-bold text-[#0E1E37]">€{workflow.agreedPrice.toFixed(2)}</p>
+                      </div>
+                    )}
                     <button
-                      onClick={handleAdvanceStep}
+                      onClick={handleAcceptProposal}
                       disabled={isAdvancing}
                       className="w-full py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-2"
                     >
