@@ -75,6 +75,13 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
 
   useEffect(() => { fetchData(); }, [influencerId]);
 
+  // Inicializar couponCode quando influencer muda
+  useEffect(() => {
+    if (influencer && !couponCode) {
+      setCouponCode(generateCouponCode());
+    }
+  }, [influencer]);
+
   const fetchData = async () => {
     if (!influencerId) return;
     try {
@@ -418,7 +425,7 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
                       <div className="flex gap-2">
                         <input
                           type="text"
-                          value={couponCode || generateCouponCode()}
+                          value={couponCode}
                           onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                           disabled={!!workflow?.couponCode}
                           placeholder="VECINO_NOME_10"
