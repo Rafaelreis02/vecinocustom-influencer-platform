@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import {
   User, Mail, Instagram, TrendingUp, BarChart3, Video,
@@ -75,9 +75,11 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
 
   useEffect(() => { fetchData(); }, [influencerId]);
 
-  // Inicializar couponCode quando influencer muda
+  // Inicializar couponCode UMAZ VEZ quando influencer muda (e ainda não temos)
+  const hasInitialized = useRef(false);
   useEffect(() => {
-    if (influencer && !couponCode) {
+    if (influencer && !hasInitialized.current && !couponCode) {
+      hasInitialized.current = true;
       setCouponCode(generateCouponCode());
     }
   }, [influencer]);
