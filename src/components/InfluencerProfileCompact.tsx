@@ -468,7 +468,7 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: Props) {
                   {/* Advance Button */}
                   <button 
                     onClick={handleAdvance} 
-                    disabled={isAdvancing || !workflow?.selectedProductUrl || !workflow?.couponCode}
+                    disabled={isAdvancing || !workflow?.couponCode}
                     className="w-full py-2 bg-[#0E1E37] text-white text-sm font-medium rounded-lg hover:bg-[#1a2f4f] disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {isAdvancing ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Confirmar Produto <ChevronRight className="h-4 w-4" /></>}
