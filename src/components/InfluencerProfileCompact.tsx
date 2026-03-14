@@ -4,268 +4,165 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   User, Mail, Instagram, TrendingUp, BarChart3, Video,
-  Award, Calendar, ExternalLink, Loader2, MapPin, Hash,
-  CheckCircle2, ChevronRight, Plus, Target, Check
+  Award, Calendar, ExternalLink, Loader2, Hash,
+  CheckCircle2, ChevronRight, Plus, Ticket, Link2
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { InfluencerStatusBadge } from '@/components/InfluencerStatusBadge';
+
+// ─── FLUXO (ver WORKFLOW.md) ──────────────────────────────────────────────────
+// Status do influencer é a fonte de verdade para o step atual.
+const STATUS_TO_STEP: Record<string, number> = {
+  ANALYZING: 0,
+  COUNTER_PROPOSAL: 0,
+  AGREED: 1,
+  PRODUCT_SELECTION: 2,
+  DESIGN_REVIEW: 3,
+  CONTRACT_PENDING: 4,
+  CONTRACT_SIGNED: 5,
+  SHIPPED: 6,
+  COMPLETED: 7,
+};
+
+// Quem age em cada step
+const STEP_ACTOR: Record<number, 'admin' | 'influencer'> = {
+  0: 'admin',       // Depende do sub-status (ver lógica abaixo)
+  1: 'influencer',  // Influencer preenche morada + sugestões
+  2: 'admin',       // Admin escolhe produto + cria cupom
+  3: 'admin',       // Admin envia prova de design
+  4: 'influencer',  // Influencer assina contrato
+  5: 'admin',       // Admin adiciona tracking
+  6: 'admin',       // Admin marca como completo
+  7: 'admin',       // Completo
+};
+
+// Campos obrigatórios para avançar cada step
+const REQUIRED_FIELDS: Record<number, string[]> = {
+  2: ['selectedProductUrl', 'couponCode'],
+  5: ['trackingUrl'],
+};
+
+// Label do botão de ação por step
+const ACTION_LABEL: Record<number, string> = {
+  2: 'Confirmar Produto',
+  3: 'Enviar Prova',
+  5: 'Adicionar Tracking',
+  6: 'Completar',
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 interface InfluencerProfileCompactProps {
   influencerId: string;
   onUpdate?: () => void;
 }
 
-// Mapeamento EXATO dos steps - deve corresponder a PartnershipWorkflow.tsx
-// currentStep 0 = Step 1 "Partnership" (ANALYZING) - Admin analisa proposta
-// currentStep 1 = Step 2 "Shipping" (AGREED) - Influencer preenche dados
-const STEP_CONFIG: Record<number, { name: string; description: string; adminAction: string | null; waitingFor: string; actionType: 'advance' | 'accept' | 'none' }> = {
-  0: { 
-    name: 'Partnership', 
-    description: 'Analisar proposta do influencer', 
-    adminAction: 'Aceitar Proposta',
-    waitingFor: 'Admin',
-    actionType: 'accept'
-  },
-  1: { 
-    name: 'Shipping', 
-    description: 'Influencer preenche dados de envio', 
-    adminAction: null,
-    waitingFor: 'Influencer',
-    actionType: 'none'
-  },
-  2: { 
-    name: 'Preparing', 
-    description: 'Confirmar produto escolhido', 
-    adminAction: 'Confirmar Produto',
-    waitingFor: 'Admin',
-    actionType: 'advance'
-  },
-  3: { 
-    name: 'Design Review', 
-    description: 'Enviar prova de design', 
-    adminAction: 'Enviar Prova',
-    waitingFor: 'Admin',
-    actionType: 'advance'
-  },
-  4: { 
-    name: 'Contract', 
-    description: 'Gerar e enviar contrato', 
-    adminAction: 'Gerar Contrato',
-    waitingFor: 'Admin',
-    actionType: 'advance'
-  },
-  5: { 
-    name: 'Contract Signed', 
-    description: 'Aguardar assinatura', 
-    adminAction: null,
-    waitingFor: 'Influencer',
-    actionType: 'none'
-  },
-  6: { 
-    name: 'Shipped', 
-    description: 'Adicionar tracking de envio', 
-    adminAction: 'Adicionar Tracking',
-    waitingFor: 'Admin',
-    actionType: 'advance'
-  },
-  7: { 
-    name: 'Completed', 
-    description: 'Parceria finalizada', 
-    adminAction: 'Completar',
-    waitingFor: 'Admin',
-    actionType: 'advance'
-  },
-};
-
 export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerProfileCompactProps) {
   const { addToast } = useToast();
   const [influencer, setInfluencer] = useState<any>(null);
   const [workflow, setWorkflow] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [isCreatingPartnership, setIsCreatingPartnership] = useState(false);
   const [isAdvancing, setIsAdvancing] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showCounterModal, setShowCounterModal] = useState(false);
+  const [showProductModal, setShowProductModal] = useState(false);
   const [agreedPrice, setAgreedPrice] = useState('');
   const [counterPrice, setCounterPrice] = useState('');
+  const [productUrl, setProductUrl] = useState('');
+  const [couponCode, setCouponCode] = useState('');
+  const [isCreatingCoupon, setIsCreatingCoupon] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'stats' | 'content'>('overview');
 
-  useEffect(() => {
-    fetchData();
-  }, [influencerId]);
+  useEffect(() => { fetchData(); }, [influencerId]);
 
   const fetchData = async () => {
     if (!influencerId) return;
-    
     try {
       setLoading(true);
       const res = await fetch(`/api/influencers/${influencerId}`);
-      
       if (res.ok) {
         const data = await res.json();
         setInfluencer(data);
-        // Pega o workflow mais recente do array partnerships
-        const workflows = data.partnerships || [];
-        setWorkflow(workflows.length > 0 ? workflows[0] : null);
+        const wf = (data.partnerships || [])[0] ?? null;
+        setWorkflow(wf);
+        if (wf?.selectedProductUrl) setProductUrl(wf.selectedProductUrl);
+        if (wf?.couponCode) setCouponCode(wf.couponCode);
       }
-    } catch (error) {
-      console.error('Error fetching data:', error);
+    } catch (e) {
+      console.error('fetchData error:', e);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCreatePartnership = async () => {
-    if (!influencer?.email) {
-      addToast('Influencer sem email', 'error');
-      return;
-    }
+  const generateCouponCode = () => {
+    const handle = (influencer?.instagramHandle || influencer?.tiktokHandle || '')
+      .replace('@', '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().substring(0, 8) || 'INF';
+    return `VECINO_${handle}_10`;
+  };
 
+  // ── Handlers ──────────────────────────────────────────────────────────────
+
+  const handleCreate = async () => {
+    if (!influencer?.email) return addToast('Influencer sem email', 'error');
     const price = parseFloat(agreedPrice);
-    if (isNaN(price) || price < 0) {
-      addToast('Valor inválido', 'error');
-      return;
-    }
-
+    if (isNaN(price) || price < 0) return addToast('Valor inválido', 'error');
     try {
-      setIsCreatingPartnership(true);
+      setIsAdvancing(true);
       const res = await fetch('/api/partnerships/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          influencerId,
-          agreedPrice: price,
-          commission: 20,
-        }),
+        body: JSON.stringify({ influencerId, agreedPrice: price, commission: 20 }),
       });
-
-      if (!res.ok) throw new Error();
-      
+      if (!res.ok) throw new Error((await res.json()).error || 'Erro');
       addToast('Parceria criada!', 'success');
       setShowCreateForm(false);
       setAgreedPrice('');
-      await fetchData();
-      onUpdate?.();
-    } catch (error) {
-      addToast('Erro ao criar parceria', 'error');
-    } finally {
-      setIsCreatingPartnership(false);
-    }
+      await fetchData(); onUpdate?.();
+    } catch (e: any) { addToast(e.message, 'error'); }
+    finally { setIsAdvancing(false); }
   };
 
-  const handleAdvanceStep = async () => {
-    if (!workflow) {
-      console.error('[handleAdvanceStep] No workflow available');
-      addToast('Erro: Workflow não encontrado', 'error');
-      return;
-    }
+  const handleAdvance = async () => {
+    if (!workflow) return addToast('Workflow não encontrado', 'error');
 
-    console.log('[handleAdvanceStep] Starting advance for workflow:', workflow.id, 'currentStep:', currentStep, 'status:', workflow.status);
+    // Validar campos obrigatórios
+    const required = REQUIRED_FIELDS[currentStep] || [];
+    const missing = required.filter(f => !workflow?.[f]);
+    if (missing.length > 0) return addToast(`Em falta: ${missing.join(', ')}`, 'error');
 
     try {
       setIsAdvancing(true);
-      const url = `/api/partnerships/${workflow.id}/advance`;
-      console.log('[handleAdvanceStep] Calling:', url);
-      
-      const res = await fetch(url, {
+      const res = await fetch(`/api/partnerships/${workflow.id}/advance`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}), // Enviar body vazio explicitamente
+        body: JSON.stringify({}),
       });
-
-      console.log('[handleAdvanceStep] Response status:', res.status);
-      
-      let data;
-      try {
-        data = await res.json();
-        console.log('[handleAdvanceStep] Response data:', data);
-      } catch (e) {
-        console.error('[handleAdvanceStep] Failed to parse response:', e);
-        throw new Error('Resposta inválida do servidor');
-      }
-
-      if (!res.ok) {
-        console.error('[handleAdvanceStep] Error response:', data);
-        throw new Error(data.error || data.message || `Erro ${res.status}`);
-      }
-      
-      if (!data.success) {
-        console.error('[handleAdvanceStep] API returned success=false:', data);
-        throw new Error(data.error || 'Erro ao avançar step');
-      }
-      
-      console.log('[handleAdvanceStep] Success! New step:', data.data?.currentStep);
-      addToast('Proposta aceite!', 'success');
-      await fetchData();
-      onUpdate?.();
-    } catch (error: any) {
-      console.error('[handleAdvanceStep] Caught error:', error);
-      addToast(error.message || 'Erro ao avançar', 'error');
-    } finally {
-      setIsAdvancing(false);
-    }
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || `Erro ${res.status}`);
+      addToast('Step avançado!', 'success');
+      await fetchData(); onUpdate?.();
+    } catch (e: any) { addToast(e.message, 'error'); }
+    finally { setIsAdvancing(false); }
   };
 
-  const handleAcceptProposal = async () => {
-    if (!workflow) {
-      console.error('[handleAcceptProposal] No workflow available');
-      addToast('Erro: Workflow não encontrado', 'error');
-      return;
-    }
-
-    console.log('[handleAcceptProposal] Accepting proposal for workflow:', workflow.id);
-
+  const handleAccept = async () => {
+    if (!workflow) return addToast('Workflow não encontrado', 'error');
     try {
       setIsAdvancing(true);
-      const url = `/api/partnerships/${workflow.id}/accept-counter`;
-      console.log('[handleAcceptProposal] Calling:', url);
-      
-      const res = await fetch(url, {
-        method: 'POST',
-      });
-
-      console.log('[handleAcceptProposal] Response status:', res.status);
-
-      let data;
-      try {
-        data = await res.json();
-        console.log('[handleAcceptProposal] Response data:', data);
-      } catch (e) {
-        console.error('[handleAcceptProposal] Failed to parse response:', e);
-        throw new Error('Resposta inválida do servidor');
-      }
-
-      if (!res.ok) {
-        console.error('[handleAcceptProposal] Error response:', data);
-        throw new Error(data.error || `Erro ${res.status}`);
-      }
-
-      if (!data.success) {
-        console.error('[handleAcceptProposal] API returned success=false:', data);
-        throw new Error(data.error || 'Erro ao aceitar proposta');
-      }
-      
-      console.log('[handleAcceptProposal] Success! New step:', data.data?.currentStep);
-      addToast('Proposta aceite! Email enviado ao influencer.', 'success');
-      await fetchData();
-      onUpdate?.();
-    } catch (error: any) {
-      console.error('[handleAcceptProposal] Caught error:', error);
-      addToast(error.message || 'Erro ao aceitar proposta', 'error');
-    } finally {
-      setIsAdvancing(false);
-    }
+      const res = await fetch(`/api/partnerships/${workflow.id}/accept-counter`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Erro');
+      addToast('Proposta aceite! Email enviado.', 'success');
+      await fetchData(); onUpdate?.();
+    } catch (e: any) { addToast(e.message, 'error'); }
+    finally { setIsAdvancing(false); }
   };
 
   const handleSendCounter = async () => {
-    if (!workflow || !counterPrice) return;
-
+    if (!workflow) return;
     const price = parseFloat(counterPrice);
-    if (isNaN(price) || price <= 0) {
-      addToast('Insira um valor válido', 'error');
-      return;
-    }
-
+    if (isNaN(price) || price <= 0) return addToast('Valor inválido', 'error');
     try {
       setIsAdvancing(true);
       const res = await fetch(`/api/partnerships/${workflow.id}/send-counter`, {
@@ -273,103 +170,77 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ agreedPrice: price }),
       });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Erro ao enviar contraproposta');
-      }
-      
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Erro');
       addToast('Contraproposta enviada!', 'success');
-      setShowCounterModal(false);
-      setCounterPrice('');
-      await fetchData();
-      onUpdate?.();
-    } catch (error: any) {
-      addToast(error.message || 'Erro ao enviar contraproposta', 'error');
-    } finally {
-      setIsAdvancing(false);
-    }
+      setShowCounterModal(false); setCounterPrice('');
+      await fetchData(); onUpdate?.();
+    } catch (e: any) { addToast(e.message, 'error'); }
+    finally { setIsAdvancing(false); }
   };
 
-  if (loading) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-gray-300" />
-      </div>
-    );
-  }
-
-  if (!influencer) {
-    return (
-      <div className="h-full flex items-center justify-center p-6 text-center">
-        <p className="text-sm text-gray-400">Influencer não encontrado</p>
-      </div>
-    );
-  }
-
-  // Mapeamento de status para step - garante sincronização entre status e step
-  const STATUS_TO_STEP: Record<string, number> = {
-    'ANALYZING': 0,
-    'COUNTER_PROPOSAL': 0,
-    'AGREED': 1,
-    'PRODUCT_SELECTION': 2,
-    'DESIGN_REVIEW': 3,
-    'CONTRACT_PENDING': 4,
-    'CONTRACT_SIGNED': 5,
-    'SHIPPED': 6,
-    'COMPLETED': 7,
+  const handleSaveProduct = async () => {
+    if (!workflow) return;
+    if (!productUrl) return addToast('URL do produto é obrigatória', 'error');
+    if (!couponCode) return addToast('Código do cupom é obrigatório', 'error');
+    try {
+      setIsCreatingCoupon(true);
+      // 1. Guardar URL do produto
+      const patchRes = await fetch(`/api/partnerships/${workflow.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ selectedProductUrl: productUrl }),
+      });
+      if (!patchRes.ok) throw new Error('Erro ao guardar produto');
+      // 2. Criar cupom na Shopify
+      const couponRes = await fetch(`/api/influencers/${influencerId}/create-coupon`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: couponCode.toUpperCase(), workflowId: workflow.id }),
+      });
+      const couponData = await couponRes.json();
+      if (!couponRes.ok) throw new Error(couponData.error || 'Erro ao criar cupom');
+      addToast('Produto e cupom guardados!', 'success');
+      setShowProductModal(false);
+      await fetchData(); onUpdate?.();
+    } catch (e: any) { addToast(e.message, 'error'); }
+    finally { setIsCreatingCoupon(false); }
   };
-  
-  // Corrige o step baseado no status do influencer
-  // Prioridade: status do influencer > workflow.currentStep
-  const getCorrectedStep = () => {
-    const workflowStep = workflow?.currentStep ?? -1;
-    const influencerStatus = influencer?.status;
-    
-    // Se temos um status conhecido, usa o mapeamento
-    if (influencerStatus && STATUS_TO_STEP[influencerStatus] !== undefined) {
-      const expectedStep = STATUS_TO_STEP[influencerStatus];
-      if (workflowStep !== expectedStep) {
-        console.warn(`[Step Mismatch] Influencer status is ${influencerStatus} (expected step ${expectedStep}) but workflow step is ${workflowStep}. Forcing correct step.`);
-        return expectedStep;
-      }
-    }
-    
-    return workflowStep;
-  };
-  
-  const currentStep = getCorrectedStep();
-  const stepConfig = currentStep >= 0 ? STEP_CONFIG[currentStep] : null;
-  const totalSteps = 8;
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+
+  if (loading) return (
+    <div className="h-full flex items-center justify-center">
+      <Loader2 className="h-6 w-6 animate-spin text-gray-300" />
+    </div>
+  );
+
+  if (!influencer) return (
+    <div className="h-full flex items-center justify-center">
+      <p className="text-sm text-gray-400">Influencer não encontrado</p>
+    </div>
+  );
+
+  // Step derivado do status (fonte de verdade)
+  const currentStep = STATUS_TO_STEP[influencer?.status] ?? -1;
+  const isAdminStep = STEP_ACTOR[currentStep] === 'admin';
   const displayStep = currentStep + 1;
+  const totalSteps = 8;
   const progress = workflow ? Math.min((displayStep / totalSteps) * 100, 100) : 0;
-
-  // DEBUG: Log values for troubleshooting
-  console.log('[InfluencerProfileCompact] Debug:', {
-    influencerId,
-    influencerStatus: influencer?.status,
-    expectedStepFromStatus: influencer?.status ? STATUS_TO_STEP[influencer.status] : null,
-    workflowId: workflow?.id,
-    workflowStep: workflow?.currentStep,
-    correctedStep: currentStep,
-    displayStep,
-    workflowStatus: workflow?.status,
-    stepConfig: stepConfig?.name,
-    stepConfigWaitingFor: stepConfig?.waitingFor,
-  });
+  const missingFields = (REQUIRED_FIELDS[currentStep] || []).filter(f => !workflow?.[f]);
 
   return (
     <div className="h-full flex flex-col bg-white">
-      {/* Header */}
+
+      {/* ── Header ──────────────────────────────────────────────────────── */}
       <div className="p-4 border-b border-gray-100">
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-3">
             <div className="w-14 h-14 rounded-2xl overflow-hidden bg-gradient-to-br from-[#0E1E37] to-[#1a2f4f] flex items-center justify-center shrink-0">
-              {influencer.avatarUrl ? (
-                <img src={influencer.avatarUrl} alt={influencer.name} className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-white text-xl font-semibold">{influencer.name?.charAt(0).toUpperCase()}</span>
-              )}
+              {influencer.avatarUrl
+                ? <img src={influencer.avatarUrl} alt={influencer.name} className="w-full h-full object-cover" />
+                : <span className="text-white text-xl font-semibold">{influencer.name?.charAt(0).toUpperCase()}</span>
+              }
             </div>
             <div className="min-w-0">
               <h3 className="font-semibold text-gray-900 truncate">{influencer.name}</h3>
@@ -380,405 +251,336 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
             <ExternalLink className="h-4 w-4 text-gray-400" />
           </Link>
         </div>
-
         <div className="grid grid-cols-3 gap-2">
-          <div className="bg-gray-50 rounded-xl p-2 text-center">
-            <p className="text-lg font-semibold text-gray-900">{influencer.engagementRate?.toFixed(1) || '-'}</p>
-            <p className="text-[10px] text-gray-400 uppercase">Eng. Rate</p>
-          </div>
-          <div className="bg-gray-50 rounded-xl p-2 text-center">
-            <p className="text-lg font-semibold text-gray-900">{influencer.followerCount ? (influencer.followerCount / 1000).toFixed(1) + 'K' : '-'}</p>
-            <p className="text-[10px] text-gray-400 uppercase">Followers</p>
-          </div>
-          <div className="bg-gray-50 rounded-xl p-2 text-center">
-            <p className="text-lg font-semibold text-gray-900">{influencer.matchScore || '-'}</p>
-            <p className="text-[10px] text-gray-400 uppercase">Match</p>
-          </div>
+          {[
+            { label: 'Eng. Rate', value: influencer.engagementRate?.toFixed(1) || '-' },
+            { label: 'Followers', value: influencer.followerCount ? (influencer.followerCount / 1000).toFixed(1) + 'K' : '-' },
+            { label: 'Match', value: influencer.matchScore || '-' },
+          ].map(item => (
+            <div key={item.label} className="bg-gray-50 rounded-xl p-2 text-center">
+              <p className="text-lg font-semibold text-gray-900">{item.value}</p>
+              <p className="text-[10px] text-gray-400 uppercase">{item.label}</p>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* WORKFLOW SECTION */}
+      {/* ── Workflow ─────────────────────────────────────────────────────── */}
       <div className="px-4 py-3 bg-gradient-to-r from-[#0E1E37]/5 to-blue-50/50 border-b border-gray-100">
-        <div className="flex items-center justify-between mb-3">
-          <h4 className="text-xs font-semibold text-gray-700 uppercase">Workflow Parceria</h4>
-          {workflow && (
-            <span className="text-xs font-medium text-[#0E1E37]">
-              Step {displayStep}/{totalSteps}
-            </span>
-          )}
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="text-xs font-semibold text-gray-700 uppercase">Workflow</h4>
+          {workflow && <span className="text-xs font-medium text-[#0E1E37]">Step {displayStep}/{totalSteps}</span>}
         </div>
 
+        {/* Sem workflow → Criar */}
         {!workflow ? (
           !showCreateForm ? (
-            <button
-              onClick={() => setShowCreateForm(true)}
-              className="w-full py-2.5 bg-[#0E1E37] text-white text-sm font-medium rounded-xl hover:bg-[#1a2f4f] flex items-center justify-center gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              Criar Parceria
+            <button onClick={() => setShowCreateForm(true)}
+              className="w-full py-2.5 bg-[#0E1E37] text-white text-sm font-medium rounded-xl hover:bg-[#1a2f4f] flex items-center justify-center gap-2">
+              <Plus className="h-4 w-4" /> Criar Parceria
             </button>
           ) : (
-            <div className="space-y-3 bg-white rounded-xl p-3 border-2 border-[#0E1E37]">
+            <div className="bg-white rounded-xl p-3 border-2 border-[#0E1E37] space-y-3">
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Valor Acordado (€)</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">€</span>
-                  <input
-                    type="number"
-                    value={agreedPrice}
-                    onChange={(e) => setAgreedPrice(e.target.value)}
-                    placeholder="0"
-                    min="0"
-                    step="0.01"
-                    className="w-full pl-8 pr-3 py-2 bg-gray-50 border-0 rounded-lg font-semibold text-gray-900 focus:ring-2 focus:ring-[#0E1E37]/20"
-                    autoFocus
-                  />
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">€</span>
+                  <input type="number" value={agreedPrice} onChange={e => setAgreedPrice(e.target.value)}
+                    placeholder="0" min="0" step="0.01" autoFocus
+                    className="w-full pl-8 pr-3 py-2 bg-gray-50 border-0 rounded-lg text-gray-900 focus:ring-2 focus:ring-[#0E1E37]/20" />
                 </div>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => setShowCreateForm(false)} className="flex-1 py-2 bg-gray-100 text-gray-600 text-sm font-medium rounded-lg">
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleCreatePartnership}
-                  disabled={isCreatingPartnership || agreedPrice === ''}
-                  className="flex-1 py-2 bg-[#0E1E37] text-white text-sm font-medium rounded-lg disabled:opacity-50"
-                >
-                  {isCreatingPartnership ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : 'Criar'}
+                <button onClick={() => setShowCreateForm(false)} className="flex-1 py-2 bg-gray-100 text-gray-600 text-sm font-medium rounded-lg">Cancelar</button>
+                <button onClick={handleCreate} disabled={isAdvancing || !agreedPrice}
+                  className="flex-1 py-2 bg-[#0E1E37] text-white text-sm font-medium rounded-lg disabled:opacity-50">
+                  {isAdvancing ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : 'Criar'}
                 </button>
               </div>
             </div>
           )
-        ) : stepConfig ? (
-          <div className="space-y-3">
-            {/* Current Step Card */}
+
+        /* Com workflow */
+        ) : currentStep >= 0 ? (
+          <div className="space-y-2">
             <div className="bg-white rounded-xl p-3 border-2 border-[#0E1E37]">
+
+              {/* Step header */}
               <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-xl bg-[#0E1E37] text-white flex items-center justify-center font-bold text-lg">
-                  {displayStep}
-                </div>
+                <div className="w-9 h-9 rounded-xl bg-[#0E1E37] text-white flex items-center justify-center font-bold">{displayStep}</div>
                 <div className="flex-1">
-                  <p className="font-semibold text-gray-900">{stepConfig.name}</p>
-                  <p className="text-xs text-gray-500">{stepConfig.description}</p>
+                  <p className="font-semibold text-gray-900 text-sm">{
+                    ['Proposta', 'Dados de Envio', 'Preparing', 'Design Review', 'Contrato', 'Contract Signed', 'Enviado', 'Completo'][currentStep] || ''
+                  }</p>
+                  <p className="text-xs text-gray-400">{isAdminStep ? '→ Ação: Admin' : '→ Ação: Influencer'}</p>
                 </div>
-              </div>
-
-              {/* Status, Value & Waiting For Badge */}
-              <div className="flex items-center gap-2 mb-3 flex-wrap">
-                <span className="text-xs text-gray-500">Status:</span>
-                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-                  {workflow?.status || influencer?.status || 'N/A'}
-                </span>
-                {workflow?.agreedPrice !== null && workflow?.agreedPrice !== undefined && (
-                  <>
-                    <span className="text-xs text-gray-500 ml-2">Valor:</span>
-                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                      €{workflow.agreedPrice.toFixed(2)}
-                    </span>
-                  </>
+                {workflow?.agreedPrice != null && (
+                  <span className="text-xs font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
+                    €{workflow.agreedPrice.toFixed(2)}
+                  </span>
                 )}
-                <span className="text-xs text-gray-500 ml-2">Aguardando:</span>
-                {(() => {
-                  // Para step 0, o "Aguardando" depende do status
-                  const status = workflow?.status || influencer?.status;
-                  let waitingFor = stepConfig.waitingFor;
-                  if (currentStep === 0) {
-                    if (status === 'COUNTER_PROPOSAL') waitingFor = 'Influencer';
-                    else if (status === 'ANALYZING') waitingFor = 'Admin';
-                  }
-                  return (
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                      waitingFor === 'Admin' 
-                        ? 'bg-amber-100 text-amber-700' 
-                        : 'bg-blue-100 text-blue-700'
-                    }`}>
-                      {waitingFor}
-                    </span>
-                  );
-                })()}
               </div>
 
-              {/* Action Buttons */}
-              {currentStep === 0 && (
-                // Step 0 (Partnership/Análise) - Lógica correta:
-                // ANALYZING = Somos nós que respondemos (aceitar ou contrapropor)
-                // COUNTER_PROPOSAL = Influencer está a analisar a nossa contraproposta
-                (workflow?.status === 'COUNTER_PROPOSAL' || influencer?.status === 'COUNTER_PROPOSAL') ? (
-                  // COUNTER_PROPOSAL: Nós enviamos contraproposta, influencer decide → Aguardamos
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-center gap-2 py-2 bg-blue-50 rounded-lg text-blue-700 text-sm">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Aguardando resposta do influencer...
-                    </div>
-                    {workflow?.agreedPrice !== null && workflow?.agreedPrice !== undefined && (
-                      <p className="text-xs text-center text-gray-500">
-                        Valor proposto: <span className="font-semibold text-gray-700">€{workflow.agreedPrice.toFixed(2)}</span>
-                      </p>
-                    )}
+              {/* ── Step 1 (0): Partnership ──────────────────────────── */}
+              {currentStep === 0 && influencer?.status === 'COUNTER_PROPOSAL' && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 py-2 px-3 bg-blue-50 rounded-lg text-blue-700 text-sm">
+                    <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                    Aguardando resposta do influencer...
                   </div>
-                ) : (workflow?.status === 'ANALYZING' || influencer?.status === 'ANALYZING') ? (
-                  // ANALYZING: Influencer enviou proposta, nós decidimos → Aceitar ou Contrapropor
-                  <div className="space-y-3">
-                    {workflow?.agreedPrice !== null && workflow?.agreedPrice !== undefined && (
-                      <div className="bg-gray-50 rounded-lg p-2 text-center">
-                        <span className="text-xs text-gray-500">Valor proposto pelo influencer:</span>
-                        <p className="text-lg font-bold text-[#0E1E37]">€{workflow.agreedPrice.toFixed(2)}</p>
-                      </div>
-                    )}
-                    <button
-                      onClick={handleAcceptProposal}
-                      disabled={isAdvancing}
-                      className="w-full py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-2"
-                    >
-                      {isAdvancing ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <>
-                          <CheckCircle2 className="h-4 w-4" />
-                          Aceitar Proposta
-                        </>
-                      )}
-                    </button>
-                    <button
-                      onClick={() => setShowCounterModal(true)}
-                      className="w-full py-2 bg-[#0E1E37] text-white text-sm font-medium rounded-lg hover:bg-[#1a2f4f] flex items-center justify-center gap-2"
-                    >
-                      Enviar Contraproposta
-                    </button>
-                  </div>
-                ) : (
-                  // Outro status (sugestão, etc)
-                  <button
-                    onClick={handleAdvanceStep}
-                    disabled={isAdvancing}
-                    className="w-full py-2 bg-[#0E1E37] text-white text-sm font-medium rounded-lg hover:bg-[#1a2f4f] disabled:opacity-50 flex items-center justify-center gap-2"
-                  >
-                    {isAdvancing ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <>
-                        Avançar
-                        <ChevronRight className="h-4 w-4" />
-                      </>
-                    )}
-                  </button>
-                )
-              )}
-              
-              {currentStep > 0 && stepConfig.adminAction && stepConfig.waitingFor === 'Admin' && (
-                // Outros steps → botão de avançar normal
-                <button
-                  onClick={handleAdvanceStep}
-                  disabled={isAdvancing}
-                  className="w-full py-2 bg-[#0E1E37] text-white text-sm font-medium rounded-lg hover:bg-[#1a2f4f] disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {isAdvancing ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <>
-                      {stepConfig.adminAction}
-                      <ChevronRight className="h-4 w-4" />
-                    </>
+                  {workflow?.agreedPrice != null && (
+                    <p className="text-xs text-center text-gray-500">
+                      Valor proposto por nós: <strong>€{workflow.agreedPrice.toFixed(2)}</strong>
+                    </p>
                   )}
+                </div>
+              )}
+              {currentStep === 0 && influencer?.status === 'ANALYZING' && (
+                <div className="space-y-2">
+                  {workflow?.agreedPrice != null && (
+                    <div className="bg-gray-50 rounded-lg p-2 text-center">
+                      <p className="text-xs text-gray-500">Valor proposto pelo influencer:</p>
+                      <p className="text-xl font-bold text-[#0E1E37]">€{workflow.agreedPrice.toFixed(2)}</p>
+                    </div>
+                  )}
+                  <button onClick={handleAccept} disabled={isAdvancing}
+                    className="w-full py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-2">
+                    {isAdvancing ? <Loader2 className="h-4 w-4 animate-spin" /> : <><CheckCircle2 className="h-4 w-4" /> Aceitar Proposta</>}
+                  </button>
+                  <button onClick={() => setShowCounterModal(true)}
+                    className="w-full py-2 bg-[#0E1E37] text-white text-sm font-medium rounded-lg hover:bg-[#1a2f4f] flex items-center justify-center gap-2">
+                    Enviar Contraproposta
+                  </button>
+                </div>
+              )}
+
+              {/* ── Step 2 (1): Shipping ─────────────────────────────── */}
+              {currentStep === 1 && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 py-2 px-3 bg-blue-50 rounded-lg text-blue-700 text-sm">
+                    <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                    Aguardando influencer preencher dados...
+                  </div>
+                  {workflow?.shippingAddress && (
+                    <div className="bg-gray-50 rounded-lg p-2">
+                      <p className="text-[10px] text-gray-400 uppercase mb-1">Morada</p>
+                      <p className="text-xs text-gray-700">{workflow.shippingAddress}</p>
+                    </div>
+                  )}
+                  {(workflow?.productSuggestion1 || workflow?.productSuggestion2 || workflow?.productSuggestion3) && (
+                    <div className="bg-gray-50 rounded-lg p-2">
+                      <p className="text-[10px] text-gray-400 uppercase mb-1">Sugestões</p>
+                      {[workflow.productSuggestion1, workflow.productSuggestion2, workflow.productSuggestion3]
+                        .filter(Boolean).map((s, i) => <p key={i} className="text-xs text-gray-700 truncate">• {s}</p>)}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── Step 3 (2): Preparing — Admin escolhe produto + cupom ── */}
+              {currentStep === 2 && (
+                <div className="space-y-2">
+                  {/* Produto */}
+                  <div className="bg-purple-50 rounded-lg p-2">
+                    <p className="text-[10px] font-medium text-purple-900 flex items-center gap-1 mb-1">
+                      <Link2 className="h-3 w-3" /> Produto Selecionado
+                    </p>
+                    {workflow?.selectedProductUrl
+                      ? <a href={workflow.selectedProductUrl} target="_blank" rel="noopener noreferrer"
+                          className="text-xs text-blue-600 hover:underline truncate block">{workflow.selectedProductUrl}</a>
+                      : <p className="text-xs text-amber-600">Em falta ⚠️</p>
+                    }
+                  </div>
+                  {/* Cupom */}
+                  <div className="bg-purple-50 rounded-lg p-2">
+                    <p className="text-[10px] font-medium text-purple-900 flex items-center gap-1 mb-1">
+                      <Ticket className="h-3 w-3" /> Cupom
+                    </p>
+                    {workflow?.couponCode
+                      ? <div className="flex items-center gap-2">
+                          <span className="text-sm font-mono font-bold text-purple-700">{workflow.couponCode}</span>
+                          <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded">Ativo</span>
+                        </div>
+                      : <p className="text-xs text-amber-600">Em falta ⚠️</p>
+                    }
+                  </div>
+                  {/* Botão editar */}
+                  <button onClick={() => { setProductUrl(workflow?.selectedProductUrl || ''); setCouponCode(workflow?.couponCode || generateCouponCode()); setShowProductModal(true); }}
+                    className="w-full py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 flex items-center justify-center gap-2">
+                    <Plus className="h-4 w-4" />
+                    {workflow?.selectedProductUrl ? 'Editar Produto/Cupom' : 'Adicionar Produto e Cupom'}
+                  </button>
+                  {/* Avançar (só ativo quando tem produto + cupom) */}
+                  <button onClick={handleAdvance} disabled={isAdvancing || missingFields.length > 0}
+                    className="w-full py-2 bg-[#0E1E37] text-white text-sm font-medium rounded-lg hover:bg-[#1a2f4f] disabled:opacity-50 flex items-center justify-center gap-2">
+                    {isAdvancing ? <Loader2 className="h-4 w-4 animate-spin" /> : <>{ACTION_LABEL[2]} <ChevronRight className="h-4 w-4" /></>}
+                  </button>
+                  {missingFields.length > 0 && (
+                    <p className="text-[10px] text-amber-600 text-center">⚠️ Preenche produto e cupom antes de avançar</p>
+                  )}
+                </div>
+              )}
+
+              {/* ── Steps 4-7: Admin genérico ──────────────────────────── */}
+              {currentStep >= 3 && isAdminStep && (
+                <button onClick={handleAdvance} disabled={isAdvancing}
+                  className="w-full py-2 bg-[#0E1E37] text-white text-sm font-medium rounded-lg hover:bg-[#1a2f4f] disabled:opacity-50 flex items-center justify-center gap-2">
+                  {isAdvancing ? <Loader2 className="h-4 w-4 animate-spin" /> : <>{ACTION_LABEL[currentStep] || 'Avançar'} <ChevronRight className="h-4 w-4" /></>}
                 </button>
               )}
 
-              {/* Waiting Message (if influencer needs to act) */}
-              {stepConfig.waitingFor === 'Influencer' && (
-                <div className="flex items-center justify-center gap-2 py-2 bg-blue-50 rounded-lg text-blue-700 text-sm">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Aguardando influencer...
+              {/* ── Steps influencer (4 = Contract) ───────────────────── */}
+              {currentStep === 4 && (
+                <div className="flex items-center gap-2 py-2 px-3 bg-blue-50 rounded-lg text-blue-700 text-sm">
+                  <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                  Aguardando assinatura do contrato...
                 </div>
               )}
+
             </div>
 
-            {/* Progress Bar */}
+            {/* Progress bar */}
             <div className="flex items-center gap-2">
               <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
                 <div className="h-full bg-[#0E1E37] rounded-full transition-all" style={{ width: `${progress}%` }} />
               </div>
-              <span className="text-[10px] text-gray-500 font-medium">{Math.round(progress)}%</span>
+              <span className="text-[10px] text-gray-500">{Math.round(progress)}%</span>
             </div>
           </div>
         ) : (
-          <p className="text-sm text-gray-400 text-center py-2">Erro ao carregar workflow</p>
+          <p className="text-xs text-gray-400 text-center py-2">Status desconhecido: {influencer?.status}</p>
         )}
       </div>
 
-      {/* Tabs */}
+      {/* ── Tabs ─────────────────────────────────────────────────────────── */}
       <div className="flex border-b border-gray-100">
         {[
           { id: 'overview', label: 'Info', icon: User },
           { id: 'stats', label: 'Stats', icon: BarChart3 },
           { id: 'content', label: 'Conteúdo', icon: Video },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
+        ].map(tab => (
+          <button key={tab.id} onClick={() => setActiveTab(tab.id as any)}
             className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-medium transition-colors ${
-              activeTab === tab.id ? 'text-[#0E1E37] border-b-2 border-[#0E1E37]' : 'text-gray-400 hover:text-gray-600'
-            }`}
-          >
-            <tab.icon className="h-3.5 w-3.5" />
-            {tab.label}
+              activeTab === tab.id ? 'text-[#0E1E37] border-b-2 border-[#0E1E37]' : 'text-gray-400 hover:text-gray-600'}`}>
+            <tab.icon className="h-3.5 w-3.5" />{tab.label}
           </button>
         ))}
       </div>
 
-      {/* Tab Content */}
+      {/* ── Tab Content ──────────────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto p-4">
         {activeTab === 'overview' && (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <h4 className="text-xs font-semibold text-gray-400 uppercase">Contacto</h4>
-              {influencer.email && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Mail className="h-4 w-4 text-gray-400" />
-                  <span className="text-gray-600 truncate">{influencer.email}</span>
-                </div>
-              )}
-              {influencer.instagramHandle && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Instagram className="h-4 w-4 text-gray-400" />
-                  <span className="text-gray-600">@{influencer.instagramHandle}</span>
-                </div>
-              )}
-              {influencer.tiktokHandle && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Hash className="h-4 w-4 text-gray-400" />
-                  <span className="text-gray-600">@{influencer.tiktokHandle}</span>
-                </div>
-              )}
-            </div>
-
-            {influencer.notes && (
-              <div className="space-y-2">
-                <h4 className="text-xs font-semibold text-gray-400 uppercase">Notas</h4>
-                <p className="text-sm text-gray-600 bg-gray-50 rounded-xl p-3">{influencer.notes}</p>
-              </div>
-            )}
+          <div className="space-y-3">
+            {influencer.email && <div className="flex items-center gap-2 text-sm"><Mail className="h-4 w-4 text-gray-400" /><span className="text-gray-600 truncate">{influencer.email}</span></div>}
+            {influencer.instagramHandle && <div className="flex items-center gap-2 text-sm"><Instagram className="h-4 w-4 text-gray-400" /><span className="text-gray-600">@{influencer.instagramHandle}</span></div>}
+            {influencer.tiktokHandle && <div className="flex items-center gap-2 text-sm"><Hash className="h-4 w-4 text-gray-400" /><span className="text-gray-600">@{influencer.tiktokHandle}</span></div>}
+            {influencer.notes && <p className="text-sm text-gray-600 bg-gray-50 rounded-xl p-3">{influencer.notes}</p>}
           </div>
         )}
-
         {activeTab === 'stats' && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-gray-50 rounded-xl p-3">
-                <div className="flex items-center gap-2 mb-1">
-                  <TrendingUp className="h-4 w-4 text-green-500" />
-                  <span className="text-xs text-gray-400">Média Views</span>
-                </div>
-                <p className="text-lg font-semibold text-gray-900">
-                  {influencer.avgVideoViews ? (influencer.avgVideoViews / 1000).toFixed(1) + 'K' : '-'}
-                </p>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { icon: TrendingUp, color: 'text-green-500', label: 'Avg Views', value: influencer.avgVideoViews ? (influencer.avgVideoViews/1000).toFixed(1)+'K' : '-' },
+              { icon: Award, color: 'text-amber-500', label: 'Fit Score', value: influencer.fitScore?.toFixed(1) || '-' },
+              { icon: Calendar, color: 'text-blue-500', label: 'Adicionado', value: influencer.createdAt ? new Date(influencer.createdAt).toLocaleDateString('pt-PT', { day:'2-digit', month:'short' }) : '-' },
+              { icon: Video, color: 'text-purple-500', label: 'Vídeos', value: influencer.videos?.length || 0 },
+            ].map(item => (
+              <div key={item.label} className="bg-gray-50 rounded-xl p-3">
+                <div className="flex items-center gap-2 mb-1"><item.icon className={`h-4 w-4 ${item.color}`} /><span className="text-xs text-gray-400">{item.label}</span></div>
+                <p className="text-lg font-semibold text-gray-900">{item.value}</p>
               </div>
-              <div className="bg-gray-50 rounded-xl p-3">
-                <div className="flex items-center gap-2 mb-1">
-                  <Award className="h-4 w-4 text-amber-500" />
-                  <span className="text-xs text-gray-400">Fit Score</span>
-                </div>
-                <p className="text-lg font-semibold text-gray-900">{influencer.fitScore?.toFixed(1) || '-'}</p>
-              </div>
-              <div className="bg-gray-50 rounded-xl p-3">
-                <div className="flex items-center gap-2 mb-1">
-                  <Calendar className="h-4 w-4 text-blue-500" />
-                  <span className="text-xs text-gray-400">Adicionado</span>
-                </div>
-                <p className="text-sm font-semibold text-gray-900">
-                  {influencer.createdAt ? new Date(influencer.createdAt).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' }) : '-'}
-                </p>
-              </div>
-              <div className="bg-gray-50 rounded-xl p-3">
-                <div className="flex items-center gap-2 mb-1">
-                  <Video className="h-4 w-4 text-purple-500" />
-                  <span className="text-xs text-gray-400">Vídeos</span>
-                </div>
-                <p className="text-lg font-semibold text-gray-900">{influencer.videos?.length || 0}</p>
-              </div>
-            </div>
+            ))}
           </div>
         )}
-
         {activeTab === 'content' && (
           <div className="space-y-3">
-            {influencer.videos && influencer.videos.length > 0 ? (
-              influencer.videos.slice(0, 5).map((video: any) => (
-                <div key={video.id} className="bg-gray-50 rounded-xl p-3">
-                  <p className="text-sm text-gray-800 line-clamp-2 mb-2">{video.description || 'Sem descrição'}</p>
-                  <div className="flex items-center gap-3 text-xs text-gray-400">
-                    <span>{(video.views / 1000).toFixed(1)}K views</span>
-                    <span>•</span>
-                    <span>{video.engagementRate?.toFixed(1)}% eng</span>
+            {influencer.videos?.length > 0
+              ? influencer.videos.slice(0,5).map((v: any) => (
+                  <div key={v.id} className="bg-gray-50 rounded-xl p-3">
+                    <p className="text-sm text-gray-800 line-clamp-2 mb-1">{v.description || 'Sem descrição'}</p>
+                    <p className="text-xs text-gray-400">{(v.views/1000).toFixed(1)}K views · {v.engagementRate?.toFixed(1)}% eng</p>
                   </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-8">
-                <Video className="h-12 w-12 mx-auto text-gray-200 mb-2" />
-                <p className="text-sm text-gray-400">Sem vídeos</p>
-              </div>
-            )}
+                ))
+              : <div className="text-center py-8"><Video className="h-12 w-12 mx-auto text-gray-200 mb-2" /><p className="text-sm text-gray-400">Sem vídeos</p></div>
+            }
           </div>
         )}
       </div>
 
-      {/* Footer */}
+      {/* ── Footer ───────────────────────────────────────────────────────── */}
       <div className="p-4 border-t border-gray-100 bg-gray-50">
-        <Link href={`/dashboard/influencers/${influencerId}`} className="flex items-center justify-center gap-2 w-full py-2.5 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-50">
-          Ver Perfil Completo
-          <ExternalLink className="h-4 w-4" />
+        <Link href={`/dashboard/influencers/${influencerId}`}
+          className="flex items-center justify-center gap-2 w-full py-2.5 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-50">
+          Ver Perfil Completo <ExternalLink className="h-4 w-4" />
         </Link>
       </div>
 
-      {/* Counter Proposal Modal */}
+      {/* ── Modal: Contraproposta ─────────────────────────────────────────── */}
       {showCounterModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Enviar Contraproposta</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">Enviar Contraproposta</h3>
             <p className="text-sm text-gray-500 mb-4">Defina o novo valor para a parceria.</p>
-            
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Valor (€)</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">€</span>
-                <input
-                  type="number"
-                  value={counterPrice}
-                  onChange={(e) => setCounterPrice(e.target.value)}
-                  placeholder="0"
-                  min="0"
-                  step="0.01"
-                  className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-900 focus:ring-2 focus:ring-[#0E1E37]/20 focus:border-[#0E1E37]"
-                  autoFocus
-                />
-              </div>
+            <div className="relative mb-4">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">€</span>
+              <input type="number" value={counterPrice} onChange={e => setCounterPrice(e.target.value)}
+                placeholder="0" min="0" step="0.01" autoFocus
+                className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 focus:ring-2 focus:ring-[#0E1E37]/20" />
             </div>
-
             <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowCounterModal(false);
-                  setCounterPrice('');
-                }}
-                className="flex-1 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleSendCounter}
-                disabled={isAdvancing || !counterPrice}
-                className="flex-1 py-2 bg-[#0E1E37] text-white text-sm font-medium rounded-lg hover:bg-[#1a2f4f] disabled:opacity-50"
-              >
-                {isAdvancing ? (
-                  <Loader2 className="h-4 w-4 animate-spin mx-auto" />
-                ) : (
-                  'Enviar'
-                )}
+              <button onClick={() => { setShowCounterModal(false); setCounterPrice(''); }}
+                className="flex-1 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg">Cancelar</button>
+              <button onClick={handleSendCounter} disabled={isAdvancing || !counterPrice}
+                className="flex-1 py-2 bg-[#0E1E37] text-white text-sm font-medium rounded-lg disabled:opacity-50">
+                {isAdvancing ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : 'Enviar'}
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* ── Modal: Produto + Cupom ───────────────────────────────────────── */}
+      {showProductModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full">
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">Produto e Cupom</h3>
+            <p className="text-sm text-gray-500 mb-4">Preenche o produto e o cupom para avançar para Design Review.</p>
+            <div className="space-y-3 mb-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">URL do Produto *</label>
+                <div className="relative">
+                  <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input type="url" value={productUrl} onChange={e => setProductUrl(e.target.value)}
+                    placeholder="https://vecinocustom.com/produto/..."
+                    className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#0E1E37]/20" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Código do Cupom *</label>
+                <div className="flex gap-2">
+                  <input type="text" value={couponCode} onChange={e => setCouponCode(e.target.value.toUpperCase())}
+                    placeholder="VECINO_NOME_10"
+                    className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-mono uppercase focus:ring-2 focus:ring-[#0E1E37]/20" />
+                  <button onClick={() => setCouponCode(generateCouponCode())}
+                    className="px-3 py-2 bg-purple-100 text-purple-700 text-xs font-medium rounded-lg hover:bg-purple-200">
+                    Gerar
+                  </button>
+                </div>
+                <p className="text-[10px] text-gray-400 mt-1">10% desconto + 20% comissão</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setShowProductModal(false)}
+                className="flex-1 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg">Cancelar</button>
+              <button onClick={handleSaveProduct} disabled={isCreatingCoupon || !productUrl || !couponCode}
+                className="flex-1 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg disabled:opacity-50 flex items-center justify-center gap-2">
+                {isCreatingCoupon ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Ticket className="h-4 w-4" /> Guardar</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
