@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { InfluencerStatusBadge } from '@/components/InfluencerStatusBadge';
+import { PartnershipStep2 } from './partnership/PartnershipStep2';
 import { PartnershipStep3 } from './partnership/PartnershipStep3';
 
 // Mapeamento status -> step
@@ -312,19 +313,18 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: Props) {
                 </div>
               )}
 
-              {/* STEP 2: Shipping - Influencer */}
-              {currentStep === 1 && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 py-2 px-3 bg-blue-50 rounded-lg text-blue-700 text-sm">
-                    <Loader2 className="h-4 w-4 animate-spin shrink-0" />
-                    Aguardando influencer preencher dados...
-                  </div>
-                  {workflow?.shippingAddress && (
-                    <div className="bg-gray-50 rounded-lg p-2">
-                      <p className="text-[10px] text-gray-400 uppercase mb-1">Morada</p>
-                      <p className="text-xs text-gray-700">{workflow.shippingAddress}</p>
-                    </div>
-                  )}
+              {/* STEP 2: Shipping - usa PartnershipStep2 */}
+              {currentStep === 1 && workflow && (
+                <div className="mt-2">
+                  <PartnershipStep2
+                    workflow={{
+                      shippingAddress: workflow.shippingAddress,
+                      productSuggestion1: workflow.productSuggestion1,
+                      productSuggestion2: workflow.productSuggestion2,
+                      productSuggestion3: workflow.productSuggestion3,
+                    }}
+                    isLocked={false}
+                  />
                 </div>
               )}
 

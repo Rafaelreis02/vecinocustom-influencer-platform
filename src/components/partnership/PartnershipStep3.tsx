@@ -46,7 +46,7 @@ export function PartnershipStep3({ workflow, influencer, onUpdate, isLocked }: P
   };
 
   const handleCreateCoupon = async () => {
-    const code = formData.couponCode || generateCouponCode();
+    const code = effectiveCoupon;
     
     setIsCreatingCoupon(true);
     setCouponError(null);
@@ -147,8 +147,10 @@ export function PartnershipStep3({ workflow, influencer, onUpdate, isLocked }: P
     setIsSaving(false);
   };
 
-  // Auto-generate coupon code if empty
+  // Auto-generate coupon code if empty - and keep in sync with state
   const suggestedCode = formData.couponCode || generateCouponCode();
+  // Effective coupon to use when creating
+  const effectiveCoupon = formData.couponCode || generateCouponCode();
 
   return (
     <div className="space-y-6">
@@ -234,7 +236,7 @@ export function PartnershipStep3({ workflow, influencer, onUpdate, isLocked }: P
         {!isLocked && !workflow.couponCode && (
           <button
             onClick={handleCreateCoupon}
-            disabled={isCreatingCoupon || !formData.couponCode}
+            disabled={isCreatingCoupon || !effectiveCoupon}
             className="w-full py-2.5 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {isCreatingCoupon ? (
