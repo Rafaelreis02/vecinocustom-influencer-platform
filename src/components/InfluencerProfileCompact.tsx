@@ -175,10 +175,6 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: Props) {
       console.log('[handleSaveProduct] ERROR: No workflow');
       return addToast('Workflow não encontrado', 'error');
     }
-    if (!productUrl) {
-      console.log('[handleSaveProduct] ERROR: No productUrl');
-      return addToast('URL do produto é obrigatória', 'error');
-    }
     
     // Coupon code - use entered value or generate
     const codeToUse = couponCode || generateCouponCode();
@@ -187,15 +183,17 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: Props) {
     try {
       setIsCreatingCoupon(true);
       
-      // 1. Save product URL
-      console.log('[handleSaveProduct] Saving product URL...');
-      const patchRes = await fetch(`/api/partnerships/${workflow.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ selectedProductUrl: productUrl }),
-      });
-      console.log('[handleSaveProduct] Patch response:', patchRes.status);
-      if (!patchRes.ok) throw new Error('Erro ao guardar produto');
+      // 1. Save product URL (if provided)
+      if (productUrl) {
+        console.log('[handleSaveProduct] Saving product URL...');
+        const patchRes = await fetch(`/api/partnerships/${workflow.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ selectedProductUrl: productUrl }),
+        });
+        console.log('[handleSaveProduct] Patch response:', patchRes.status);
+        if (!patchRes.ok) throw new Error('Erro ao guardar produto');
+      }
       
       // 2. Create coupon in Shopify
       console.log('[handleSaveProduct] Creating coupon...');
@@ -209,7 +207,7 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: Props) {
       if (!couponRes.ok) throw new Error(couponData.error || 'Erro ao criar cupom');
       
       console.log('[handleSaveProduct] SUCCESS!');
-      addToast('Produto e cupom guardados!', 'success');
+      addToast('Cupom criado na Shopify!', 'success');
       await refresh();
     } catch (e: any) {
       console.error('[handleSaveProduct] ERROR:', e.message);
@@ -444,10 +442,10 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: Props) {
                           console.log('[BOTÃO CRIAR CUPOM] CLICKED!');
                           console.log('[BOTÃO CRIAR CUPOM] isCreatingCoupon:', isCreatingCoupon);
                           console.log('[BOTÃO CRIAR CUPOM] productUrl:', productUrl);
-                          console.log('[BOTÃO CRIAR CUPOM] disabled condition:', isCreatingCoupon || !productUrl);
+                          console.log('[BOTÃO CRIAR CUPOM] disabled condition:', isCreatingCoupon);
                           handleSaveProduct();
                         }}
-                        disabled={isCreatingCoupon || !productUrl}
+                        disabled={isCreatingCoupon}
                         className="w-full mt-2 py-2 bg-purple-600 text-white text-xs font-medium rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center justify-center gap-2"
                       >
                         {isCreatingCoupon ? (
