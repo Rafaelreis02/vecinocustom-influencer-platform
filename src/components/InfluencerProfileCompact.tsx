@@ -251,7 +251,23 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
     );
   }
 
-  const currentStep = workflow?.currentStep ?? -1;
+  // Se o influencer.status for ANALYZING ou COUNTER_PROPOSAL, devemos estar no step 0
+  // Mesmo que o workflow.currentStep venha incorreto da API
+  const getCorrectedStep = () => {
+    const workflowStep = workflow?.currentStep ?? -1;
+    const influencerStatus = influencer?.status;
+    
+    // Se o influencer está em estado de análise, força step 0
+    if (influencerStatus === 'ANALYZING' || influencerStatus === 'COUNTER_PROPOSAL') {
+      if (workflowStep !== 0) {
+        console.warn(`[Step Mismatch] Influencer status is ${influencerStatus} but workflow step is ${workflowStep}. Forcing step 0.`);
+        return 0;
+      }
+    }
+    return workflowStep;
+  };
+  
+  const currentStep = getCorrectedStep();
   const stepConfig = currentStep >= 0 ? STEP_CONFIG[currentStep] : null;
   const totalSteps = 8;
   const displayStep = currentStep + 1;
@@ -260,11 +276,14 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
   // DEBUG: Log values for troubleshooting
   console.log('[InfluencerProfileCompact] Debug:', {
     influencerId,
+    influencerStatus: influencer?.status,
     workflowId: workflow?.id,
-    currentStep,
+    workflowStep: workflow?.currentStep,
+    correctedStep: currentStep,
     displayStep,
     workflowStatus: workflow?.status,
     stepConfig: stepConfig?.name,
+    stepConfigWaitingFor: stepConfig?.waitingFor,
   });
 
   return (
@@ -372,9 +391,13 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
                 </div>
               </div>
 
-              {/* Waiting For Badge */}
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-xs text-gray-500">Aguardando:</span>
+              {/* Status & Waiting For Badge */}
+              <div className="flex items-center gap-2 mb-3 flex-wrap">
+                <span className="text-xs text-gray-500">Status:</span>
+                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                  {workflow?.status || 'N/A'}
+                </span>
+                <span className="text-xs text-gray-500 ml-2">Aguardando:</span>
                 <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                   stepConfig.waitingFor === 'Admin' 
                     ? 'bg-amber-100 text-amber-700' 
@@ -387,7 +410,8 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
               {/* Action Buttons */}
               {currentStep === 0 && (
                 // Step 0 (Partnership/Análise) - Mostrar ações específicas
-                workflow?.status === 'COUNTER_PROPOSAL' ? (
+                // Usar influencer.status como fallback se workflow.status não estiver definido
+                (workflow?.status === 'COUNTER_PROPOSAL' || influencer?.status === 'COUNTER_PROPOSAL') ? (
                   // Influencer enviou contraproposta → podemos aceitar
                   <button
                     onClick={handleAcceptProposal}
@@ -418,7 +442,7 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: InfluencerP
                           <CheckCircle2 className="h-4 w-4" />
                           Aceitar Proposta
                         </>
-                      )}
+                      )
                     </button>
                     <button
                       onClick={() => setShowCounterModal(true)}
