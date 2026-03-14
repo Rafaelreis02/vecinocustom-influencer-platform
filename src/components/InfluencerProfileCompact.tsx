@@ -5,10 +5,11 @@ import Link from 'next/link';
 import {
   User, Mail, Instagram, TrendingUp, BarChart3, Video,
   Award, Calendar, ExternalLink, Loader2, Hash,
-  CheckCircle2, ChevronRight, Plus, Ticket, Link2, Check
+  CheckCircle2, ChevronRight, Plus
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { InfluencerStatusBadge } from '@/components/InfluencerStatusBadge';
+import { PartnershipStep3 } from './partnership/PartnershipStep3';
 
 // Mapeamento status -> step
 const STATUS_TO_STEP: Record<string, number> = {
@@ -34,11 +35,6 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: Props) {
   const [agreedPrice, setAgreedPrice] = useState('');
   const [counterPrice, setCounterPrice] = useState('');
   const [activeTab, setActiveTab] = useState<'overview' | 'stats' | 'content'>('overview');
-  
-  // Step 3 form state
-  const [productUrl, setProductUrl] = useState('');
-  const [couponCode, setCouponCode] = useState('');
-  const [isCreatingCoupon, setIsCreatingCoupon] = useState(false);
 
   useEffect(() => { fetchData(); }, [influencerId]);
 
@@ -52,9 +48,6 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: Props) {
       setInfluencer(data);
       const wf = (data.partnerships || [])[0] ?? null;
       setWorkflow(wf);
-      // Initialize form values from workflow
-      if (wf?.selectedProductUrl) setProductUrl(wf.selectedProductUrl);
-      if (wf?.couponCode) setCouponCode(wf.couponCode);
     } catch (e) {
       console.error('fetchData error:', e);
     } finally {
@@ -65,21 +58,6 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: Props) {
   const refresh = async () => {
     await fetchData();
     onUpdate?.();
-  };
-
-  const generateCouponCode = () => {
-    console.log('[generateCouponCode] influencer:', influencer);
-    if (!influencer) {
-      console.log('[generateCouponCode] No influencer, returning default');
-      return 'VECINO_INF_10';
-    }
-    // Sincronizado com PartnershipStep3: tiktok primeiro, depois instagram
-    const handle = influencer.tiktokHandle || influencer.instagramHandle || '';
-    const clean = handle.replace('@', '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().substring(0, 8);
-    const suffix = clean || 'INF';
-    const code = `VECINO_${suffix}_10`;
-    console.log('[generateCouponCode] Generated:', code);
-    return code;
   };
 
   // Handlers
@@ -163,67 +141,6 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: Props) {
       addToast(e.message, 'error');
     } finally {
       setIsAdvancing(false);
-    }
-  };
-
-  // Step 3: Save product and create coupon
-  const handleSaveProduct = async () => {
-    console.log('[handleSaveProduct] CLICKED!');
-    console.log('[handleSaveProduct] workflow:', workflow?.id);
-    console.log('[handleSaveProduct] influencerId:', influencerId);
-    console.log('[handleSaveProduct] productUrl:', productUrl);
-    console.log('[handleSaveProduct] couponCode state:', couponCode);
-    
-    if (!workflow) {
-      console.log('[handleSaveProduct] ERROR: No workflow');
-      return addToast('Workflow não encontrado', 'error');
-    }
-    
-    if (!influencerId) {
-      console.log('[handleSaveProduct] ERROR: No influencerId');
-      return addToast('ID do influencer não encontrado', 'error');
-    }
-    
-    // Coupon code - use entered value or generate
-    const codeToUse = couponCode || generateCouponCode();
-    console.log('[handleSaveProduct] codeToUse:', codeToUse);
-    console.log('[handleSaveProduct] workflowId being sent:', workflow.id);
-    
-    try {
-      setIsCreatingCoupon(true);
-      
-      // 1. Save product URL (if provided)
-      if (productUrl) {
-        console.log('[handleSaveProduct] Saving product URL...');
-        const patchRes = await fetch(`/api/partnerships/${workflow.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ selectedProductUrl: productUrl }),
-        });
-        console.log('[handleSaveProduct] Patch response:', patchRes.status);
-        if (!patchRes.ok) throw new Error('Erro ao guardar produto');
-      }
-      
-      // 2. Create coupon in Shopify
-      console.log('[handleSaveProduct] Creating coupon with workflowId:', workflow.id);
-      const couponRes = await fetch(`/api/influencers/${influencerId}/create-coupon`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: codeToUse.toUpperCase(), workflowId: workflow.id }),
-      });
-      const couponData = await couponRes.json();
-      console.log('[handleSaveProduct] Coupon response:', couponRes.status, couponData);
-      if (!couponRes.ok) throw new Error(couponData.error || 'Erro ao criar cupom');
-      
-      console.log('[handleSaveProduct] SUCCESS! Refreshing...');
-      addToast('Cupom criado na Shopify!', 'success');
-      await refresh();
-      console.log('[handleSaveProduct] Refresh complete. New workflow:', workflow?.couponCode);
-    } catch (e: any) {
-      console.error('[handleSaveProduct] ERROR:', e.message);
-      addToast(e.message, 'error');
-    } finally {
-      setIsCreatingCoupon(false);
     }
   };
 
@@ -396,90 +313,32 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: Props) {
                 </div>
               )}
 
-              {/* STEP 3: Preparing - Inline Form */}
-              {currentStep === 2 && (
-                <div className="mt-2 space-y-3">
-                  {/* Product URL */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">URL do Produto</label>
-                    <div className="relative">
-                      <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <input
-                        type="url"
-                        value={productUrl}
-                        onChange={(e) => setProductUrl(e.target.value)}
-                        placeholder="https://..."
-                        disabled={!!workflow?.selectedProductUrl}
-                        className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#0E1E37]/20 disabled:bg-gray-100"
-                      />
-                    </div>
-                  </div>
-                  
-                  {/* Coupon */}
-                  <div className="bg-purple-50 rounded-lg p-3 border border-purple-100">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Ticket className="h-4 w-4 text-purple-600" />
-                      <span className="text-xs font-medium text-purple-700">Cupom 10% + 20% comissão</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={couponCode || generateCouponCode()}
-                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                        disabled={!!workflow?.couponCode}
-                        className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-mono uppercase focus:ring-2 focus:ring-[#0E1E37]/20 disabled:bg-gray-100"
-                      />
-                      {!workflow?.couponCode && (
-                        <button
-                          onClick={() => {
-                            console.log('[BOTÃO GERAR] CLICKED!');
-                            const newCode = generateCouponCode();
-                            console.log('[BOTÃO GERAR] Setting couponCode to:', newCode);
-                            setCouponCode(newCode);
-                            console.log('[BOTÃO GERAR] setCouponCode called');
-                          }}
-                          className="px-3 py-2 bg-white border border-purple-300 text-purple-700 text-xs font-medium rounded-lg hover:bg-purple-100"
-                        >
-                          Gerar
-                        </button>
-                      )}
-                    </div>
-                    
-                    {/* Create Coupon Button */}
-                    {!workflow?.couponCode && (
-                      <button
-                        onClick={() => {
-                          console.log('[BOTÃO CRIAR CUPOM] CLICKED!');
-                          console.log('[BOTÃO CRIAR CUPOM] isCreatingCoupon:', isCreatingCoupon);
-                          console.log('[BOTÃO CRIAR CUPOM] productUrl:', productUrl);
-                          console.log('[BOTÃO CRIAR CUPOM] disabled condition:', isCreatingCoupon);
-                          handleSaveProduct();
-                        }}
-                        disabled={isCreatingCoupon}
-                        className="w-full mt-2 py-2 bg-purple-600 text-white text-xs font-medium rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center justify-center gap-2"
-                      >
-                        {isCreatingCoupon ? (
-                          <><Loader2 className="h-3 w-3 animate-spin" /> A criar...</>
-                        ) : (
-                          <><Ticket className="h-3 w-3" /> Criar Cupom na Shopify</>
-                        )}
-                      </button>
-                    )}
-                    
-                    {/* Coupon Created Status */}
-                    {workflow?.couponCode && (
-                      <div className="mt-2 flex items-center gap-2 text-xs text-green-700">
-                        <Check className="h-4 w-4" />
-                        Cupom {workflow.couponCode} criado na Shopify
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Advance Button */}
+              {/* STEP 3: Preparing - USA PartnershipStep3 */}
+              {currentStep === 2 && workflow && (
+                <div className="mt-2">
+                  <PartnershipStep3
+                    workflow={{
+                      id: workflow.id,
+                      selectedProductUrl: workflow.selectedProductUrl,
+                      couponCode: workflow.couponCode,
+                    }}
+                    influencer={{
+                      id: influencerId,
+                      name: influencer?.name || '',
+                      tiktokHandle: influencer?.tiktokHandle,
+                      instagramHandle: influencer?.instagramHandle,
+                    }}
+                    onUpdate={async (updates) => {
+                      console.log('[PartnershipStep3 onUpdate] updates:', updates);
+                      await refresh();
+                      return true;
+                    }}
+                    isLocked={false}
+                  />
                   <button 
                     onClick={handleAdvance} 
                     disabled={isAdvancing || !workflow?.couponCode}
-                    className="w-full py-2 bg-[#0E1E37] text-white text-sm font-medium rounded-lg hover:bg-[#1a2f4f] disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="w-full mt-3 py-2 bg-[#0E1E37] text-white text-sm font-medium rounded-lg hover:bg-[#1a2f4f] disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {isAdvancing ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Confirmar Produto <ChevronRight className="h-4 w-4" /></>}
                   </button>
