@@ -68,10 +68,16 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: Props) {
   };
 
   const generateCouponCode = () => {
-    if (!influencer) return 'VECINO_10';
+    console.log('[generateCouponCode] influencer:', influencer);
+    if (!influencer) {
+      console.log('[generateCouponCode] No influencer, returning default');
+      return 'VECINO_10';
+    }
     const handle = influencer.instagramHandle || influencer.tiktokHandle || influencer.name || 'INF';
     const clean = handle.replace('@', '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().substring(0, 8);
-    return `VECINO_${clean}_10`;
+    const code = `VECINO_${clean}_10`;
+    console.log('[generateCouponCode] Generated:', code);
+    return code;
   };
 
   // Handlers
@@ -160,35 +166,53 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: Props) {
 
   // Step 3: Save product and create coupon
   const handleSaveProduct = async () => {
-    if (!workflow) return addToast('Workflow não encontrado', 'error');
-    if (!productUrl) return addToast('URL do produto é obrigatória', 'error');
+    console.log('[handleSaveProduct] CLICKED!');
+    console.log('[handleSaveProduct] workflow:', workflow?.id);
+    console.log('[handleSaveProduct] productUrl:', productUrl);
+    console.log('[handleSaveProduct] couponCode state:', couponCode);
+    
+    if (!workflow) {
+      console.log('[handleSaveProduct] ERROR: No workflow');
+      return addToast('Workflow não encontrado', 'error');
+    }
+    if (!productUrl) {
+      console.log('[handleSaveProduct] ERROR: No productUrl');
+      return addToast('URL do produto é obrigatória', 'error');
+    }
     
     // Coupon code - use entered value or generate
     const codeToUse = couponCode || generateCouponCode();
+    console.log('[handleSaveProduct] codeToUse:', codeToUse);
     
     try {
       setIsCreatingCoupon(true);
       
       // 1. Save product URL
+      console.log('[handleSaveProduct] Saving product URL...');
       const patchRes = await fetch(`/api/partnerships/${workflow.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ selectedProductUrl: productUrl }),
       });
+      console.log('[handleSaveProduct] Patch response:', patchRes.status);
       if (!patchRes.ok) throw new Error('Erro ao guardar produto');
       
       // 2. Create coupon in Shopify
+      console.log('[handleSaveProduct] Creating coupon...');
       const couponRes = await fetch(`/api/influencers/${influencerId}/create-coupon`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code: codeToUse.toUpperCase(), workflowId: workflow.id }),
       });
       const couponData = await couponRes.json();
+      console.log('[handleSaveProduct] Coupon response:', couponRes.status, couponData);
       if (!couponRes.ok) throw new Error(couponData.error || 'Erro ao criar cupom');
       
+      console.log('[handleSaveProduct] SUCCESS!');
       addToast('Produto e cupom guardados!', 'success');
       await refresh();
     } catch (e: any) {
+      console.error('[handleSaveProduct] ERROR:', e.message);
       addToast(e.message, 'error');
     } finally {
       setIsCreatingCoupon(false);
@@ -399,7 +423,13 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: Props) {
                       />
                       {!workflow?.couponCode && (
                         <button
-                          onClick={() => setCouponCode(generateCouponCode())}
+                          onClick={() => {
+                            console.log('[BOTÃO GERAR] CLICKED!');
+                            const newCode = generateCouponCode();
+                            console.log('[BOTÃO GERAR] Setting couponCode to:', newCode);
+                            setCouponCode(newCode);
+                            console.log('[BOTÃO GERAR] setCouponCode called');
+                          }}
                           className="px-3 py-2 bg-white border border-purple-300 text-purple-700 text-xs font-medium rounded-lg hover:bg-purple-100"
                         >
                           Gerar
@@ -410,7 +440,13 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: Props) {
                     {/* Create Coupon Button */}
                     {!workflow?.couponCode && (
                       <button
-                        onClick={handleSaveProduct}
+                        onClick={() => {
+                          console.log('[BOTÃO CRIAR CUPOM] CLICKED!');
+                          console.log('[BOTÃO CRIAR CUPOM] isCreatingCoupon:', isCreatingCoupon);
+                          console.log('[BOTÃO CRIAR CUPOM] productUrl:', productUrl);
+                          console.log('[BOTÃO CRIAR CUPOM] disabled condition:', isCreatingCoupon || !productUrl);
+                          handleSaveProduct();
+                        }}
                         disabled={isCreatingCoupon || !productUrl}
                         className="w-full mt-2 py-2 bg-purple-600 text-white text-xs font-medium rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center justify-center gap-2"
                       >
