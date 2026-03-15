@@ -307,7 +307,8 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
       
       const data = await res.json();
       if (data.success) {
-        setWorkflow(data.data);
+        setLocalInfluencerStatus('AGREED');
+        await fetchWorkflow(); // Refresh completo para sincronizar
       } else {
         setError(data.error);
       }
@@ -337,13 +338,11 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
       
       const data = await res.json();
       if (data.success) {
-        setWorkflow(data.data);
-        // Update local status to COUNTER_PROPOSAL
-        if (data.data.influencerStatus) {
-          setLocalInfluencerStatus(data.data.influencerStatus);
-        }
+        // Update local status from response
+        setLocalInfluencerStatus(data.influencerStatus || 'COUNTER_PROPOSAL');
         setShowCounterModal(false);
         setCounterPrice('');
+        await fetchWorkflow(); // Refresh completo para sincronizar
       } else {
         setError(data.error);
       }

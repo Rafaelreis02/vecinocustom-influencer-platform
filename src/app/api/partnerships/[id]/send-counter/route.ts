@@ -94,6 +94,7 @@ export async function POST(
       success: true,
       message: 'New proposal sent',
       data: updatedWorkflow,
+      influencerStatus: 'COUNTER_PROPOSAL', // Novo status do influencer
       emailSent: emailResult.success,
       emailError: emailResult.error || null,
     });
