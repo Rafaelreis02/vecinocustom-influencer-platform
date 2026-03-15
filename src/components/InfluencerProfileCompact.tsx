@@ -39,27 +39,18 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: Props) {
 
   useEffect(() => { fetchData(); }, [influencerId]);
 
-  // Atualizar quando o painel fica visível (para sincronização bidirecional)
+  // Atualizar apenas quando a janela volta a ter foco (não usar polling)
   useEffect(() => {
-    // Atualizar quando a janela volta a ter foco
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        console.log('[InfluencerProfileCompact] Tab became visible, refreshing...');
         fetchData();
       }
     };
-
-    // Polling a cada 5 segundos para manter sincronizado
-    const interval = setInterval(() => {
-      console.log('[InfluencerProfileCompact] Polling refresh...');
-      fetchData();
-    }, 5000);
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('focus', handleVisibilityChange);
 
     return () => {
-      clearInterval(interval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', handleVisibilityChange);
     };
@@ -357,8 +348,20 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: Props) {
                     }}
                     onUpdate={async (updates) => {
                       console.log('[PartnershipStep3 onUpdate] updates:', updates);
-                      await refresh();
-                      return true;
+                      if (!workflow) return false;
+                      try {
+                        const res = await fetch(`/api/partnerships/${workflow.id}`, {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify(updates),
+                        });
+                        if (!res.ok) throw new Error('Erro ao guardar');
+                        await refresh();
+                        return true;
+                      } catch (e) {
+                        console.error('onUpdate error:', e);
+                        return false;
+                      }
                     }}
                     isLocked={false}
                   />
