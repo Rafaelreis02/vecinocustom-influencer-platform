@@ -39,6 +39,32 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: Props) {
 
   useEffect(() => { fetchData(); }, [influencerId]);
 
+  // Atualizar quando o painel fica visível (para sincronização bidirecional)
+  useEffect(() => {
+    // Atualizar quando a janela volta a ter foco
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('[InfluencerProfileCompact] Tab became visible, refreshing...');
+        fetchData();
+      }
+    };
+
+    // Polling a cada 5 segundos para manter sincronizado
+    const interval = setInterval(() => {
+      console.log('[InfluencerProfileCompact] Polling refresh...');
+      fetchData();
+    }, 5000);
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleVisibilityChange);
+    };
+  }, [influencerId]);
+
   const fetchData = async () => {
     if (!influencerId) return;
     try {
