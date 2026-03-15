@@ -65,10 +65,19 @@ export async function PUT(request: Request, { params }: any) {
         ...(body.isFlagged !== undefined && { isFlagged: body.isFlagged }),
         ...(body.labels && { labels: body.labels }),
       },
-      include: {
-        influencer: true,
-      },
+      include: { influencer: true },
     });
+
+    // Quando associamos um email a um influencer, actualizar o email do influencer
+    if (body.influencerId && email.from) {
+      const senderMatch = email.from.match(/<([^>]+)>/);
+      const senderEmail = senderMatch ? senderMatch[1] : email.from;
+      await prisma.influencer.update({
+        where: { id: body.influencerId },
+        data: { email: senderEmail },
+      });
+      logger.info(`[EMAIL_PUT] Influencer ${body.influencerId} email → ${senderEmail}`);
+    }
 
     return NextResponse.json(serializeBigInt(email));
   } catch (error) {

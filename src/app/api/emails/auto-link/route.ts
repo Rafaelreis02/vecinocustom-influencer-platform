@@ -52,17 +52,22 @@ export async function POST(request: Request) {
       select: { id: true },
     });
 
-    // Update all emails from this sender
+    // Associar todos os emails deste remetente ao influencer
     const updatePromises = emailsToUpdate.map((e) =>
       prisma.email.update({
         where: { id: e.id },
         data: { influencerId },
       })
     );
-
     await Promise.all(updatePromises);
 
-    logger.info(`[AUTO-LINK] Associated ${emailsToUpdate.length} emails from ${senderEmail} to influencer ${influencerId}`);
+    // Actualizar o email do influencer com o email do remetente
+    await prisma.influencer.update({
+      where: { id: influencerId },
+      data: { email: senderEmail },
+    });
+
+    logger.info(`[AUTO-LINK] ${emailsToUpdate.length} emails → influencer ${influencerId}, email → ${senderEmail}`);
 
     return NextResponse.json(
       serializeBigInt({
