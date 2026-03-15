@@ -39,6 +39,15 @@ export async function GET(
         createdAt: true,
         step9CompletedAt: true,
         isRestarted: true,
+        // Campos importantes para o workflow
+        couponCode: true,
+        selectedProductUrl: true,
+        shippingAddress: true,
+        productSuggestion1: true,
+        productSuggestion2: true,
+        productSuggestion3: true,
+        trackingUrl: true,
+        contractSigned: true,
       },
       orderBy: { createdAt: 'desc' },
     });

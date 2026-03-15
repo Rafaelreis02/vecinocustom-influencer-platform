@@ -73,7 +73,8 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: Props) {
       if (!res.ok) throw new Error('Failed to fetch');
       const data = await res.json();
       setInfluencer(data);
-      const wf = (data.partnerships || [])[0] ?? null;
+      // Usar latestWorkflow que vem com todos os campos (couponCode, selectedProductUrl, etc)
+      const wf = data.latestWorkflow || ((data.partnerships || [])[0] ?? null);
       setWorkflow(wf);
     } catch (e) {
       console.error('fetchData error:', e);

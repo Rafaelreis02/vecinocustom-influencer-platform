@@ -57,8 +57,15 @@ export async function GET(
     const totalShares = influencer.videos.reduce((sum, v) => sum + (v.shares || 0), 0);
     const totalRevenue = influencer.coupons.reduce((sum, c) => sum + (c.totalSales || 0), 0);
 
+    // Buscar workflow mais recente com TODOS os campos (couponCode, selectedProductUrl, etc)
+    const latestWorkflow = await prisma.partnershipWorkflow.findFirst({
+      where: { influencerId: id },
+      orderBy: { createdAt: 'desc' },
+    });
+
     const enriched = {
       ...influencer,
+      latestWorkflow, // Incluir workflow completo com couponCode, selectedProductUrl, etc
       stats: {
         totalViews,
         totalLikes,
