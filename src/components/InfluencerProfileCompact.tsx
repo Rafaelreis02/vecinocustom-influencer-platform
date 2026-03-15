@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, memo } from 'react';
 import Link from 'next/link';
 import {
   User, Mail, Instagram, TrendingUp, BarChart3, Video,
@@ -67,7 +67,13 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: Props) {
       setInfluencer(data);
       // Usar latestWorkflow que vem com todos os campos (couponCode, selectedProductUrl, etc)
       const wf = data.latestWorkflow || ((data.partnerships || [])[0] ?? null);
-      setWorkflow(wf);
+      // Só atualizar workflow se mudou (evita re-render desnecessário)
+      setWorkflow((prev: any) => {
+        if (prev?.id === wf?.id && prev?.designRevisionCount === wf?.designRevisionCount) {
+          return prev;
+        }
+        return wf;
+      });
     } catch (e) {
       console.error('fetchData error:', e);
     } finally {
@@ -378,30 +384,11 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: Props) {
 
               {/* STEP 4: Design Review - Chat Style */}
               {currentStep === 3 && workflow && (
-                <div className="mt-2 space-y-3">
-                  {/* Alerta quando influencer pede alterações */}
-                  {influencer?.status === 'ALTERATIONS_REQUESTED' && (
-                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                      <p className="text-sm text-amber-800 font-medium">
-                        ⚠️ Alterações solicitadas pelo influencer
-                      </p>
-                      <p className="text-xs text-amber-600 mt-1">
-                        Revisão #{workflow.designRevisionCount || 1} — Envia nova prova pelo chat abaixo
-                      </p>
-                    </div>
-                  )}
-                  <PartnershipStep4
-                    workflow={{
-                      id: workflow.id,
-                      designReferenceUrl: workflow.designReferenceUrl,
-                      designReferenceSubmittedAt: workflow.designReferenceSubmittedAt,
-                      designApproved: workflow.designApproved,
-                      designRevisionCount: workflow.designRevisionCount,
-                    }}
-                    isLocked={false}
-                    onAdvance={handleAdvance}
-                  />
-                </div>
+                <Step4Chat 
+                  workflow={workflow} 
+                  influencer={influencer}
+                  handleAdvance={handleAdvance}
+                />
               )}
 
               {/* STEP 5: Contract */}
@@ -576,3 +563,44 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: Props) {
     </div>
   );
 }
+
+// Componente memoizado para evitar re-renders que limpam o estado do chat
+const Step4Chat = memo(function Step4Chat({ 
+  workflow, 
+  influencer,
+  handleAdvance 
+}: { 
+  workflow: any; 
+  influencer: any;
+  handleAdvance: () => void;
+}) {
+  // Memoizar o objeto workflow para evitar re-renders desnecessários
+  const workflowProps = useMemo(() => ({
+    id: workflow.id,
+    designReferenceUrl: workflow.designReferenceUrl,
+    designReferenceSubmittedAt: workflow.designReferenceSubmittedAt,
+    designApproved: workflow.designApproved,
+    designRevisionCount: workflow.designRevisionCount,
+  }), [workflow.id, workflow.designReferenceUrl, workflow.designReferenceSubmittedAt, workflow.designApproved, workflow.designRevisionCount]);
+
+  return (
+    <div className="mt-2 space-y-3">
+      {/* Alerta quando influencer pede alterações */}
+      {influencer?.status === 'ALTERATIONS_REQUESTED' && (
+        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+          <p className="text-sm text-amber-800 font-medium">
+            ⚠️ Alterações solicitadas pelo influencer
+          </p>
+          <p className="text-xs text-amber-600 mt-1">
+            Revisão #{workflow.designRevisionCount || 1} — Envia nova prova pelo chat abaixo
+          </p>
+        </div>
+      )}
+      <PartnershipStep4
+        workflow={workflowProps}
+        isLocked={false}
+        onAdvance={handleAdvance}
+      />
+    </div>
+  );
+});
