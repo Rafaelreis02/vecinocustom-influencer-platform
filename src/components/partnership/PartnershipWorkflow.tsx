@@ -23,23 +23,42 @@ interface Workflow {
   currentStep: number;
   status: string;
   agreedPrice: number | null;
+  createdAt: string;
+  isRestarted: boolean;
+  // Step 1: Partnership
   contactEmail: string | null;
   contactInstagram: string | null;
   contactWhatsapp: string | null;
+  step1CompletedAt: string | null;
+  // Step 2: Shipping
   shippingAddress: string | null;
   productSuggestion1: string | null;
   productSuggestion2: string | null;
   productSuggestion3: string | null;
+  step2CompletedAt: string | null;
+  // Step 3: Preparing
   selectedProductUrl: string | null;
+  step3CompletedAt: string | null;
+  // Step 3.5: Design Reference
   designReferenceUrl: string | null;
   designReferenceSubmittedAt: string | null;
+  // Step 4: Design Review
   designApproved: boolean;
   designRevisionCount: number;
+  step4CompletedAt: string | null;
+  // Step 5: Contract
   contractSigned: boolean;
   contractUrl: string | null;
+  step5CompletedAt: string | null;
+  // Step 6: Preparing Shipment
   trackingUrl: string | null;
   couponCode: string | null;
-  createdAt: string;
+  step6CompletedAt: string | null;
+  // Step 7 & 8
+  step7CompletedAt: string | null;
+  step8CompletedAt: string | null;
+  step9CompletedAt: string | null;
+  // Relations
   emails: Array<{
     id: string;
     step: number;

@@ -39,15 +39,49 @@ export async function GET(
         createdAt: true,
         step9CompletedAt: true,
         isRestarted: true,
-        // Campos importantes para o workflow
-        couponCode: true,
-        selectedProductUrl: true,
+        // Step 1: Partnership
+        contactEmail: true,
+        contactInstagram: true,
+        contactWhatsapp: true,
+        step1CompletedAt: true,
+        // Step 2: Shipping
         shippingAddress: true,
         productSuggestion1: true,
         productSuggestion2: true,
         productSuggestion3: true,
-        trackingUrl: true,
+        step2CompletedAt: true,
+        // Step 3: Preparing
+        selectedProductUrl: true,
+        step3CompletedAt: true,
+        // Step 3.5: Design Reference
+        designReferenceUrl: true,
+        designReferenceSubmittedAt: true,
+        // Step 4: Design Review
+        designApproved: true,
+        designRevisionCount: true,
+        step4CompletedAt: true,
+        // Step 5: Contract
         contractSigned: true,
+        contractUrl: true,
+        step5CompletedAt: true,
+        // Step 6: Preparing Shipment
+        trackingUrl: true,
+        couponCode: true,
+        step6CompletedAt: true,
+        // Step 7 & 8
+        step7CompletedAt: true,
+        step8CompletedAt: true,
+        // Relations
+        emails: {
+          select: {
+            id: true,
+            step: true,
+            subject: true,
+            sentAt: true,
+          },
+          orderBy: { sentAt: 'desc' },
+          take: 10,
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
