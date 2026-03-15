@@ -123,18 +123,10 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
 
       if (data.success) {
         const workflow = data.data.activePartnership;
-
-        // Validate consistency between influencer status and workflow step
-        if (workflow && influencerStatus) {
-          const validation = validateWorkflowConsistency(influencerStatus, workflow.currentStep);
-          if (!validation.isValid) {
-            console.warn('Workflow consistency issue:', {
-              influencerStatus,
-              workflowStep: workflow.currentStep,
-              expectedStep: validation.expectedStep,
-              expectedStatus: validation.expectedStatus,
-            });
-          }
+        // Atualizar localInfluencerStatus com o valor actual da BD
+        const freshStatus = data.data.influencer?.status;
+        if (freshStatus) {
+          setLocalInfluencerStatus(freshStatus);
         }
 
         setWorkflow(workflow);
