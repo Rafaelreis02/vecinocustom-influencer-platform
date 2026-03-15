@@ -711,7 +711,7 @@ export default function MessagesPage() {
             </div>
             
             {/* Influencer Profile Panel */}
-            <div className="hidden lg:flex w-[320px] xl:w-[380px] border-l border-gray-200 flex-col shrink-0">
+            <div className="hidden lg:flex w-[320px] xl:w-[380px] border-l border-gray-200 flex-col shrink-0 h-full overflow-hidden">
               {selectedEmail.influencer ? (
                 <InfluencerProfileCompact
                   influencerId={selectedEmail.influencer.id}

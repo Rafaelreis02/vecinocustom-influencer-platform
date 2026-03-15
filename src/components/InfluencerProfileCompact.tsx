@@ -186,7 +186,7 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: Props) {
   const progress = workflow ? Math.min((displayStep / totalSteps) * 100, 100) : 0;
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className="h-full flex flex-col bg-white overflow-y-auto">
 
       {/* Header */}
       <div className="p-4 border-b border-gray-100">
