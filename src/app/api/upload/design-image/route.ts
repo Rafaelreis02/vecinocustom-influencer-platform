@@ -5,6 +5,7 @@ import { logger } from '@/lib/logger';
 
 // Simple image upload endpoint - stores base64 in database
 // For production, use Supabase Storage, Cloudinary, or S3
+// Route: /api/upload/design-image
 
 // Max size: 2MB (base64 increases size by ~33%)
 const MAX_SIZE_MB = 2;
