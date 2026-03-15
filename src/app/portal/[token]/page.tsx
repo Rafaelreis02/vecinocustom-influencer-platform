@@ -504,7 +504,7 @@ function Step1({ data, token, onUpdate, onNext, isReviewMode }: StepProps) {
     if (error) {
       setValidationError(error);
       setTimeout(() => setValidationError(null), VALIDATION_ERROR_DISPLAY_DURATION);
-      setShowModal(false);
+      // NÃO fechar o modal - mostrar erro na página por baixo
       return;
     }
 
