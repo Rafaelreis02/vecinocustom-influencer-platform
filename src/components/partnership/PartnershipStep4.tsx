@@ -62,13 +62,20 @@ export function PartnershipStep4({ workflow, isLocked, onAdvance }: PartnershipS
   };
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('[handleFileChange] File input changed', e.target.files);
     const file = e.target.files?.[0];
     setUploadError(null);
     setFileInputKey(Date.now());
     
-    if (!file) return;
+    if (!file) {
+      console.log('[handleFileChange] No file selected');
+      return;
+    }
+
+    console.log('[handleFileChange] File selected:', file.name, file.type, file.size);
 
     if (file.size > MAX_FILE_SIZE) {
+      console.log('[handleFileChange] File too large');
       setUploadError('A imagem deve ter menos de 5MB');
       return;
     }
@@ -77,13 +84,19 @@ export function PartnershipStep4({ workflow, isLocked, onAdvance }: PartnershipS
     const isImage = validTypes.includes(file.type) || file.type.startsWith('image/');
     
     if (!isImage) {
+      console.log('[handleFileChange] Invalid file type:', file.type);
       setUploadError('O ficheiro deve ser uma imagem');
       return;
     }
 
+    console.log('[handleFileChange] Reading file as DataURL...');
     const reader = new FileReader();
     reader.onloadend = () => {
+      console.log('[handleFileChange] File read successfully, length:', (reader.result as string)?.length);
       setUploadedImage(reader.result as string);
+    };
+    reader.onerror = (err) => {
+      console.error('[handleFileChange] FileReader error:', err);
     };
     reader.readAsDataURL(file);
   }, []);
@@ -266,7 +279,11 @@ export function PartnershipStep4({ workflow, isLocked, onAdvance }: PartnershipS
           )}
           
           <div className="flex items-end gap-2">
-            <label htmlFor="admin-image-upload" className="flex-shrink-0 cursor-pointer">
+            <label 
+              htmlFor="admin-image-upload" 
+              className="flex-shrink-0 cursor-pointer"
+              onClick={() => console.log('[Image Button] Clicked')}
+            >
               <input
                 key={fileInputKey}
                 type="file"
