@@ -91,16 +91,24 @@ export function PartnershipStep4({ workflow, isLocked, onAdvance }: PartnershipS
   const clearImage = () => {
     setUploadedImage(null);
     setUploadError(null);
+    // Reset file input para permitir novo upload do mesmo ficheiro
+    setFileInputKey(Date.now());
   };
 
   const sendMessage = async () => {
-    if (!newMessage.trim() && !uploadedImage) return;
+    console.log('[sendMessage] Starting...', { hasMessage: !!newMessage.trim(), hasImage: !!uploadedImage });
+    
+    if (!newMessage.trim() && !uploadedImage) {
+      console.log('[sendMessage] Nothing to send');
+      return;
+    }
 
     try {
       setIsSending(true);
       
       let finalImageUrl = null;
       if (uploadedImage && uploadedImage.startsWith('data:')) {
+        console.log('[sendMessage] Uploading image...');
         const uploadRes = await fetch('/api/upload/design-image', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -110,9 +118,17 @@ export function PartnershipStep4({ workflow, isLocked, onAdvance }: PartnershipS
         if (uploadRes.ok) {
           const uploadData = await uploadRes.json();
           finalImageUrl = uploadData.url;
+          console.log('[sendMessage] Image uploaded:', finalImageUrl?.substring(0, 50));
+        } else {
+          const errorData = await uploadRes.json();
+          console.error('[sendMessage] Upload failed:', errorData);
+          setUploadError(errorData.error || 'Erro ao fazer upload da imagem');
+          setIsSending(false);
+          return;
         }
       }
       
+      console.log('[sendMessage] Sending message...', { content: newMessage?.substring(0, 50), imageUrl: !!finalImageUrl });
       const res = await fetch(`/api/partnerships/${workflow.id}/design-messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -120,12 +136,16 @@ export function PartnershipStep4({ workflow, isLocked, onAdvance }: PartnershipS
       });
 
       if (res.ok) {
+        console.log('[sendMessage] Message sent successfully');
         setNewMessage('');
         setUploadedImage(null);
         await fetchMessages();
+      } else {
+        const errorData = await res.json();
+        console.error('[sendMessage] Failed:', errorData);
       }
     } catch (err) {
-      console.error('Error sending message:', err);
+      console.error('[sendMessage] Error:', err);
     } finally {
       setIsSending(false);
     }
@@ -276,8 +296,9 @@ export function PartnershipStep4({ workflow, isLocked, onAdvance }: PartnershipS
             
             <button
               onClick={sendMessage}
-              disabled={isSending || (!newMessage.trim() && !uploadedImage) || !!uploadError}
+              disabled={isSending || (!newMessage.trim() && !uploadedImage)}
               className="flex-shrink-0 p-3 bg-black text-white rounded-full hover:bg-gray-800 disabled:opacity-50"
+              title={uploadError ? `Erro: ${uploadError}` : 'Enviar mensagem'}
             >
               {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
             </button>
