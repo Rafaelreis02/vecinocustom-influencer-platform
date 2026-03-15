@@ -255,7 +255,10 @@ export function PartnershipStep4({ workflow, isLocked, onAdvance }: PartnershipS
         <div className="border-t border-gray-200 pt-4">
           {uploadedImage && (
             <div className="relative mb-3 inline-block">
-              <img src={uploadedImage} alt="Preview" className="h-20 w-20 object-cover rounded-lg border" />
+              <img src={uploadedImage} alt="Preview" className="h-20 w-20 object-cover rounded-lg border-2 border-green-500" />
+              <div className="absolute -bottom-1 -right-1 bg-green-500 text-white text-[10px] px-2 py-0.5 rounded-full">
+                Pronto
+              </div>
               <button onClick={clearImage} className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full">
                 <X className="h-3 w-3" />
               </button>
@@ -295,7 +298,10 @@ export function PartnershipStep4({ workflow, isLocked, onAdvance }: PartnershipS
             </div>
             
             <button
-              onClick={sendMessage}
+              onClick={() => {
+                console.log('[Button Click]', { isSending, hasMessage: !!newMessage.trim(), hasImage: !!uploadedImage, disabled: isSending || (!newMessage.trim() && !uploadedImage) });
+                sendMessage();
+              }}
               disabled={isSending || (!newMessage.trim() && !uploadedImage)}
               className="flex-shrink-0 p-3 bg-black text-white rounded-full hover:bg-gray-800 disabled:opacity-50"
               title={uploadError ? `Erro: ${uploadError}` : 'Enviar mensagem'}
