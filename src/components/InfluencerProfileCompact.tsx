@@ -15,7 +15,7 @@ import { PartnershipStep3 } from './partnership/PartnershipStep3';
 // Mapeamento status -> step
 const STATUS_TO_STEP: Record<string, number> = {
   ANALYZING: 0, COUNTER_PROPOSAL: 0, AGREED: 1, PRODUCT_SELECTION: 2,
-  DESIGN_REVIEW: 3, CONTRACT_PENDING: 4, CONTRACT_SIGNED: 5, SHIPPED: 6, COMPLETED: 7,
+  DESIGN_REFERENCE_SUBMITTED: 3, DESIGN_REVIEW: 3, CONTRACT_PENDING: 4, CONTRACT_SIGNED: 5, SHIPPED: 6, COMPLETED: 7,
 };
 
 const STEP_NAMES = ['Proposta', 'Dados de Envio', 'Preparing', 'Design Review', 'Contrato', 'Contract Signed', 'Enviado', 'Completo'];
@@ -377,10 +377,41 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: Props) {
 
               {/* STEP 4: Design Review */}
               {currentStep === 3 && (
-                <button onClick={handleAdvance} disabled={isAdvancing}
-                  className="w-full py-2 bg-[#0E1E37] text-white text-sm font-medium rounded-lg hover:bg-[#1a2f4f] disabled:opacity-50 flex items-center justify-center gap-2">
-                  {isAdvancing ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Enviar Prova <ChevronRight className="h-4 w-4" /></>}
-                </button>
+                <div className="mt-2 space-y-3">
+                  {/* Design Reference Submitted */}
+                  {workflow?.designReferenceUrl && (
+                    <div className="bg-blue-50 rounded-lg p-3 border border-blue-100">
+                      <p className="text-xs font-medium text-blue-700 mb-2">Referência do Influencer:</p>
+                      <img 
+                        src={workflow.designReferenceUrl} 
+                        alt="Design reference" 
+                        className="w-full h-32 object-cover rounded-lg mb-2"
+                      />
+                      <p className="text-xs text-blue-600">
+                        Submetido: {workflow.designReferenceSubmittedAt ? new Date(workflow.designReferenceSubmittedAt).toLocaleDateString('pt-PT') : 'N/A'}
+                      </p>
+                    </div>
+                  )}
+                  
+                  {/* Design Status */}
+                  <div className="flex items-center gap-2 py-2 px-3 bg-gray-50 rounded-lg">
+                    <div className={`w-2 h-2 rounded-full ${workflow?.designApproved ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                    <span className="text-sm text-gray-700">
+                      {workflow?.designApproved ? 'Design Aprovado' : 'Aguardando aprovação'}
+                    </span>
+                  </div>
+                  
+                  {workflow?.designRevisionCount > 0 && (
+                    <p className="text-xs text-gray-500">
+                      Revisões: {workflow.designRevisionCount}
+                    </p>
+                  )}
+                  
+                  <button onClick={handleAdvance} disabled={isAdvancing}
+                    className="w-full py-2 bg-[#0E1E37] text-white text-sm font-medium rounded-lg hover:bg-[#1a2f4f] disabled:opacity-50 flex items-center justify-center gap-2">
+                    {isAdvancing ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Enviar Prova <ChevronRight className="h-4 w-4" /></>}
+                  </button>
+                </div>
               )}
 
               {/* STEP 5: Contract */}
