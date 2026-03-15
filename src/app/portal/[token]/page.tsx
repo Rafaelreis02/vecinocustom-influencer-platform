@@ -502,9 +502,13 @@ function Step1({ data, token, onUpdate, onNext, isReviewMode }: StepProps) {
   const confirmAccept = async () => {
     const error = validateForm();
     if (error) {
+      setShowModal(false); // Fechar modal para mostrar erro
       setValidationError(error);
+      // Scroll para o erro
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 100);
       setTimeout(() => setValidationError(null), VALIDATION_ERROR_DISPLAY_DURATION);
-      // NÃO fechar o modal - mostrar erro na página por baixo
       return;
     }
 
@@ -546,6 +550,10 @@ function Step1({ data, token, onUpdate, onNext, isReviewMode }: StepProps) {
     const error = validateForm();
     if (error) {
       setValidationError(error);
+      // Scroll para o erro
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 100);
       setTimeout(() => setValidationError(null), VALIDATION_ERROR_DISPLAY_DURATION);
       return;
     }
@@ -591,6 +599,10 @@ function Step1({ data, token, onUpdate, onNext, isReviewMode }: StepProps) {
     const error = validateForm();
     if (error) {
       setValidationError(error);
+      // Scroll para o erro
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 100);
       setTimeout(() => setValidationError(null), VALIDATION_ERROR_DISPLAY_DURATION);
       return;
     }
