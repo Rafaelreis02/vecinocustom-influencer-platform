@@ -193,17 +193,25 @@ export default function PortalPage() {
   const [searchMode, setSearchMode] = useState(false);
   const [isReviewMode, setIsReviewMode] = useState(false);
 
-  // ✅ AUTO-REFRESH: Atualiza dados a cada 5 segundos para manter sincronizado
+  // ✅ AUTO-REFRESH: Atualiza dados quando a tab fica visível (não polling)
   useEffect(() => {
     if (token) {
       fetchInfluencerData();
       
-      // Polling a cada 5 segundos para atualização automática
-      const interval = setInterval(() => {
-        fetchInfluencerData(false); // false = não mostra loading spinner
-      }, 5000);
+      // Atualizar quando a tab/janela volta a ter foco
+      const handleVisibilityChange = () => {
+        if (document.visibilityState === 'visible') {
+          fetchInfluencerData(false);
+        }
+      };
       
-      return () => clearInterval(interval);
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      window.addEventListener('focus', handleVisibilityChange);
+      
+      return () => {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+        window.removeEventListener('focus', handleVisibilityChange);
+      };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
@@ -447,6 +455,12 @@ function Step1({ data, token, onUpdate, onNext, isReviewMode }: StepProps) {
   const hasPrice = data.agreedPrice && data.agreedPrice > 0;
   const priceChanged = formData.agreedPrice !== originalPrice;
 
+  // Só atualizar originalPrice quando agreedPrice da BD muda (não quando user edita)
+  useEffect(() => {
+    setOriginalPrice(data.agreedPrice || 0);
+  }, [data.agreedPrice]);
+  
+  // Inicializar formData apenas na primeira renderização
   useEffect(() => {
     setFormData({
       name: data.name || '',
@@ -458,7 +472,8 @@ function Step1({ data, token, onUpdate, onNext, isReviewMode }: StepProps) {
       agreedPrice: data.agreedPrice || 0,
     });
     setOriginalPrice(data.agreedPrice || 0);
-  }, [data]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Array vazio = só corre na montagem
 
   const handleChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
