@@ -16,7 +16,7 @@ import { PartnershipStep4 } from './partnership/PartnershipStep4';
 // Mapeamento status -> step
 const STATUS_TO_STEP: Record<string, number> = {
   ANALYZING: 0, COUNTER_PROPOSAL: 0, AGREED: 1, PRODUCT_SELECTION: 2,
-  DESIGN_REFERENCE_SUBMITTED: 3, DESIGN_REVIEW: 3, CONTRACT_PENDING: 4, CONTRACT_SIGNED: 5, SHIPPED: 6, COMPLETED: 7,
+  DESIGN_REFERENCE_SUBMITTED: 3, DESIGN_REVIEW: 3, ALTERATIONS_REQUESTED: 3, CONTRACT_PENDING: 4, CONTRACT_SIGNED: 5, SHIPPED: 6, COMPLETED: 7,
 };
 
 const STEP_NAMES = ['Proposta', 'Dados de Envio', 'Preparing', 'Design Review', 'Contrato', 'Contract Signed', 'Enviado', 'Completo'];
@@ -378,7 +378,18 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: Props) {
 
               {/* STEP 4: Design Review - Chat Style */}
               {currentStep === 3 && workflow && (
-                <div className="mt-2">
+                <div className="mt-2 space-y-3">
+                  {/* Alerta quando influencer pede alterações */}
+                  {influencer?.status === 'ALTERATIONS_REQUESTED' && (
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                      <p className="text-sm text-amber-800 font-medium">
+                        ⚠️ Alterações solicitadas pelo influencer
+                      </p>
+                      <p className="text-xs text-amber-600 mt-1">
+                        Revisão #{workflow.designRevisionCount || 1} — Envia nova prova pelo chat abaixo
+                      </p>
+                    </div>
+                  )}
                   <PartnershipStep4
                     workflow={{
                       id: workflow.id,
