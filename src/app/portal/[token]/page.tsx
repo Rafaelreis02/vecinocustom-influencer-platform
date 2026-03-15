@@ -630,6 +630,13 @@ function Step1({ data, token, onUpdate, onNext, isReviewMode }: StepProps) {
         </div>
       )}
       
+      {/* Validation Error */}
+      {validationError && (
+        <div className="mb-6 p-4 bg-red-50/50 rounded-2xl border border-red-200">
+          <p className="text-sm text-red-700 font-medium">{validationError}</p>
+        </div>
+      )}
+      
       <div className="space-y-5">
         {/* ✅ Input Fields - Estilo Apple */}
         <InputField
@@ -942,6 +949,13 @@ function Step2({ data, token, onUpdate, onBack, onNext }: StepProps) {
         <h2 className="text-lg font-semibold text-gray-900 tracking-tight mb-1">Morada & Sugestões</h2>
         <p className="text-sm text-gray-400">Onde enviamos a tua peça</p>
       </div>
+
+      {/* Validation Error */}
+      {validationError && (
+        <div className="mb-6 p-4 bg-red-50/50 rounded-2xl border border-red-200">
+          <p className="text-sm text-red-700 font-medium">{validationError}</p>
+        </div>
+      )}
 
       <div className="space-y-5">
         {/* ✅ Morada - Minimalista */}
