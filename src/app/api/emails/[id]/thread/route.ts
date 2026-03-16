@@ -1,1 +1,138 @@
-// Thread API - Busca thread completa do Gmail APIn// Rota: /api/emails/[id]/threadn// Método: GETnnimport { NextRequest, NextResponse } from 'next/server';nimport { prisma } from '@/lib/prisma';nimport { getServerSession } from 'next-auth';nimport { authOptions } from '@/lib/auth';nimport { getGmailAuth } from '@/lib/gmail';nimport { google } from 'googleapis';nn// Extrair email de strings tipo "Nome <email@domain.com>"nfunction extractEmail(str: string): string {n  const match = str.match(/<([^>]+)>/);n  return match ? match[1].toLowerCase() : str.toLowerCase();n}nn// Verificar se é email nossonfunction isOurEmail(from: string): boolean {n  const email = extractEmail(from);n  const ourEmail = (process.env.GMAIL_USER || 'brand@vecinocustom.com').toLowerCase();n  return email.includes(ourEmail);n}nnexport async function GET(n  request: NextRequest,n  { params }: { params: Promise<{ id: string }> }n) {n  try {n    const session = await getServerSession(authOptions);n    if (!session?.user) {n      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });n    }nn    const { id } = await params;nn    // Buscar email na BD para obter o threadIdn    const email = await prisma.email.findUnique({n      where: { id },n      select: {n        id: true,n        gmailThreadId: true,n        gmailId: true,n        from: true,n        to: true,n        subject: true,n        body: true,n        htmlBody: true,n        receivedAt: true,n        influencer: {n          select: { id: true, name: true, avatarUrl: true },n        },n      },n    });nn    if (!email) {n      return NextResponse.json({ error: 'Email not found' }, { status: 404 });n    }nn    // Se não tem threadId, retornar só o email atualn    if (!email.gmailThreadId) {n      return NextResponse.json({n        success: true,n        data: [{n          id: email.id,n          from: email.from,n          to: email.to,n          subject: email.subject,n          body: email.body,n          htmlBody: email.htmlBody,n          receivedAt: email.receivedAt,n          isSent: false,n          influencer: email.influencer,n          senderName: email.influencer?.name || email.from.split('<')[0].trim(),n        }],n      });n    }nn    // Buscar thread do Gmail APIn    const auth = await getGmailAuth();n    const gmail = google.gmail({ version: 'v1', auth });n    const thread = await gmail.users.threads.get({n      userId: 'me',n      id: email.gmailThreadId,n      format: 'full',n    });nn    const gmailMessages = thread.data.messages || [];n    const messages = [];nn    for (const msg of gmailMessages) {n      const headers = msg.payload?.headers || [];n      const from = headers.find((h: any) => h.name === 'From')?.value || '';n      const to = headers.find((h: any) => h.name === 'To')?.value || '';n      const subject = headers.find((h: any) => h.name === 'Subject')?.value || '';n      const date = msg.internalDate;nn      // Extrair bodyn      let body = '';n      let htmlBody = '';nn      if (msg.payload?.parts) {n        for (const part of msg.payload.parts) {n          if (part.mimeType === 'text/plain' && part.body?.data) {n            body = Buffer.from(part.body.data, 'base64').toString('utf-8');n          }n          if (part.mimeType === 'text/html' && part.body?.data) {n            htmlBody = Buffer.from(part.body.data, 'base64').toString('utf-8');n          }n        }n      } else if (msg.payload?.body?.data) {n        const data = Buffer.from(msg.payload.body.data, 'base64').toString('utf-8');n        if (msg.payload.mimeType === 'text/html') {n          htmlBody = data;n        } else {n          body = data;n        }n      }nn      const isFromMe = isOurEmail(from);nn      messages.push({n        id: msg.id,n        from,n        to,n        subject,n        body,n        htmlBody,n        receivedAt: date ? new Date(parseInt(date)).toISOString() : new Date().toISOString(),n        isSent: isFromMe,n        influencer: isFromMe ? null : email.influencer,n        senderName: isFromMe ? 'Vecino Custom' : (email.influencer?.name || from.split('<')[0].trim()),n      });n    }nn    return NextResponse.json({n      success: true,n      data: messages,n    });nn  } catch (error: any) {n    console.error('[thread API] Error:', error);n    return NextResponse.json(n      { error: 'Failed to fetch thread', message: error.message },n      { status: 500 }n    );n  }n}
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { getGmailAuth } from '@/lib/gmail';
+import { google } from 'googleapis';
+
+function extractEmail(str: string): string {
+  const match = str.match(/<([^>]+)>/);
+  return match ? match[1].toLowerCase() : str.toLowerCase();
+}
+
+function isOurEmail(from: string): boolean {
+  const email = extractEmail(from);
+  const ourEmail = (process.env.GMAIL_USER || 'brand@vecinocustom.com').toLowerCase();
+  return email.includes(ourEmail);
+}
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { id } = await params;
+
+    const email = await prisma.email.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        gmailThreadId: true,
+        gmailId: true,
+        from: true,
+        to: true,
+        subject: true,
+        body: true,
+        htmlBody: true,
+        receivedAt: true,
+        influencer: {
+          select: { id: true, name: true, avatarUrl: true },
+        },
+      },
+    });
+
+    if (!email) {
+      return NextResponse.json({ error: 'Email not found' }, { status: 404 });
+    }
+
+    if (!email.gmailThreadId) {
+      return NextResponse.json({
+        success: true,
+        data: [{
+          id: email.id,
+          from: email.from,
+          to: email.to,
+          subject: email.subject,
+          body: email.body,
+          htmlBody: email.htmlBody,
+          receivedAt: email.receivedAt,
+          isSent: false,
+          influencer: email.influencer,
+          senderName: email.influencer?.name || email.from.split('<')[0].trim(),
+        }],
+      });
+    }
+
+    const auth = await getGmailAuth();
+    const gmail = google.gmail({ version: 'v1', auth });
+    const thread = await gmail.users.threads.get({
+      userId: 'me',
+      id: email.gmailThreadId,
+      format: 'full',
+    });
+
+    const gmailMessages = thread.data.messages || [];
+    const messages = [];
+
+    for (const msg of gmailMessages) {
+      const headers = msg.payload?.headers || [];
+      const from = headers.find((h: any) => h.name === 'From')?.value || '';
+      const to = headers.find((h: any) => h.name === 'To')?.value || '';
+      const subject = headers.find((h: any) => h.name === 'Subject')?.value || '';
+      const date = msg.internalDate;
+
+      let body = '';
+      let htmlBody = '';
+
+      if (msg.payload?.parts) {
+        for (const part of msg.payload.parts) {
+          if (part.mimeType === 'text/plain' && part.body?.data) {
+            body = Buffer.from(part.body.data, 'base64').toString('utf-8');
+          }
+          if (part.mimeType === 'text/html' && part.body?.data) {
+            htmlBody = Buffer.from(part.body.data, 'base64').toString('utf-8');
+          }
+        }
+      } else if (msg.payload?.body?.data) {
+        const data = Buffer.from(msg.payload.body.data, 'base64').toString('utf-8');
+        if (msg.payload.mimeType === 'text/html') {
+          htmlBody = data;
+        } else {
+          body = data;
+        }
+      }
+
+      const isFromMe = isOurEmail(from);
+
+      messages.push({
+        id: msg.id,
+        from,
+        to,
+        subject,
+        body,
+        htmlBody,
+        receivedAt: date ? new Date(parseInt(date)).toISOString() : new Date().toISOString(),
+        isSent: isFromMe,
+        influencer: isFromMe ? null : email.influencer,
+        senderName: isFromMe ? 'Vecino Custom' : (email.influencer?.name || from.split('<')[0].trim()),
+      });
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: messages,
+    });
+
+  } catch (error: any) {
+    console.error('[thread API] Error:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch thread', message: error.message },
+      { status: 500 }
+    );
+  }
+}
