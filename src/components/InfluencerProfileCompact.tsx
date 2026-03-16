@@ -408,10 +408,80 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: Props) {
 
               {/* STEP 6: Contract Signed */}
               {currentStep === 5 && (
-                <button onClick={handleAdvance} disabled={isAdvancing || !workflow?.trackingUrl}
-                  className="w-full py-2 bg-[#0E1E37] text-white text-sm font-medium rounded-lg hover:bg-[#1a2f4f] disabled:opacity-50 flex items-center justify-center gap-2">
-                  {isAdvancing ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Adicionar Tracking <ChevronRight className="h-4 w-4" /></>}
-                </button>
+                <div className="mt-2 space-y-3">
+                  {/* Success Message */}
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center gap-2 mb-1">
+                      <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+                      <span className="text-sm font-medium text-green-800">Contrato Assinado!</span>
+                    </div>
+                    <p className="text-xs text-green-700">
+                      O influencer aceitou o contrato. Prepara a encomenda e adiciona o tracking.
+                    </p>
+                  </div>
+                  
+                  {/* Coupon Display */}
+                  {workflow?.couponCode && (
+                    <div className="bg-white p-3 rounded-lg border border-gray-200">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Cupom do Influencer</label>
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 px-2 py-1 bg-gray-100 rounded text-xs font-mono">
+                          {workflow.couponCode}
+                        </code>
+                        <span className="text-[10px] text-green-600 bg-green-100 px-2 py-0.5 rounded-full">
+                          10% + 20%
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Tracking URL Input */}
+                  <div className="bg-white p-3 rounded-lg border border-gray-200">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Link de Tracking</label>
+                    <input
+                      type="url"
+                      value={workflow?.trackingUrl || ''}
+                      onChange={(e) => {
+                        // Update local workflow state
+                        setWorkflow((prev: any) => prev ? { ...prev, trackingUrl: e.target.value } : null);
+                      }}
+                      onBlur={async () => {
+                        if (workflow?.trackingUrl) {
+                          // Save to API
+                          try {
+                            await fetch(`/api/partnerships/${workflow.id}`, {
+                              method: 'PATCH',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ trackingUrl: workflow.trackingUrl }),
+                            });
+                          } catch (e) {
+                            console.error('Failed to save tracking URL:', e);
+                          }
+                        }
+                      }}
+                      placeholder="https://www.ctt.pt/..."
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#0E1E37]/20"
+                    />
+                    <p className="text-[10px] text-gray-400 mt-1">
+                      O influencer vai receber este link para acompanhar a encomenda.
+                    </p>
+                  </div>
+                  
+                  {/* Advance Button */}
+                  <button 
+                    onClick={handleAdvance} 
+                    disabled={isAdvancing || !workflow?.trackingUrl}
+                    className="w-full py-2 bg-[#0E1E37] text-white text-sm font-medium rounded-lg hover:bg-[#1a2f4f] disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {isAdvancing ? (
+                      <><Loader2 className="h-4 w-4 animate-spin" /> A processar...</>
+                    ) : workflow?.trackingUrl ? (
+                      <><CheckCircle2 className="h-4 w-4" /> Marcar como Enviado</>
+                    ) : (
+                      <><ChevronRight className="h-4 w-4" /> Adicionar Tracking Primeiro</>
+                    )}
+                  </button>
+                </div>
               )}
 
               {/* STEP 7: Shipped */}

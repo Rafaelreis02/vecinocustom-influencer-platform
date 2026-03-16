@@ -59,6 +59,7 @@ export default function MessagesPage() {
     { value: 'DESIGN_REFERENCE_SUBMITTED', label: 'Ref. Design' },
     { value: 'ALTERATIONS_REQUESTED', label: 'Alterações Solicitadas' },
     { value: 'CONTRACT_PENDING', label: 'Pendente Contrato' },
+    { value: 'CONTRACT_SIGNED', label: 'Contrato Aceite' },
     { value: 'SHIPPED', label: 'Enviado' },
     { value: 'COMPLETED', label: 'Concluído' },
   ];
