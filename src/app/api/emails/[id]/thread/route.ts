@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { parseEmailThread } from '@/lib/email-parser';
 
 export async function GET(
   request: NextRequest,
@@ -15,118 +16,54 @@ export async function GET(
 
     const { id } = await params;
 
-    // Buscar o email atual para obter o threadId
+    // Buscar o email atual
     const email = await prisma.email.findUnique({
       where: { id },
-      select: { gmailThreadId: true, from: true, to: true },
+      include: {
+        influencer: {
+          select: {
+            id: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+      },
     });
 
     if (!email) {
       return NextResponse.json({ error: 'Email not found' }, { status: 404 });
     }
 
-    // Helper para extrair email de strings tipo "Nome <email@domain.com>"
-    const extractEmail = (str: string): string => {
-      const match = str.match(/<([^>]+)>/);
-      return match ? match[1] : str;
-    };
+    // Verificar se é email do sistema (enviado por nós)
+    const isFromMe = email.from.toLowerCase().includes('vecino') ||
+                     email.from.toLowerCase().includes('noreply') ||
+                     email.from.toLowerCase().includes('system');
 
-    // Se tem threadId, buscar todos os emails da mesma thread
-    // Se não tem, buscar emails entre os mesmos remetentes
-    let threadEmails;
-    
-    if (email.gmailThreadId) {
-      threadEmails = await prisma.email.findMany({
-        where: {
-          gmailThreadId: email.gmailThreadId,
-        },
-        orderBy: { receivedAt: 'asc' },
-        include: {
-          influencer: {
-            select: {
-              id: true,
-              name: true,
-              avatarUrl: true,
-            },
-          },
-        },
-      });
-    } else {
-      // Fallback: buscar emails entre os mesmos remetentes
-      // Extrair apenas o email address (sem o nome)
-      const fromEmailClean = extractEmail(email.from);
-      const toEmailClean = extractEmail(email.to);
-      
-      threadEmails = await prisma.email.findMany({
-        where: {
-          OR: [
-            { 
-              AND: [
-                { from: { contains: fromEmailClean } },
-                { to: { contains: toEmailClean } }
-              ]
-            },
-            { 
-              AND: [
-                { from: { contains: toEmailClean } },
-                { to: { contains: fromEmailClean } }
-              ]
-            },
-          ],
-        },
-        orderBy: { receivedAt: 'asc' },
-        include: {
-          influencer: {
-            select: {
-              id: true,
-              name: true,
-              avatarUrl: true,
-            },
-          },
-        },
-      });
-    }
+    // Analisar o conteúdo e separar em mensagens
+    const parsedMessages = parseEmailThread(
+      email.htmlBody || email.body,
+      !!email.htmlBody,
+      email.from,
+      isFromMe
+    );
 
-    // Buscar também os emails enviados (respostas nossas)
-    const sentEmails = await prisma.sentEmail.findMany({
-      where: {
-        emailId: { in: threadEmails.map((e: any) => e.id) },
-      },
-      orderBy: { sentAt: 'asc' },
-    });
-
-    // Combinar emails recebidos e enviados numa única lista
-    const allMessages = [
-      ...threadEmails.map((e: any) => ({
-        id: e.id,
-        from: e.from,
-        to: e.to,
-        subject: e.subject,
-        body: e.body,
-        htmlBody: e.htmlBody,
-        receivedAt: e.receivedAt,
-        isSent: false,
-        influencer: e.influencer,
-      })),
-      ...sentEmails.map((e: any) => ({
-        id: e.id,
-        from: 'vecino@vecinocustom.com', // Simular que é do nosso sistema
-        to: e.toEmail,
-        subject: e.subject,
-        body: e.body,
-        htmlBody: e.htmlBody,
-        receivedAt: e.sentAt,
-        isSent: true,
-        influencer: null,
-      })),
-    ];
-
-    // Ordenar por data
-    allMessages.sort((a, b) => new Date(a.receivedAt).getTime() - new Date(b.receivedAt).getTime());
+    // Converter para o formato esperado pelo frontend
+    const messages = parsedMessages.map((msg, index) => ({
+      id: `${email.id}-${index}`,
+      from: msg.isFromMe ? 'vecino@vecinocustom.com' : email.from,
+      to: msg.isFromMe ? email.from : 'vecino@vecinocustom.com',
+      subject: email.subject,
+      body: msg.content,
+      htmlBody: msg.content,
+      receivedAt: email.receivedAt,
+      isSent: msg.isFromMe,
+      influencer: msg.isFromMe ? null : email.influencer,
+      senderName: msg.senderName || (msg.isFromMe ? 'Vecino Custom' : email.influencer?.name || email.from.split('<')[0].trim()),
+    }));
 
     return NextResponse.json({
       success: true,
-      data: allMessages,
+      data: messages,
     });
   } catch (error) {
     console.error('Error fetching email thread:', error);
