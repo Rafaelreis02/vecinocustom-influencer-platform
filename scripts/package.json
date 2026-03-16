@@ -1,0 +1,12 @@
+{
+  "name": "admin-scripts",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "update-threads": "node update-thread-ids.js"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.0.0",
+    "googleapis": "^144.0.0"
+  }
+}
