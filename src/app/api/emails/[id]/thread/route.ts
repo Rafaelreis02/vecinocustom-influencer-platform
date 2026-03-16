@@ -146,7 +146,7 @@ export async function GET(
             subject,
             body,
             htmlBody,
-            receivedAt: new Date(parseInt(date)).toISOString(),
+            receivedAt: date ? new Date(parseInt(date)).toISOString() : new Date().toISOString(),
             isSent: isFromMe,
             source: 'gmail',
             senderName: isFromMe 
