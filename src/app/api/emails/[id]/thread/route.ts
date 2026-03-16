@@ -37,15 +37,21 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  console.log('[thread API] START');
+  
   try {
     const session = await getServerSession(authOptions);
+    console.log('[thread API] Session:', session?.user?.email || 'no session');
+    
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id } = await params;
+    console.log('[thread API] Email ID:', id);
 
     // 1. Buscar email na nossa BD
+    console.log('[thread API] Fetching from database...');
     const email = await prisma.email.findUnique({
       where: { id },
       include: {
@@ -58,9 +64,17 @@ export async function GET(
       },
     });
 
+    console.log('[thread API] Email found:', email ? 'YES' : 'NO');
+
     if (!email) {
       return NextResponse.json({ error: 'Email not found' }, { status: 404 });
     }
+    
+    console.log('[thread API] Email data:', { 
+      id: email.id, 
+      hasThreadId: !!email.gmailThreadId,
+      sentEmailsCount: email.sentEmails?.length || 0 
+    });
 
     const messages: any[] = [];
 
@@ -156,7 +170,8 @@ export async function GET(
         }
 
       } catch (gmailError: any) {
-        console.error('[thread API] Gmail API error:', gmailError.message);
+        console.error('[thread API] Gmail API ERROR:', gmailError.message);
+        console.error('[thread API] Gmail API ERROR details:', gmailError);
         // Continua com os dados da BD (fallback)
       }
     }
@@ -184,6 +199,7 @@ export async function GET(
     }
 
     console.log(`[thread API] Returning ${messages.length} messages total`);
+    console.log('[thread API] END');
 
     return NextResponse.json({
       success: true,
@@ -196,7 +212,8 @@ export async function GET(
     });
 
   } catch (error: any) {
-    console.error('[thread API] Fatal error:', error);
+    console.error('[thread API] FATAL ERROR:', error.message);
+    console.error('[thread API] FATAL ERROR stack:', error.stack);
     return NextResponse.json(
       { error: 'Failed to fetch thread', message: error.message },
       { status: 500 }
