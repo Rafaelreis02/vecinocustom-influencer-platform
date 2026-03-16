@@ -50,26 +50,28 @@ export async function GET(
     console.log(`[thread API] Found ${parsedMessages.length} messages`);
 
     // Converter para o formato esperado pelo frontend
-    const messages = parsedMessages.map((msg, index) => ({
-      id: `${email.id}-${index}`,
-      from: msg.isFromMe ? 'vecino@vecinocustom.com' : email.from,
-      to: msg.isFromMe ? email.from : 'vecino@vecinocustom.com',
-      subject: email.subject,
-      body: msg.content,
-      htmlBody: msg.content,
-      receivedAt: email.receivedAt,
-      isSent: msg.isFromMe,
-      influencer: msg.isFromMe ? null : email.influencer,
-      senderName: msg.senderName || (msg.isFromMe ? 'Vecino Custom' : email.influencer?.name || email.from.split('<')[0].trim()),
-    }));
+    // Ordem: mais antigo primeiro (index 0), mais recente último
+    const messages = parsedMessages.map((msg, index) => {
+      // Determinar se é nosso ou deles baseado no parser
+      const msgIsFromMe = msg.isFromMe;
+      
+      return {
+        id: `${email.id}-${index}`,
+        from: msgIsFromMe ? 'vecino@vecinocustom.com' : email.from,
+        to: msgIsFromMe ? email.from : 'vecino@vecinocustom.com',
+        subject: email.subject,
+        body: msg.content,
+        htmlBody: msg.content,
+        receivedAt: email.receivedAt,
+        isSent: msgIsFromMe,
+        influencer: msgIsFromMe ? null : email.influencer,
+        senderName: msg.senderName || (msgIsFromMe ? 'Vecino Custom' : email.influencer?.name || email.from.split('<')[0].trim()),
+      };
+    });
 
     return NextResponse.json({
       success: true,
       data: messages,
-      debug: {
-        originalContentLength: (email.htmlBody || email.body)?.length,
-        messageCount: messages.length,
-      }
     });
   } catch (error) {
     console.error('Error fetching email thread:', error);
