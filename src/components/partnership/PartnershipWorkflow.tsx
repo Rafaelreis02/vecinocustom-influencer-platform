@@ -506,21 +506,21 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
   if (isCompleted) {
     return (
       <div className="space-y-6">
-        <div className="bg-green-50 border-2 border-green-200 rounded-xl p-8 text-center">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle2 className="h-8 w-8 text-green-600" />
+        <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-3xl p-10 text-center">
+          <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
+            <CheckCircle2 className="h-10 w-10 text-green-600" />
           </div>
-          <h3 className="text-xl font-bold text-green-900 mb-2">Parceria Concluída!</h3>
-          <p className="text-green-700 mb-6">
+          <h3 className="text-2xl font-semibold text-gray-900 mb-3">Parceria Concluída!</h3>
+          <p className="text-gray-500 mb-8 max-w-md mx-auto">
             Esta parceria foi completada com sucesso. Todos os passos foram finalizados.
           </p>
           <button
             onClick={restartWorkflow}
             disabled={isRestarting}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-[#0E1E37] text-white rounded-lg font-medium hover:bg-[#1a2f4f] transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-[#0E1E37] text-white rounded-full font-medium hover:bg-[#1a2f4f] transition-all disabled:opacity-50 shadow-lg shadow-gray-200"
           >
             <RefreshCcw className="h-5 w-5" />
-            {isRestarting ? 'A recomeçar...' : '🔄 Iniciar Nova Parceria'}
+            {isRestarting ? 'A recomeçar...' : 'Iniciar Nova Parceria'}
           </button>
         </div>
       </div>
@@ -529,30 +529,31 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
 
   return (
     <div className="space-y-6">
-      {/* Progress Bar */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">
-            Progresso da Parceria
-          </h3>
+      {/* Progress Section */}
+      <div className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="text-xl font-semibold text-gray-900">Progresso da Parceria</h3>
+            <p className="text-sm text-gray-400 mt-1">Acompanha o estado da parceria</p>
+          </div>
           <div className="flex gap-2">
-            {/* Restart button - available at step 8 (delivered) or when cancelled */}
+            {/* Restart button */}
             {(currentStep >= 8 || isCancelled) && (
               <button
                 onClick={restartWorkflow}
                 disabled={isRestarting}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50/50 rounded-full hover:bg-blue-100 transition-colors disabled:opacity-50"
               >
                 <RefreshCcw className="h-3.5 w-3.5" />
-                {isRestarting ? 'A recomeçar...' : 'Reiniciar Parceria'}
+                {isRestarting ? 'A recomeçar...' : 'Reiniciar'}
               </button>
             )}
-            {/* Cancel button - only show if not at final steps and not completed/cancelled */}
+            {/* Cancel button */}
             {currentStep < 8 && !isCancelled && (
               <button
                 onClick={cancelWorkflow}
                 disabled={isCancelling}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-red-600 bg-red-50/50 rounded-full hover:bg-red-100 transition-colors disabled:opacity-50"
               >
                 <X className="h-3.5 w-3.5" />
                 {isCancelling ? 'A cancelar...' : 'Cancelar'}
@@ -562,11 +563,11 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
         </div>
 
         {/* Status Badge */}
-        <div className="mb-4">
-          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+        <div className="mb-6">
+          <span className={`inline-flex items-center px-4 py-1.5 rounded-full text-sm font-medium ${
             isCompleted ? 'bg-green-100 text-green-700' :
             isCancelled ? 'bg-red-100 text-red-700' :
-            'bg-blue-100 text-blue-700'
+            'bg-[#0E1E37]/5 text-[#0E1E37]'
           }`}>
             {isCompleted ? 'Concluída' :
              isCancelled ? 'Cancelada' :
@@ -575,47 +576,49 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
         </div>
 
         {/* Resumo de Dados da Parceria */}
-        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-6">
-          <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-            <Check className="h-4 w-4 text-blue-600" />
+        <div className="bg-gray-50/50 rounded-2xl p-6 mb-6">
+          <h4 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-[#0E1E37]/10 flex items-center justify-center">
+              <Check className="h-3.5 w-3.5 text-[#0E1E37]" />
+            </div>
             Dados da Parceria
           </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             {/* Step 1 - Partnership Details */}
-            <div className="p-2 bg-white rounded border border-gray-100">
-              <span className="text-gray-500 text-xs">Valor Acordado:</span>
-              <p className={`font-medium ${workflow.agreedPrice !== null ? 'text-slate-900' : 'text-amber-600'}`}>
+            <div className="p-3 bg-white rounded-xl border border-gray-100">
+              <span className="text-gray-400 text-xs uppercase tracking-wider">Valor Acordado</span>
+              <p className={`font-semibold mt-1 ${workflow.agreedPrice !== null ? 'text-gray-900' : 'text-amber-500'}`}>
                 {workflow.agreedPrice === null ? 'Em falta' : 
                  workflow.agreedPrice === 0 ? 'Somente comissão' : 
                  `${workflow.agreedPrice.toFixed(2)}€`}
               </p>
             </div>
-            <div className="p-2 bg-white rounded border border-gray-100">
-              <span className="text-gray-500 text-xs">Email de Contacto:</span>
-              <p className={`font-medium ${workflow.contactEmail ? 'text-slate-900' : 'text-amber-600'}`}>
+            <div className="p-3 bg-white rounded-xl border border-gray-100">
+              <span className="text-gray-400 text-xs uppercase tracking-wider">Email de Contacto</span>
+              <p className={`font-semibold mt-1 ${workflow.contactEmail ? 'text-gray-900' : 'text-amber-500'}`}>
                 {workflow.contactEmail || 'Em falta'}
               </p>
             </div>
 
             {/* Step 2 - Shipping */}
-            <div className="p-2 bg-white rounded border border-gray-100">
-              <span className="text-gray-500 text-xs">Morada de Envio:</span>
-              <p className={`font-medium ${workflow.shippingAddress ? 'text-slate-900' : 'text-amber-600'}`}>
+            <div className="p-3 bg-white rounded-xl border border-gray-100">
+              <span className="text-gray-400 text-xs uppercase tracking-wider">Morada de Envio</span>
+              <p className={`font-semibold mt-1 ${workflow.shippingAddress ? 'text-gray-900' : 'text-amber-500'}`}>
                 {workflow.shippingAddress || 'Em falta'}
               </p>
             </div>
-            <div className="p-2 bg-white rounded border border-gray-100">
-              <span className="text-gray-500 text-xs">Sugestão de Produto 1:</span>
-              <p className={`font-medium ${workflow.productSuggestion1 ? 'text-slate-900' : 'text-amber-600'}`}>
+            <div className="p-3 bg-white rounded-xl border border-gray-100">
+              <span className="text-gray-400 text-xs uppercase tracking-wider">Sugestão de Produto 1</span>
+              <p className={`font-semibold mt-1 ${workflow.productSuggestion1 ? 'text-gray-900' : 'text-amber-500'}`}>
                 {workflow.productSuggestion1 || 'Em falta'}
               </p>
             </div>
 
             {/* Sugestão 2 */}
             {workflow.productSuggestion2 && (
-              <div className="p-2 bg-white rounded border border-gray-100">
-                <span className="text-gray-500 text-xs">Sugestão de Produto 2:</span>
-                <p className="font-medium text-slate-900 truncate">
+              <div className="p-3 bg-white rounded-xl border border-gray-100">
+                <span className="text-gray-400 text-xs uppercase tracking-wider">Sugestão de Produto 2</span>
+                <p className="font-semibold text-gray-900 mt-1 truncate">
                   {workflow.productSuggestion2}
                 </p>
               </div>
@@ -623,48 +626,48 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
 
             {/* Sugestão 3 */}
             {workflow.productSuggestion3 && (
-              <div className="p-2 bg-white rounded border border-gray-100">
-                <span className="text-gray-500 text-xs">Sugestão de Produto 3:</span>
-                <p className="font-medium text-slate-900 truncate">
+              <div className="p-3 bg-white rounded-xl border border-gray-100">
+                <span className="text-gray-400 text-xs uppercase tracking-wider">Sugestão de Produto 3</span>
+                <p className="font-semibold text-gray-900 mt-1 truncate">
                   {workflow.productSuggestion3}
                 </p>
               </div>
             )}
 
             {/* Step 3 - Preparing */}
-            <div className="p-2 bg-white rounded border border-gray-100">
-              <span className="text-gray-500 text-xs">Produto Selecionado:</span>
-              <p className={`font-medium ${workflow.selectedProductUrl ? 'text-slate-900' : 'text-amber-600'} truncate`}>
+            <div className="p-3 bg-white rounded-xl border border-gray-100">
+              <span className="text-gray-400 text-xs uppercase tracking-wider">Produto Selecionado</span>
+              <p className={`font-semibold mt-1 ${workflow.selectedProductUrl ? 'text-gray-900' : 'text-amber-500'} truncate`}>
                 {workflow.selectedProductUrl ? (
-                  <a href={workflow.selectedProductUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                    Ver produto
+                  <a href={workflow.selectedProductUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700 hover:underline">
+                    Ver produto →
                   </a>
                 ) : 'Em falta'}
               </p>
             </div>
-            <div className="p-2 bg-white rounded border border-gray-100">
-              <span className="text-gray-500 text-xs">Cupom:</span>
-              <p className={`font-medium ${workflow.couponCode ? 'text-slate-900 font-mono' : 'text-amber-600'}`}>
+            <div className="p-3 bg-white rounded-xl border border-gray-100">
+              <span className="text-gray-400 text-xs uppercase tracking-wider">Cupom</span>
+              <p className={`font-semibold mt-1 ${workflow.couponCode ? 'text-gray-900 font-mono' : 'text-amber-500'}`}>
                 {workflow.couponCode || 'Em falta'}
               </p>
             </div>
 
             {/* Step 4 - Design Reference */}
-            <div className="p-2 bg-white rounded border border-gray-100">
-              <span className="text-gray-500 text-xs">Referência do Design:</span>
-              <p className={`font-medium ${workflow.designReferenceUrl ? 'text-slate-900' : 'text-amber-600'} truncate`}>
+            <div className="p-3 bg-white rounded-xl border border-gray-100">
+              <span className="text-gray-400 text-xs uppercase tracking-wider">Referência do Design</span>
+              <p className={`font-semibold mt-1 ${workflow.designReferenceUrl ? 'text-gray-900' : 'text-amber-500'} truncate`}>
                 {workflow.designReferenceUrl ? (
-                  <a href={workflow.designReferenceUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                    Ver referência
+                  <a href={workflow.designReferenceUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700 hover:underline">
+                    Ver referência →
                   </a>
                 ) : 'Em falta'}
               </p>
             </div>
 
             {/* Step 5 - Contract */}
-            <div className="p-2 bg-white rounded border border-gray-100">
-              <span className="text-gray-500 text-xs">Contrato Assinado:</span>
-              <p className={`font-medium ${workflow.contractSigned ? 'text-green-600' : 'text-amber-600'}`}>
+            <div className="p-3 bg-white rounded-xl border border-gray-100">
+              <span className="text-gray-400 text-xs uppercase tracking-wider">Contrato Assinado</span>
+              <p className={`font-semibold mt-1 ${workflow.contractSigned ? 'text-green-600' : 'text-amber-500'}`}>
                 {workflow.contractSigned ? 'Sim ✓' : 'Em falta'}
               </p>
             </div>
@@ -930,14 +933,14 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
 
         {/* Action buttons based on step type */}
         {!isCompleted && !isCancelled && (
-          <div className="mt-6">
+          <div className="mt-8">
             {/* Steps 3, 6, 7: Admin advances and sends email */}
             {(currentStep === 3 || currentStep === 6 || currentStep === 7) && (
               <div className="flex justify-end gap-3">
                 <button
                   onClick={loadEmailPreview}
                   disabled={isAdvancing || isLoadingPreview}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 border border-gray-200 text-gray-700 rounded-full font-medium hover:bg-gray-50 transition-all disabled:opacity-50"
                 >
                   {isLoadingPreview ? (
                     <>
@@ -955,7 +958,7 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
                 <button
                   onClick={advanceStep}
                   disabled={isAdvancing || (currentStep === 6 && !workflow.trackingUrl)}
-                  className="inline-flex items-center gap-2 px-6 py-2.5 bg-black text-white rounded-lg font-medium hover:bg-gray-800 transition-colors disabled:opacity-50"
+                  className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#0E1E37] text-white rounded-full font-medium hover:bg-[#1a2f4f] transition-all disabled:opacity-50 shadow-lg shadow-gray-200"
                 >
                   {isAdvancing ? (
                     <>
@@ -965,16 +968,16 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
                   ) : currentStep === 7 ? (
                     <>
                       <CheckCircle2 className="h-4 w-4" />
-                      Completar Parceria (enviar email)
+                      Completar Parceria
                     </>
                   ) : currentStep === 6 ? (
                     <>
                       <CheckCircle2 className="h-4 w-4" />
-                      {workflow.trackingUrl ? 'Marcar como Enviado (enviar email)' : 'Adicionar Tracking Primeiro'}
+                      {workflow.trackingUrl ? 'Marcar como Enviado' : 'Adicionar Tracking Primeiro'}
                     </>
                   ) : (
                     <>
-                      Avançar para {STEPS[currentStep]?.name} (enviar email)
+                      Avançar para {STEPS[currentStep]?.name}
                       <ChevronRight className="h-4 w-4" />
                     </>
                   )}
@@ -984,18 +987,18 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
             
             {/* Steps 1, 2, 4: Automatic - no email sent by system */}
             {(currentStep === 1 || currentStep === 2 || currentStep === 4) && (
-              <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <div className="p-4 bg-amber-50/50 border border-amber-100 rounded-2xl">
                 <p className="text-sm text-amber-800">
-                  <span className="font-medium">📧 Comunicação via Chat:</span> Neste step a comunicação é feita através do chat acima. O influencer recebe notificação quando enviares mensagens.
+                  <span className="font-medium">Comunicação via Chat:</span> Neste step a comunicação é feita através do chat acima. O influencer recebe notificação quando enviares mensagens.
                 </p>
               </div>
             )}
             
             {/* Step 4: Design Review - Show status only (advance is handled by component) */}
             {currentStep === 4 && !workflow.designApproved && (
-              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <div className="p-4 bg-amber-50/50 border border-amber-100 rounded-2xl">
                 <p className="text-sm text-amber-800">
-                  <span className="font-medium">⏳ Aguardando aprovação do influencer</span>
+                  <span className="font-medium">Aguardando aprovação do influencer</span>
                 </p>
               </div>
             )}
@@ -1005,48 +1008,46 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
 
       {/* Email Preview Modal */}
       {showEmailPreview && emailPreview && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
               <div>
-                <h3 className="font-semibold text-gray-900">Preview do Email</h3>
-                <p className="text-xs text-gray-500">
-                  Step {emailPreview.step}: {emailPreview.stepName} • {' '}
-                  {emailPreview.hasValue ? 'Com valor fixo' : 'Apenas comissão'} • {' '}
-                  Template: {emailPreview.templateKey}
+                <h3 className="text-lg font-semibold text-gray-900">Preview do Email</h3>
+                <p className="text-sm text-gray-400 mt-1">
+                  Step {emailPreview.step}: {emailPreview.stepName}
                 </p>
               </div>
               <button
                 onClick={() => setShowEmailPreview(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
             
-            <div className="p-4 overflow-y-auto flex-1">
-              <div className="mb-4">
-                <label className="text-xs font-semibold text-gray-500 uppercase">Assunto</label>
-                <p className="text-sm font-medium text-gray-900 bg-gray-50 p-2 rounded mt-1">
+            <div className="p-6 overflow-y-auto flex-1">
+              <div className="mb-6">
+                <label className="text-xs font-medium text-gray-400 uppercase tracking-wider">Assunto</label>
+                <p className="text-sm font-medium text-gray-900 bg-gray-50 p-3 rounded-xl mt-2">
                   {emailPreview.subject}
                 </p>
               </div>
               
               <div>
-                <label className="text-xs font-semibold text-gray-500 uppercase">Corpo do Email</label>
-                <div className="mt-1 p-4 bg-white border border-gray-200 rounded text-sm text-gray-800 whitespace-pre-wrap font-mono">
+                <label className="text-xs font-medium text-gray-400 uppercase tracking-wider">Corpo do Email</label>
+                <div className="mt-2 p-5 bg-gray-50 rounded-xl text-sm text-gray-700 whitespace-pre-wrap font-mono leading-relaxed">
                   {emailPreview.body}
                 </div>
               </div>
 
               {/* Variables used */}
-              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                <label className="text-xs font-semibold text-blue-700 uppercase">Variáveis Usadas</label>
-                <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+              <div className="mt-6 p-4 bg-blue-50/50 rounded-2xl border border-blue-100">
+                <label className="text-xs font-medium text-blue-600 uppercase tracking-wider">Variáveis Usadas</label>
+                <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
                   {Object.entries(emailPreview.variables).map(([key, value]) => (
-                    <div key={key} className="flex gap-2">
-                      <span className="text-blue-600 font-mono">{`{{${key}}}`}:</span>
-                      <span className="text-blue-800 truncate" title={String(value)}>
+                    <div key={key} className="flex gap-2 items-center">
+                      <span className="text-blue-500 font-mono">{`{{${key}}}`}</span>
+                      <span className="text-gray-600 truncate" title={String(value)}>
                         {String(value) || '(vazio)'}
                       </span>
                     </div>
@@ -1055,10 +1056,10 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
               </div>
             </div>
             
-            <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
+            <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
               <button
                 onClick={() => setShowEmailPreview(false)}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-100"
+                className="px-6 py-2.5 border border-gray-200 text-gray-700 rounded-full font-medium hover:bg-gray-50 transition-all"
               >
                 Fechar
               </button>
@@ -1068,7 +1069,7 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
                 <button
                   onClick={advanceStep}
                   disabled={isAdvancing}
-                  className="px-4 py-2 bg-black text-white rounded-lg font-medium hover:bg-gray-800 disabled:opacity-50"
+                  className="px-6 py-2.5 bg-[#0E1E37] text-white rounded-full font-medium hover:bg-[#1a2f4f] transition-all disabled:opacity-50 shadow-lg shadow-gray-200"
                 >
                   {isAdvancing ? (
                     <>
@@ -1076,12 +1077,12 @@ export function PartnershipWorkflow({ influencerId, influencerName, influencerHa
                       A enviar...
                     </>
                   ) : (
-                    'Confirmar e Enviar Email'
+                    'Confirmar e Enviar'
                   )}
                 </button>
               ) : (
-                <div className="px-4 py-2 bg-amber-50 text-amber-700 rounded-lg text-sm">
-                  Este step é automático - não é enviado email pelo sistema. Envia manualmente se necessário.
+                <div className="px-4 py-2 bg-amber-50 text-amber-700 rounded-full text-sm">
+                  Este step é automático
                 </div>
               )}
             </div>
