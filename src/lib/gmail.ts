@@ -102,3 +102,85 @@ export async function sendEmail(auth: any, options: {
     throw error;
   }
 }
+
+/**
+ * Busca uma thread completa do Gmail
+ * Retorna cada mensagem separadamente (sem citações embutidas)
+ */
+export async function getThread(auth: any, threadId: string) {
+  console.log('[GMAIL-DEBUG] getThread called:', threadId);
+  
+  const gmail = google.gmail({ version: 'v1', auth });
+  
+  try {
+    const res = await gmail.users.threads.get({
+      userId: 'me',
+      id: threadId,
+      format: 'full',
+    });
+    
+    const thread = res.data;
+    const messages = thread.messages || [];
+    
+    console.log(`[GMAIL-DEBUG] Thread has ${messages.length} messages`);
+    
+    // Parsear cada mensagem
+    const parsedMessages = messages.map((msg: any, index: number) => {
+      const headers = msg.payload?.headers || [];
+      
+      // Extrair headers importantes
+      const from = headers.find((h: any) => h.name === 'From')?.value || '';
+      const to = headers.find((h: any) => h.name === 'To')?.value || '';
+      const subject = headers.find((h: any) => h.name === 'Subject')?.value || '';
+      const date = headers.find((h: any) => h.name === 'Date')?.value || '';
+      const messageId = headers.find((h: any) => h.name === 'Message-ID')?.value || '';
+      
+      // Extrair corpo da mensagem
+      let body = '';
+      let htmlBody = '';
+      
+      if (msg.payload?.parts) {
+        // Mensagem multipart
+        for (const part of msg.payload.parts) {
+          if (part.mimeType === 'text/plain' && part.body?.data) {
+            body = Buffer.from(part.body.data, 'base64').toString('utf-8');
+          }
+          if (part.mimeType === 'text/html' && part.body?.data) {
+            htmlBody = Buffer.from(part.body.data, 'base64').toString('utf-8');
+          }
+        }
+      } else if (msg.payload?.body?.data) {
+        // Mensagem simples
+        const data = Buffer.from(msg.payload.body.data, 'base64').toString('utf-8');
+        if (msg.payload.mimeType === 'text/html') {
+          htmlBody = data;
+        } else {
+          body = data;
+        }
+      }
+      
+      return {
+        id: msg.id,
+        threadId: msg.threadId,
+        messageId,
+        from,
+        to,
+        subject,
+        date,
+        body,
+        htmlBody,
+        internalDate: msg.internalDate,
+        index,
+      };
+    });
+    
+    return {
+      threadId: thread.id,
+      historyId: thread.historyId,
+      messages: parsedMessages,
+    };
+  } catch (error: any) {
+    console.error('[GMAIL-DEBUG] getThread FAILED:', error.message);
+    throw error;
+  }
+}

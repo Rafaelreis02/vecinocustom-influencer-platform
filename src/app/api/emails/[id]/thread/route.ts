@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { parseEmailThread } from '@/lib/email-parser';
+import { getGmailAuth, getThread } from '@/lib/gmail';
 
 export async function GET(
   request: NextRequest,
@@ -16,7 +16,7 @@ export async function GET(
 
     const { id } = await params;
 
-    // Buscar o email atual
+    // Buscar o email atual na nossa BD
     const email = await prisma.email.findUnique({
       where: { id },
       include: {
@@ -34,38 +34,53 @@ export async function GET(
       return NextResponse.json({ error: 'Email not found' }, { status: 404 });
     }
 
-    // Verificar se é email do sistema (enviado por nós)
-    const isFromMe = email.from.toLowerCase().includes('vecino') ||
-                     email.from.toLowerCase().includes('noreply') ||
-                     email.from.toLowerCase().includes('system');
+    // Se não temos threadId, retornar só o email atual
+    if (!email.gmailThreadId) {
+      return NextResponse.json({
+        success: true,
+        data: [{
+          id: email.id,
+          from: email.from,
+          to: email.to,
+          subject: email.subject,
+          body: email.body,
+          htmlBody: email.htmlBody,
+          receivedAt: email.receivedAt,
+          isSent: false,
+          influencer: email.influencer,
+          senderName: email.influencer?.name || email.from.split('<')[0].trim(),
+        }],
+      });
+    }
 
-    // Analisar o conteúdo e separar em mensagens
-    console.log('[thread API] Parsing email content...');
-    const parsedMessages = parseEmailThread(
-      email.htmlBody || email.body,
-      !!email.htmlBody,
-      email.from,
-      isFromMe
-    );
-    console.log(`[thread API] Found ${parsedMessages.length} messages`);
+    // Buscar thread completa do Gmail API
+    console.log('[thread API] Fetching from Gmail API, threadId:', email.gmailThreadId);
+    const auth = await getGmailAuth();
+    const thread = await getThread(auth, email.gmailThreadId);
+    
+    console.log(`[thread API] Gmail returned ${thread.messages.length} messages`);
 
     // Converter para o formato esperado pelo frontend
-    // Ordem: mais antigo primeiro (index 0), mais recente último
-    const messages = parsedMessages.map((msg, index) => {
-      // Determinar se é nosso ou deles baseado no parser
-      const msgIsFromMe = msg.isFromMe;
+    // O Gmail já devolve na ordem cronológica
+    const messages = thread.messages.map((msg: any, index: number) => {
+      // Verificar se é email nosso (enviado por nós)
+      const gmailUser = process.env.GMAIL_USER?.toLowerCase() || '';
+      const isFromMe = msg.from.toLowerCase().includes('vecino') ||
+                       msg.from.toLowerCase().includes(gmailUser);
       
       return {
-        id: `${email.id}-${index}`,
-        from: msgIsFromMe ? 'vecino@vecinocustom.com' : email.from,
-        to: msgIsFromMe ? email.from : 'vecino@vecinocustom.com',
-        subject: email.subject,
-        body: msg.content,
-        htmlBody: msg.content,
-        receivedAt: email.receivedAt,
-        isSent: msgIsFromMe,
-        influencer: msgIsFromMe ? null : email.influencer,
-        senderName: msg.senderName || (msgIsFromMe ? 'Vecino Custom' : email.influencer?.name || email.from.split('<')[0].trim()),
+        id: msg.id || `${email.id}-${index}`,
+        from: msg.from,
+        to: msg.to,
+        subject: msg.subject,
+        body: msg.body,
+        htmlBody: msg.htmlBody,
+        receivedAt: new Date(parseInt(msg.internalDate)).toISOString(),
+        isSent: isFromMe,
+        influencer: isFromMe ? null : email.influencer,
+        senderName: isFromMe 
+          ? 'Vecino Custom' 
+          : (email.influencer?.name || msg.from.split('<')[0].trim()),
       };
     });
 
