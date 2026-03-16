@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, memo } from 'react';
+import { useState, useEffect, useMemo, memo, useRef } from 'react';
 import Link from 'next/link';
 import {
   User, Mail, Instagram, TrendingUp, BarChart3, Video,
@@ -37,13 +37,14 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: Props) {
   const [agreedPrice, setAgreedPrice] = useState('');
   const [counterPrice, setCounterPrice] = useState('');
   const [activeTab, setActiveTab] = useState<'overview' | 'stats' | 'content'>('overview');
+  const isInteracting = useRef(false);
 
   useEffect(() => { fetchData(); }, [influencerId]);
 
   // Atualizar apenas quando a janela volta a ter foco (não usar polling)
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
+      if (document.visibilityState === 'visible' && !isInteracting.current) {
         fetchData();
       }
     };
@@ -56,6 +57,10 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: Props) {
       window.removeEventListener('focus', handleVisibilityChange);
     };
   }, [influencerId]);
+
+  const setInteracting = (value: boolean) => {
+    isInteracting.current = value;
+  };
 
   const fetchData = async () => {
     if (!influencerId) return;
@@ -385,9 +390,11 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: Props) {
               {/* STEP 4: Design Review - Chat Style */}
               {currentStep === 3 && workflow && (
                 <Step4Chat 
+                  key={`step4-${workflow.id}`}
                   workflow={workflow} 
                   influencer={influencer}
                   handleAdvance={handleAdvance}
+                  setInteracting={setInteracting}
                 />
               )}
 
@@ -568,11 +575,13 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: Props) {
 const Step4Chat = memo(function Step4Chat({ 
   workflow, 
   influencer,
-  handleAdvance 
+  handleAdvance,
+  setInteracting
 }: { 
   workflow: any; 
   influencer: any;
   handleAdvance: () => void;
+  setInteracting: (value: boolean) => void;
 }) {
   // Memoizar o objeto workflow para evitar re-renders desnecessários
   const workflowProps = useMemo(() => ({
@@ -600,6 +609,8 @@ const Step4Chat = memo(function Step4Chat({
         workflow={workflowProps}
         isLocked={false}
         onAdvance={handleAdvance}
+        onFocus={() => setInteracting(true)}
+        onBlur={() => setInteracting(false)}
       />
     </div>
   );

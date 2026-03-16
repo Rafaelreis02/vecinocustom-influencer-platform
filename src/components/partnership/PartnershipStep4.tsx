@@ -23,11 +23,13 @@ interface PartnershipStep4Props {
   workflow: Workflow;
   isLocked: boolean;
   onAdvance?: () => void;
+  onFocus?: () => void;
+  onBlur?: () => void;
 }
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
-export function PartnershipStep4({ workflow, isLocked, onAdvance }: PartnershipStep4Props) {
+export function PartnershipStep4({ workflow, isLocked, onAdvance, onFocus, onBlur }: PartnershipStep4Props) {
   const [messages, setMessages] = useState<DesignMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
@@ -265,7 +267,11 @@ export function PartnershipStep4({ workflow, isLocked, onAdvance }: PartnershipS
 
       {/* Input Area */}
       {!isLocked && !workflow.designApproved && hasReference && (
-        <div className="border-t border-gray-200 pt-4">
+        <div 
+          className="border-t border-gray-200 pt-4"
+          onFocus={onFocus}
+          onBlur={onBlur}
+        >
           {uploadedImage && (
             <div className="relative mb-3 inline-block">
               <img src={uploadedImage} alt="Preview" className="h-20 w-20 object-cover rounded-lg border-2 border-green-500" />
