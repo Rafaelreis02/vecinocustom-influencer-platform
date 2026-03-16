@@ -87,13 +87,46 @@ export async function GET(
       });
     }
 
-    // Buscar também as respostas enviadas (replies) da nossa base de dados
-    // Assumindo que as respostas são guardadas numa tabela separada ou com um flag
-    // Por agora, vamos retornar só os emails recebidos
+    // Buscar também os emails enviados (respostas nossas)
+    const sentEmails = await prisma.sentEmail.findMany({
+      where: {
+        emailId: { in: threadEmails.map((e: any) => e.id) },
+      },
+      orderBy: { sentAt: 'asc' },
+    });
+
+    // Combinar emails recebidos e enviados numa única lista
+    const allMessages = [
+      ...threadEmails.map((e: any) => ({
+        id: e.id,
+        from: e.from,
+        to: e.to,
+        subject: e.subject,
+        body: e.body,
+        htmlBody: e.htmlBody,
+        receivedAt: e.receivedAt,
+        isSent: false,
+        influencer: e.influencer,
+      })),
+      ...sentEmails.map((e: any) => ({
+        id: e.id,
+        from: 'vecino@vecinocustom.com', // Simular que é do nosso sistema
+        to: e.toEmail,
+        subject: e.subject,
+        body: e.body,
+        htmlBody: e.htmlBody,
+        receivedAt: e.sentAt,
+        isSent: true,
+        influencer: null,
+      })),
+    ];
+
+    // Ordenar por data
+    allMessages.sort((a, b) => new Date(a.receivedAt).getTime() - new Date(b.receivedAt).getTime());
 
     return NextResponse.json({
       success: true,
-      data: threadEmails,
+      data: allMessages,
     });
   } catch (error) {
     console.error('Error fetching email thread:', error);

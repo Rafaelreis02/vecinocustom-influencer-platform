@@ -111,8 +111,9 @@ export default function MessagesPage() {
       if (data.success && data.data.length > 0) {
         // Converter emails para formato de chat
         const messages: ChatMessage[] = data.data.map((email: any) => {
-          const isFromUs = isEmailFromUs(email.from);
-          console.log(`[fetchEmailThread] Email ${email.id}: from="${email.from}" isFromUs=${isFromUs}`);
+          // Usar o campo isSent da API ou fallback para verificação manual
+          const isFromUs = email.isSent || isEmailFromUs(email.from);
+          console.log(`[fetchEmailThread] Email ${email.id}: isSent=${email.isSent} isFromUs=${isFromUs}`);
           return {
             id: email.id,
             content: email.htmlBody || email.body,

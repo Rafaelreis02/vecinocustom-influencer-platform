@@ -482,6 +482,7 @@ model Email {
   // Relations
   influencerId    String?
   influencer      Influencer?   @relation("InfluencerEmails", fields: [influencerId], references: [id], onDelete: SetNull)
+  sentEmails      SentEmail[]   // Emails enviados em resposta a este email
   
   // Attachments
   attachments     Json?         // JSON array of {filename, mimeType, size, attachmentId}
@@ -499,6 +500,37 @@ model Email {
   @@index([influencerId])
   @@index([gmailThreadId])
   @@index([from])
+}
+
+// ============================================
+// SENT EMAILS - Emails enviados pelo sistema
+// ============================================
+model SentEmail {
+  id              String    @id @default(cuid())
+  
+  // Relação com email original
+  emailId         String
+  email           Email     @relation(fields: [emailId], references: [id], onDelete: Cascade)
+  
+  // Thread ID para agrupar conversas
+  threadId        String?
+  
+  // Destinatário
+  toEmail         String
+  
+  // Conteúdo
+  subject         String
+  body            String    @db.Text
+  htmlBody        String?   @db.Text
+  
+  // Metadata
+  sentAt          DateTime  @default(now())
+  createdAt       DateTime  @default(now())
+  
+  @@map("sent_emails")
+  @@index([emailId])
+  @@index([threadId])
+  @@index([toEmail])
 }
 
 // ============================================
