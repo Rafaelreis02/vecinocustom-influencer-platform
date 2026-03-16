@@ -36,8 +36,23 @@ export function PartnershipStep4({ workflow, isLocked, onAdvance, onFocus, onBlu
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [fileInputKey, setFileInputKey] = useState(Date.now());
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // Ref para guardar a imagem entre re-renders
+  const imageRef = useRef<string | null>(null);
+  
+  // Sincronizar ref com estado
+  useEffect(() => {
+    imageRef.current = uploadedImage;
+  }, [uploadedImage]);
+  
+  // Restaurar imagem se o componente for remontado
+  useEffect(() => {
+    if (imageRef.current && !uploadedImage) {
+      console.log('[PartnershipStep4] Restoring image from ref');
+      setUploadedImage(imageRef.current);
+    }
+  }, []);
 
   useEffect(() => {
     fetchMessages();
@@ -63,11 +78,9 @@ export function PartnershipStep4({ workflow, isLocked, onAdvance, onFocus, onBlu
     }
   };
 
-  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('[handleFileChange] File input changed', e.target.files);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('[handleFileChange] File input changed');
     const file = e.target.files?.[0];
-    setUploadError(null);
-    setFileInputKey(Date.now());
     
     if (!file) {
       console.log('[handleFileChange] No file selected');
@@ -75,9 +88,9 @@ export function PartnershipStep4({ workflow, isLocked, onAdvance, onFocus, onBlu
     }
 
     console.log('[handleFileChange] File selected:', file.name, file.type, file.size);
+    setUploadError(null);
 
     if (file.size > MAX_FILE_SIZE) {
-      console.log('[handleFileChange] File too large');
       setUploadError('A imagem deve ter menos de 5MB');
       return;
     }
@@ -86,34 +99,38 @@ export function PartnershipStep4({ workflow, isLocked, onAdvance, onFocus, onBlu
     const isImage = validTypes.includes(file.type) || file.type.startsWith('image/');
     
     if (!isImage) {
-      console.log('[handleFileChange] Invalid file type:', file.type);
       setUploadError('O ficheiro deve ser uma imagem');
       return;
     }
 
-    console.log('[handleFileChange] Reading file as DataURL...');
     const reader = new FileReader();
     reader.onloadend = () => {
-      console.log('[handleFileChange] File read successfully, length:', (reader.result as string)?.length);
-      setUploadedImage(reader.result as string);
+      const result = reader.result as string;
+      console.log('[handleFileChange] File read successfully');
+      imageRef.current = result; // Guardar no ref primeiro
+      setUploadedImage(result); // Depois no estado
     };
-    reader.onerror = (err) => {
-      console.error('[handleFileChange] FileReader error:', err);
+    reader.onerror = () => {
+      setUploadError('Erro ao ler o ficheiro');
     };
     reader.readAsDataURL(file);
-  }, []);
+  };
 
   const clearImage = () => {
     setUploadedImage(null);
+    imageRef.current = null;
     setUploadError(null);
-    // Reset file input para permitir novo upload do mesmo ficheiro
-    setFileInputKey(Date.now());
+    // Reset file input
+    const input = document.getElementById('admin-image-upload') as HTMLInputElement;
+    if (input) input.value = '';
   };
 
   const sendMessage = async () => {
-    console.log('[sendMessage] Starting...', { hasMessage: !!newMessage.trim(), hasImage: !!uploadedImage });
+    // Usar o ref que persiste entre re-renders
+    const imageToSend = uploadedImage || imageRef.current;
+    console.log('[sendMessage] Starting...', { hasMessage: !!newMessage.trim(), hasImage: !!imageToSend });
     
-    if (!newMessage.trim() && !uploadedImage) {
+    if (!newMessage.trim() && !imageToSend) {
       console.log('[sendMessage] Nothing to send');
       return;
     }
@@ -121,19 +138,20 @@ export function PartnershipStep4({ workflow, isLocked, onAdvance, onFocus, onBlu
     try {
       setIsSending(true);
       
+      const imageToUpload = uploadedImage || imageRef.current;
       let finalImageUrl = null;
-      if (uploadedImage && uploadedImage.startsWith('data:')) {
+      if (imageToUpload && imageToUpload.startsWith('data:')) {
         console.log('[sendMessage] Uploading image...');
         const uploadRes = await fetch('/api/upload/design-image', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image: uploadedImage }),
+          body: JSON.stringify({ image: imageToUpload }),
         });
         
         if (uploadRes.ok) {
           const uploadData = await uploadRes.json();
           finalImageUrl = uploadData.url;
-          console.log('[sendMessage] Image uploaded:', finalImageUrl?.substring(0, 50));
+          console.log('[sendMessage] Image uploaded');
         } else {
           const errorData = await uploadRes.json();
           console.error('[sendMessage] Upload failed:', errorData);
@@ -154,6 +172,10 @@ export function PartnershipStep4({ workflow, isLocked, onAdvance, onFocus, onBlu
         console.log('[sendMessage] Message sent successfully');
         setNewMessage('');
         setUploadedImage(null);
+        imageRef.current = null;
+        // Reset file input
+        const input = document.getElementById('admin-image-upload') as HTMLInputElement;
+        if (input) input.value = '';
         await fetchMessages();
       } else {
         const errorData = await res.json();
@@ -288,10 +310,8 @@ export function PartnershipStep4({ workflow, isLocked, onAdvance, onFocus, onBlu
             <label 
               htmlFor="admin-image-upload" 
               className="flex-shrink-0 cursor-pointer"
-              onClick={() => console.log('[Image Button] Clicked')}
             >
               <input
-                key={fileInputKey}
                 type="file"
                 accept="image/*"
                 onChange={handleFileChange}
