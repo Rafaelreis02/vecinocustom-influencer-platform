@@ -1,15 +1,37 @@
-// Thread API - Busca thread completa do Gmail
-// Rota: /api/emails/[id]/thread
-// Método: GET
-// FORCE REBUILD: 2024-03-16-20-00
-
-export const dynamic = 'force-dynamic';
+/**
+ * Sistema de Chat de Emails Robusto
+ * 
+ * Combina:
+ * 1. Emails recebidos do Gmail (via API)
+ * 2. Emails enviados guardados na nossa BD
+ * 
+ * Assim temos histórico completo mesmo se a API falhar
+ */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { getGmailAuth, getThread } from '@/lib/gmail';
+import { getGmailAuth } from '@/lib/gmail';
+import { google } from 'googleapis';
+
+// Extrair email de strings tipo "Nome <email@domain.com>"
+function extractEmail(str: string): string {
+  const match = str.match(/<([^>]+)>/);
+  return match ? match[1].toLowerCase() : str.toLowerCase();
+}
+
+// Verificar se é email nosso
+function isOurEmail(from: string): boolean {
+  const email = extractEmail(from);
+  const ourEmails = [
+    process.env.GMAIL_USER?.toLowerCase() || '',
+    'brand@vecinocustom.com',
+    'vecino@vecinocustom.com',
+    'noreply@vecinocustom.com',
+  ];
+  return ourEmails.some(e => email.includes(e));
+}
 
 export async function GET(
   request: NextRequest,
@@ -23,16 +45,15 @@ export async function GET(
 
     const { id } = await params;
 
-    // Buscar o email atual na nossa BD
+    // 1. Buscar email na nossa BD
     const email = await prisma.email.findUnique({
       where: { id },
       include: {
         influencer: {
-          select: {
-            id: true,
-            name: true,
-            avatarUrl: true,
-          },
+          select: { id: true, name: true, avatarUrl: true },
+        },
+        sentEmails: {
+          orderBy: { sentAt: 'asc' },
         },
       },
     });
@@ -41,112 +62,143 @@ export async function GET(
       return NextResponse.json({ error: 'Email not found' }, { status: 404 });
     }
 
-    console.log('[thread API] Email found:', { id: email.id, hasThreadId: !!email.gmailThreadId, threadId: email.gmailThreadId });
+    const messages: any[] = [];
 
-    // Se não temos threadId, retornar só o email atual
-    if (!email.gmailThreadId) {
-      console.log('[thread API] No gmailThreadId, returning single email');
-      return NextResponse.json({
-        success: true,
-        data: [{
-          id: email.id,
-          from: email.from,
-          to: email.to,
-          subject: email.subject,
-          body: email.body,
-          htmlBody: email.htmlBody,
-          receivedAt: email.receivedAt,
-          isSent: false,
-          influencer: email.influencer,
-          senderName: email.influencer?.name || email.from.split('<')[0].trim(),
-        }],
-      });
-    }
-
-    // Buscar thread completa do Gmail API
-    console.log('[thread API] Fetching from Gmail API, threadId:', email.gmailThreadId);
-    
-    let thread;
-    try {
-      const auth = await getGmailAuth();
-      thread = await getThread(auth, email.gmailThreadId);
-      console.log(`[thread API] Gmail returned ${thread.messages.length} messages`);
-    } catch (gmailError: any) {
-      console.error('[thread API] Gmail API failed:', gmailError.message);
-      
-      // Se for erro de permissão/scope, informar claramente
-      if (gmailError.message?.includes('insufficient permissions') || 
-          gmailError.message?.includes('Forbidden') ||
-          gmailError.message?.includes('scope')) {
-        return NextResponse.json({
-          success: false,
-          error: 'Gmail permission error',
-          message: 'Need to regenerate OAuth token with gmail.readonly scope',
-          fallback: [{
-            id: email.id,
-            from: email.from,
-            to: email.to,
-            subject: email.subject,
-            body: email.body,
-            htmlBody: email.htmlBody,
-            receivedAt: email.receivedAt,
-            isSent: false,
-            influencer: email.influencer,
-            senderName: email.influencer?.name || email.from.split('<')[0].trim(),
-          }],
-        }, { status: 403 });
+    // 2. Adicionar emails enviados (da nossa BD) - SEMPRE disponíveis
+    if (email.sentEmails && email.sentEmails.length > 0) {
+      for (const sent of email.sentEmails) {
+        messages.push({
+          id: `sent-${sent.id}`,
+          from: process.env.GMAIL_USER || 'brand@vecinocustom.com',
+          to: sent.toEmail,
+          subject: sent.subject,
+          body: sent.body,
+          htmlBody: sent.htmlBody,
+          receivedAt: sent.sentAt.toISOString(),
+          isSent: true,
+          source: 'database',
+          senderName: 'Vecino Custom',
+        });
       }
-      
-      // Outros erros - usar fallback
-      return NextResponse.json({
-        success: true,
-        data: [{
-          id: email.id,
-          from: email.from,
-          to: email.to,
-          subject: email.subject,
-          body: email.body,
-          htmlBody: email.htmlBody,
-          receivedAt: email.receivedAt,
-          isSent: false,
-          influencer: email.influencer,
-          senderName: email.influencer?.name || email.from.split('<')[0].trim(),
-        }],
+    }
+
+    // 3. Tentar buscar do Gmail API (melhor opção se funcionar)
+    if (email.gmailThreadId) {
+      try {
+        console.log('[thread API] Fetching from Gmail:', email.gmailThreadId);
+        
+        const auth = await getGmailAuth();
+        const gmail = google.gmail({ version: 'v1', auth });
+        
+        const thread = await gmail.users.threads.get({
+          userId: 'me',
+          id: email.gmailThreadId,
+          format: 'full',
+        });
+
+        const gmailMessages = thread.data.messages || [];
+        console.log(`[thread API] Gmail returned ${gmailMessages.length} messages`);
+
+        // Limpar mensagens da BD que já vêm do Gmail (evitar duplicados)
+        const existingIds = new Set(messages.map(m => m.id));
+        
+        for (const msg of gmailMessages) {
+          const msgId = msg.id;
+          if (existingIds.has(msgId) || existingIds.has(`gmail-${msgId}`)) {
+            continue;
+          }
+
+          // Extrair headers
+          const headers = msg.payload?.headers || [];
+          const from = headers.find((h: any) => h.name === 'From')?.value || '';
+          const to = headers.find((h: any) => h.name === 'To')?.value || '';
+          const subject = headers.find((h: any) => h.name === 'Subject')?.value || '';
+          const date = msg.internalDate;
+
+          // Extrair body
+          let body = '';
+          let htmlBody = '';
+
+          if (msg.payload?.parts) {
+            for (const part of msg.payload.parts) {
+              if (part.mimeType === 'text/plain' && part.body?.data) {
+                body = Buffer.from(part.body.data, 'base64').toString('utf-8');
+              }
+              if (part.mimeType === 'text/html' && part.body?.data) {
+                htmlBody = Buffer.from(part.body.data, 'base64').toString('utf-8');
+              }
+            }
+          } else if (msg.payload?.body?.data) {
+            const data = Buffer.from(msg.payload.body.data, 'base64').toString('utf-8');
+            if (msg.payload.mimeType === 'text/html') {
+              htmlBody = data;
+            } else {
+              body = data;
+            }
+          }
+
+          const isFromMe = isOurEmail(from);
+
+          messages.push({
+            id: `gmail-${msgId}`,
+            from,
+            to,
+            subject,
+            body,
+            htmlBody,
+            receivedAt: new Date(parseInt(date)).toISOString(),
+            isSent: isFromMe,
+            source: 'gmail',
+            senderName: isFromMe 
+              ? 'Vecino Custom' 
+              : (email.influencer?.name || from.split('<')[0].trim()),
+          });
+        }
+
+      } catch (gmailError: any) {
+        console.error('[thread API] Gmail API error:', gmailError.message);
+        // Continua com os dados da BD (fallback)
+      }
+    }
+
+    // 4. Ordenar por data (mais antigo primeiro)
+    messages.sort((a, b) => 
+      new Date(a.receivedAt).getTime() - new Date(b.receivedAt).getTime()
+    );
+
+    // 5. Se não temos mensagens, retornar o email original
+    if (messages.length === 0) {
+      messages.push({
+        id: email.id,
+        from: email.from,
+        to: email.to,
+        subject: email.subject,
+        body: email.body,
+        htmlBody: email.htmlBody,
+        receivedAt: email.receivedAt,
+        isSent: false,
+        source: 'database',
+        influencer: email.influencer,
+        senderName: email.influencer?.name || email.from.split('<')[0].trim(),
       });
     }
 
-    // Converter para o formato esperado pelo frontend
-    // O Gmail já devolve na ordem cronológica
-    const messages = thread.messages.map((msg: any, index: number) => {
-      // Verificar se é email nosso (enviado por nós)
-      const gmailUser = process.env.GMAIL_USER?.toLowerCase() || '';
-      const isFromMe = msg.from.toLowerCase().includes('vecino') ||
-                       msg.from.toLowerCase().includes(gmailUser);
-      
-      return {
-        id: msg.id || `${email.id}-${index}`,
-        from: msg.from,
-        to: msg.to,
-        subject: msg.subject,
-        body: msg.body,
-        htmlBody: msg.htmlBody,
-        receivedAt: new Date(parseInt(msg.internalDate)).toISOString(),
-        isSent: isFromMe,
-        influencer: isFromMe ? null : email.influencer,
-        senderName: isFromMe 
-          ? 'Vecino Custom' 
-          : (email.influencer?.name || msg.from.split('<')[0].trim()),
-      };
-    });
+    console.log(`[thread API] Returning ${messages.length} messages total`);
 
     return NextResponse.json({
       success: true,
       data: messages,
+      meta: {
+        total: messages.length,
+        fromGmail: messages.filter(m => m.source === 'gmail').length,
+        fromDatabase: messages.filter(m => m.source === 'database').length,
+      },
     });
-  } catch (error) {
-    console.error('Error fetching email thread:', error);
+
+  } catch (error: any) {
+    console.error('[thread API] Fatal error:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch email thread' },
+      { error: 'Failed to fetch thread', message: error.message },
       { status: 500 }
     );
   }

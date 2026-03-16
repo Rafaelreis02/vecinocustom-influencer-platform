@@ -52,7 +52,20 @@ export async function POST(
       threadId: email.gmailThreadId || '',
     });
 
-    logger.info(`Replied to ${email.from}: ${email.subject}`);
+    // Guardar na tabela de emails enviados
+    await prisma.sentEmail.create({
+      data: {
+        emailId: email.id,
+        threadId: email.gmailThreadId,
+        toEmail: email.from,
+        subject: email.subject.startsWith('Re:') ? email.subject : `Re: ${email.subject}`,
+        body: text,
+        htmlBody: `<p>${text.replace(/\n/g, '<br>')}</p>`,
+        sentAt: new Date(),
+      },
+    });
+
+    logger.info(`Replied to ${email.from}: ${email.subject} and saved to database`);
 
     return NextResponse.json({
       success: true,
