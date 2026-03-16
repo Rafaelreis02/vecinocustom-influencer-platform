@@ -1,5 +1,5 @@
 /**
- * Email History Parser - Lê citações e separa mensagens
+ * Email History Parser - Separa emails em mensagens individuais
  */
 
 export interface ParsedMessage {
@@ -34,35 +34,36 @@ function stripHtml(html: string): string {
 }
 
 /**
- * Extrai informação do header de citação
- * Ex: "Shannon Quinn escreveu (quarta, 18/02/2026 à(s) 16:01):"
+ * Verifica se é header de citação (início de mensagem anterior)
  */
-function parseCitationHeader(line: string): { name: string; date?: string } | null {
-  // Padrão português: "Nome escreveu (dia, data à(s) hora):"
-  const ptMatch = line.match(/(.+?)\s+(?:escreveu|wrote)\s*\((.+?)\):/i);
+function isCitationHeader(line: string): { isMatch: boolean; name?: string; date?: string } {
+  const trimmed = line.trim();
+  
+  // Padrão português: "Shannon Quinn escreveu (segunda, 23/02/2026 à(s) 11:27):"
+  const ptMatch = trimmed.match(/(.+?)\s+(?:escreveu|wrote)\s*\((.+?)\)\s*:/i);
   if (ptMatch) {
-    return { name: ptMatch[1].trim(), date: ptMatch[2].trim() };
+    return { isMatch: true, name: ptMatch[1].trim(), date: ptMatch[2].trim() };
   }
   
-  // Padrão Gmail: "On Mon, Jan 1, 2024 at 10:00 AM, Name wrote:"
-  const enMatch = line.match(/On\s+(.+?),\s*(.+?)\s+wrote:/i);
+  // Padrão Gmail: "On Mon, Jan 1, 2024 at 10:00 AM, John Doe wrote:"
+  const enMatch = trimmed.match(/On\s+(.+?),\s*(.+?)\s+wrote:\s*$/i);
   if (enMatch) {
-    return { name: enMatch[2].trim(), date: enMatch[1].trim() };
+    return { isMatch: true, name: enMatch[2].trim(), date: enMatch[1].trim() };
   }
   
   // Padrão Outlook: "From: Name <email>"
-  const fromMatch = line.match(/From:\s*(.+?)(?:\s*<|$)/i);
+  const fromMatch = trimmed.match(/^From:\s*(.+?)(?:\s*<|$)/i);
   if (fromMatch) {
-    return { name: fromMatch[1].trim() };
+    return { isMatch: true, name: fromMatch[1].trim() };
   }
   
-  // Padrão "De: Nome"
-  const deMatch = line.match(/De:\s*(.+?)(?:\s*<|$)/i);
+  // Padrão "De: Nome <email>"
+  const deMatch = trimmed.match(/^De:\s*(.+?)(?:\s*<|$)/i);
   if (deMatch) {
-    return { name: deMatch[1].trim() };
+    return { isMatch: true, name: deMatch[1].trim() };
   }
   
-  return null;
+  return { isMatch: false };
 }
 
 /**
@@ -73,21 +74,10 @@ function isQuotedLine(line: string): boolean {
 }
 
 /**
- * Verifica se é início de uma nova mensagem no histórico
+ * Limpa linha de citação (remove > do início)
  */
-function isNewMessageStart(line: string): boolean {
-  const trimmed = line.trim();
-  
-  // Citação explícita
-  if (trimmed.startsWith('>')) return true;
-  
-  // Headers de citação
-  if (/\w+\s+(?:escreveu|wrote)\s*\(/i.test(trimmed)) return true;
-  if (/^On\s+\w+.+?wrote:/i.test(trimmed)) return true;
-  if (/^From:\s*\S+/i.test(trimmed)) return true;
-  if (/^De:\s*\S+/i.test(trimmed)) return true;
-  
-  return false;
+function cleanQuotedLine(line: string): string {
+  return line.replace(/^>\s?/, '');
 }
 
 /**
@@ -110,84 +100,57 @@ export function parseEmailThread(
   const lines = text.split('\n');
   const messages: ParsedMessage[] = [];
   
-  // A primeira mensagem (mais recente) é o conteúdo antes de qualquer citação
   let currentContent: string[] = [];
   let currentSender: string | undefined;
   let currentDate: string | undefined;
-  let inQuote = false;
+  let isFirstMessage = true;
   
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
+    const trimmed = line.trim();
     
-    // Verifica se é início de uma mensagem citada
-    if (isNewMessageStart(line)) {
-      // Guarda a mensagem atual
-      if (currentContent.length > 0 && !inQuote) {
-        const msgText = currentContent.join('\n').trim();
-        if (msgText.length > 10) { // Ignora mensagens muito curtas (só headers)
-          messages.push({
-            id: `msg-${messages.length}`,
-            content: msgText,
-            isFromMe: messages.length === 0 ? isOriginalFromMe : !messages[messages.length - 1]?.isFromMe,
-            senderName: currentSender,
-            date: currentDate,
-          });
-        }
-        currentContent = [];
-      }
-      
-      // Analisa o header de citação
-      const citation = parseCitationHeader(line);
-      if (citation) {
-        currentSender = citation.name;
-        currentDate = citation.date;
-      }
-      
-      inQuote = true;
-      
-      // Se é linha com >, remove o prefixo para o conteúdo
-      if (line.trim().startsWith('>')) {
-        const cleaned = line.replace(/^>\s?/, '');
-        if (cleaned.trim()) {
-          currentContent.push(cleaned);
-        }
-      }
-      
+    // Ignora linhas vazias no início
+    if (isFirstMessage && trimmed === '' && currentContent.length === 0) {
       continue;
     }
     
-    // Dentro de uma citação
-    if (inQuote) {
-      if (isQuotedLine(line)) {
-        const cleaned = line.replace(/^>\s?/, '');
-        currentContent.push(cleaned);
-      } else if (line.trim() === '') {
-        // Linha vazia dentro da citação
-        currentContent.push('');
-      } else {
-        // Acabou a citação
-        inQuote = false;
-        
-        // Guarda a mensagem anterior
-        if (currentContent.length > 0) {
-          const msgText = currentContent.join('\n').trim();
-          if (msgText.length > 10) {
-            messages.push({
-              id: `msg-${messages.length}`,
-              content: msgText,
-              isFromMe: messages.length === 0 ? isOriginalFromMe : !messages[messages.length - 1]?.isFromMe,
-              senderName: currentSender,
-              date: currentDate,
-            });
-          }
-          currentContent = [];
+    // Verifica se é header de citação (início de mensagem anterior)
+    const citation = isCitationHeader(line);
+    if (citation.isMatch) {
+      // Guarda a mensagem atual antes de começar a anterior
+      if (currentContent.length > 0) {
+        const msgText = currentContent.join('\n').trim();
+        if (msgText.length > 5) {
+          messages.push({
+            id: `msg-${messages.length}`,
+            content: msgText,
+            isFromMe: isFirstMessage ? isOriginalFromMe : !messages[messages.length - 1]?.isFromMe,
+            senderName: currentSender,
+            date: currentDate,
+          });
+          console.log(`[parseEmailThread] Saved message ${messages.length}: "${msgText.substring(0, 50)}..."`);
         }
-        
-        // Começa nova mensagem
-        currentContent.push(line);
+        currentContent = [];
+        isFirstMessage = false;
+      }
+      
+      // Guarda info do remetente da mensagem anterior
+      currentSender = citation.name;
+      currentDate = citation.date;
+      
+      // NÃO adiciona o header ao conteúdo
+      continue;
+    }
+    
+    // Se é linha de citação (>), limpa e adiciona
+    if (isQuotedLine(line)) {
+      const cleaned = cleanQuotedLine(line);
+      // Só adiciona se não for linha vazia ou header
+      if (cleaned.trim().length > 0) {
+        currentContent.push(cleaned);
       }
     } else {
-      // Fora de citação - conteúdo da mensagem atual
+      // Linha normal - adiciona ao conteúdo atual
       currentContent.push(line);
     }
   }
@@ -195,20 +158,20 @@ export function parseEmailThread(
   // Guarda última mensagem
   if (currentContent.length > 0) {
     const msgText = currentContent.join('\n').trim();
-    if (msgText.length > 10) {
+    if (msgText.length > 5) {
       messages.push({
         id: `msg-${messages.length}`,
         content: msgText,
-        isFromMe: messages.length === 0 ? isOriginalFromMe : !messages[messages.length - 1]?.isFromMe,
+        isFromMe: isFirstMessage ? isOriginalFromMe : !messages[messages.length - 1]?.isFromMe,
         senderName: currentSender,
         date: currentDate,
       });
+      console.log(`[parseEmailThread] Saved final message ${messages.length}`);
     }
   }
   
-  console.log(`[parseEmailThread] Found ${messages.length} messages`);
+  console.log(`[parseEmailThread] Total: ${messages.length} messages`);
   
-  // Inverte a ordem para ficar: mais antigo em cima, mais recente em baixo
-  // (estilo WhatsApp)
+  // Inverte para ficar: antigo em cima, novo em baixo (WhatsApp style)
   return messages.reverse();
 }
