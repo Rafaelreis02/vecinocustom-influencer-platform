@@ -1,4 +1,10 @@
 // Thread API - Busca thread completa do Gmail
+// Rota: /api/emails/[id]/thread
+// Método: GET
+// FORCE REBUILD: 2024-03-16-20-00
+
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
