@@ -90,29 +90,46 @@ export default function MessagesPage() {
     }
   }, [selectedEmail]);
 
+  // Identificar se um email é "nosso" (enviado por nós) ou deles
+  const isEmailFromUs = (from: string): boolean => {
+    // Emails enviados por nós geralmente têm o domínio vecino ou são do sistema
+    const fromLower = from.toLowerCase();
+    return fromLower.includes('vecino') || 
+           fromLower.includes('noreply') ||
+           fromLower.includes('system') ||
+           fromLower.includes('admin');
+  };
+
   async function fetchEmailThread(emailId: string) {
     try {
+      console.log('[fetchEmailThread] Fetching thread for email:', emailId);
       const res = await fetch(`/api/emails/${emailId}/thread`);
       const data = await res.json();
       
+      console.log('[fetchEmailThread] API response:', { success: data.success, count: data.data?.length });
+      
       if (data.success && data.data.length > 0) {
         // Converter emails para formato de chat
-        const messages: ChatMessage[] = data.data.map((email: any) => ({
-          id: email.id,
-          content: email.htmlBody || email.body,
-          isFromMe: !email.from.includes('vecino'), // Assumir que emails nossos têm vecino no from
-          timestamp: email.receivedAt,
-          type: email.htmlBody ? 'html' : 'text',
-          senderName: email.influencer?.name || email.from.split('<')[0].trim(),
-          senderAvatar: email.influencer?.avatarUrl,
-        }));
+        const messages: ChatMessage[] = data.data.map((email: any) => {
+          const isFromUs = isEmailFromUs(email.from);
+          console.log(`[fetchEmailThread] Email ${email.id}: from="${email.from}" isFromUs=${isFromUs}`);
+          return {
+            id: email.id,
+            content: email.htmlBody || email.body,
+            isFromMe: isFromUs,
+            timestamp: email.receivedAt,
+            type: email.htmlBody ? 'html' : 'text',
+            senderName: email.influencer?.name || email.from.split('<')[0].trim(),
+            senderAvatar: email.influencer?.avatarUrl,
+          };
+        });
         setChatMessages(messages);
       } else {
         // Fallback: mostrar só o email atual
         const messages: ChatMessage[] = [{
           id: selectedEmail!.id,
           content: selectedEmail!.htmlBody || selectedEmail!.body,
-          isFromMe: false,
+          isFromMe: isEmailFromUs(selectedEmail!.from),
           timestamp: selectedEmail!.receivedAt,
           type: selectedEmail!.htmlBody ? 'html' : 'text',
           senderName: selectedEmail!.influencer?.name || selectedEmail!.from.split('<')[0].trim(),
@@ -126,7 +143,7 @@ export default function MessagesPage() {
       const messages: ChatMessage[] = [{
         id: selectedEmail!.id,
         content: selectedEmail!.htmlBody || selectedEmail!.body,
-        isFromMe: false,
+        isFromMe: isEmailFromUs(selectedEmail!.from),
         timestamp: selectedEmail!.receivedAt,
         type: selectedEmail!.htmlBody ? 'html' : 'text',
         senderName: selectedEmail!.influencer?.name || selectedEmail!.from.split('<')[0].trim(),
@@ -648,57 +665,85 @@ export default function MessagesPage() {
               </div>
 
               {/* Chat Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#F5F5F7]">
-                {chatMessages.map((message, index) => {
-                  const showSender = !message.isFromMe && index > 0 && chatMessages[index - 1].isFromMe;
-                  const isFirstMessage = index === 0 || chatMessages[index - 1].isFromMe !== message.isFromMe;
-                  
-                  return (
-                    <div key={message.id} className={`flex ${message.isFromMe ? 'justify-end' : 'justify-start'}`}>
-                      {!message.isFromMe && (
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#0E1E37] to-[#1a2f4f] text-white flex items-center justify-center text-sm font-semibold mr-3 shrink-0 self-end shadow-sm overflow-hidden">
-                          {message.senderAvatar ? (
-                            <img src={message.senderAvatar} alt={message.senderName || 'Influencer'} className="w-full h-full object-cover" />
-                          ) : (
-                            message.senderName?.charAt(0).toUpperCase() || 'I'
-                          )}
-                        </div>
-                      )}
-                      
-                      <div className={`max-w-[80%] md:max-w-[65%] ${message.isFromMe ? 'mr-2' : ''}`}>
-                        {/* Nome do remetente */}
-                        {showSender && message.senderName && (
-                          <p className="text-xs text-gray-500 mb-1 ml-1">{message.senderName}</p>
+              <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#F5F5F7]">
+                {chatMessages.length === 0 ? (
+                  <div className="flex items-center justify-center h-full text-gray-400">
+                    <p className="text-sm">Sem mensagens</p>
+                  </div>
+                ) : (
+                  chatMessages.map((message, index) => {
+                    const prevMessage = index > 0 ? chatMessages[index - 1] : null;
+                    const isFirstInGroup = !prevMessage || prevMessage.isFromMe !== message.isFromMe;
+                    const isLastInGroup = index === chatMessages.length - 1 || chatMessages[index + 1].isFromMe !== message.isFromMe;
+                    
+                    return (
+                      <div 
+                        key={message.id} 
+                        className={`flex ${message.isFromMe ? 'justify-end' : 'justify-start'} ${isFirstInGroup ? 'mt-4' : 'mt-1'}`}
+                      >
+                        {/* Avatar - só mostra no primeiro da grupo */}
+                        {!message.isFromMe && isFirstInGroup && (
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#0E1E37] to-[#1a2f4f] text-white flex items-center justify-center text-sm font-semibold mr-3 shrink-0 self-end shadow-sm overflow-hidden">
+                            {message.senderAvatar ? (
+                              <img src={message.senderAvatar} alt={message.senderName || 'Influencer'} className="w-full h-full object-cover" />
+                            ) : (
+                              message.senderName?.charAt(0).toUpperCase() || 'I'
+                            )}
+                          </div>
                         )}
                         
-                        <div className={`px-4 py-3 ${
-                          isFirstMessage 
-                            ? message.isFromMe 
-                              ? 'rounded-2xl rounded-br-md' 
-                              : 'rounded-2xl rounded-bl-md'
-                            : 'rounded-2xl'
-                        } ${
-                          message.isFromMe 
-                            ? 'bg-[#0E1E37] text-white shadow-md' 
-                            : 'bg-white text-gray-800 shadow-sm'
-                        }`}>
-                          {message.type === 'html' ? (
-                            <div 
-                              className={`prose prose-sm max-w-none ${message.isFromMe ? 'prose-invert' : ''} chat-message-content`}
-                              dangerouslySetInnerHTML={{ __html: message.content }}
-                            />
-                          ) : (
-                            <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                        {/* Espaço quando não é o primeiro do grupo */}
+                        {!message.isFromMe && !isFirstInGroup && <div className="w-10 mr-3" />}
+                        
+                        <div className={`max-w-[75%] md:max-w-[60%] ${message.isFromMe ? 'mr-2' : ''}`}>
+                          {/* Nome do remetente - só no primeiro do grupo */}
+                          {isFirstInGroup && !message.isFromMe && message.senderName && (
+                            <p className="text-xs text-gray-500 mb-1 ml-1">{message.senderName}</p>
+                          )}
+                          
+                          {/* Bolha da mensagem */}
+                          <div className={`px-4 py-2.5 ${
+                            isFirstInGroup && isLastInGroup
+                              ? message.isFromMe 
+                                ? 'rounded-2xl rounded-br-md' 
+                                : 'rounded-2xl rounded-bl-md'
+                              : isFirstInGroup
+                                ? message.isFromMe
+                                  ? 'rounded-t-2xl rounded-l-2xl rounded-br-md'
+                                  : 'rounded-t-2xl rounded-r-2xl rounded-bl-md'
+                                : isLastInGroup
+                                  ? message.isFromMe
+                                    ? 'rounded-b-2xl rounded-l-2xl rounded-br-md'
+                                    : 'rounded-b-2xl rounded-r-2xl rounded-bl-md'
+                                  : message.isFromMe
+                                    ? 'rounded-l-2xl rounded-r-md'
+                                    : 'rounded-r-2xl rounded-l-md'
+                          } ${
+                            message.isFromMe 
+                              ? 'bg-[#0E1E37] text-white shadow-md' 
+                              : 'bg-white text-gray-800 shadow-sm'
+                          }`}>
+                            {message.type === 'html' ? (
+                              <div 
+                                className={`prose prose-sm max-w-none ${message.isFromMe ? 'prose-invert' : ''} chat-message-content`}
+                                dangerouslySetInnerHTML={{ __html: message.content }}
+                              />
+                            ) : (
+                              <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                            )}
+                          </div>
+                          
+                          {/* Timestamp - só no último do grupo */}
+                          {isLastInGroup && (
+                            <p className={`text-[11px] mt-1 ${message.isFromMe ? 'text-right text-gray-400' : 'text-gray-400 ml-1'}`}>
+                              {formatTime(message.timestamp)}
+                            </p>
                           )}
                         </div>
-                        
-                        <p className={`text-[11px] mt-1 ${message.isFromMe ? 'text-right text-gray-400' : 'text-gray-400 ml-1'}`}>
-                          {formatTime(message.timestamp)}
-                        </p>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                )}
                 <div ref={chatEndRef} />
               </div>
 

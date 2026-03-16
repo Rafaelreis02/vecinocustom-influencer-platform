@@ -25,6 +25,12 @@ export async function GET(
       return NextResponse.json({ error: 'Email not found' }, { status: 404 });
     }
 
+    // Helper para extrair email de strings tipo "Nome <email@domain.com>"
+    const extractEmail = (str: string): string => {
+      const match = str.match(/<([^>]+)>/);
+      return match ? match[1] : str;
+    };
+
     // Se tem threadId, buscar todos os emails da mesma thread
     // Se não tem, buscar emails entre os mesmos remetentes
     let threadEmails;
@@ -47,14 +53,25 @@ export async function GET(
       });
     } else {
       // Fallback: buscar emails entre os mesmos remetentes
-      const fromEmail = email.from;
-      const toEmail = email.to;
+      // Extrair apenas o email address (sem o nome)
+      const fromEmailClean = extractEmail(email.from);
+      const toEmailClean = extractEmail(email.to);
       
       threadEmails = await prisma.email.findMany({
         where: {
           OR: [
-            { from: fromEmail, to: toEmail },
-            { from: toEmail, to: fromEmail },
+            { 
+              AND: [
+                { from: { contains: fromEmailClean } },
+                { to: { contains: toEmailClean } }
+              ]
+            },
+            { 
+              AND: [
+                { from: { contains: toEmailClean } },
+                { to: { contains: fromEmailClean } }
+              ]
+            },
           ],
         },
         orderBy: { receivedAt: 'asc' },
