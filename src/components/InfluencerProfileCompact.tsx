@@ -39,13 +39,13 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: Props) {
   const [activeTab, setActiveTab] = useState<'overview' | 'stats' | 'content'>('overview');
   const isInteracting = useRef(false);
 
-  useEffect(() => { fetchData(); }, [influencerId]);
+  useEffect(() => { fetchData(true); }, [influencerId]);
 
   // Atualizar apenas quando a janela volta a ter foco (não usar polling)
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && !isInteracting.current) {
-        fetchData();
+        fetchData(false); // Não mostrar loading em atualizações automáticas
       }
     };
 
@@ -62,10 +62,10 @@ export function InfluencerProfileCompact({ influencerId, onUpdate }: Props) {
     isInteracting.current = value;
   };
 
-  const fetchData = async () => {
+  const fetchData = async (showLoading = true) => {
     if (!influencerId) return;
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       const res = await fetch(`/api/influencers/${influencerId}`);
       if (!res.ok) throw new Error('Failed to fetch');
       const data = await res.json();
