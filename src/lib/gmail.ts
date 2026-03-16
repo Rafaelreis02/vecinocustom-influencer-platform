@@ -2,7 +2,10 @@ import { google } from 'googleapis';
 import { logger } from './logger';
 
 // Gmail API configuration
-const GMAIL_SCOPES = ['https://www.googleapis.com/auth/gmail.send'];
+const GMAIL_SCOPES = [
+  'https://www.googleapis.com/auth/gmail.send',
+  'https://www.googleapis.com/auth/gmail.readonly',
+];
 
 async function getSenderSettings() {
   return {
@@ -181,6 +184,10 @@ export async function getThread(auth: any, threadId: string) {
     };
   } catch (error: any) {
     console.error('[GMAIL-DEBUG] getThread FAILED:', error.message);
+    if (error.message?.includes('insufficient permissions') || error.message?.includes('scope')) {
+      console.error('[GMAIL-DEBUG] This is likely a permission/scope issue');
+      console.error('[GMAIL-DEBUG] Current scopes:', GMAIL_SCOPES);
+    }
     throw error;
   }
 }
