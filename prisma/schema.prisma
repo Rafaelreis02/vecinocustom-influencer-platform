@@ -482,7 +482,6 @@ model Email {
   // Relations
   influencerId    String?
   influencer      Influencer?   @relation("InfluencerEmails", fields: [influencerId], references: [id], onDelete: SetNull)
-  sentEmails      SentEmail[]   // Emails enviados em resposta a este email
   
   // Attachments
   attachments     Json?         // JSON array of {filename, mimeType, size, attachmentId}
