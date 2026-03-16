@@ -110,6 +110,7 @@ export async function POST(request: Request) {
         await prisma.email.create({
           data: {
             gmailId: message.id,
+            gmailThreadId: fullMessage.data.threadId || null, // Guardar threadId!
             from: from,
             to: to,
             subject: subject,
