@@ -35,8 +35,11 @@ export async function GET(
       return NextResponse.json({ error: 'Email not found' }, { status: 404 });
     }
 
+    console.log('[thread API] Email found:', { id: email.id, hasThreadId: !!email.gmailThreadId, threadId: email.gmailThreadId });
+
     // Se não temos threadId, retornar só o email atual
     if (!email.gmailThreadId) {
+      console.log('[thread API] No gmailThreadId, returning single email');
       return NextResponse.json({
         success: true,
         data: [{
