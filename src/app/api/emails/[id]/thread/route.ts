@@ -40,12 +40,14 @@ export async function GET(
                      email.from.toLowerCase().includes('system');
 
     // Analisar o conteúdo e separar em mensagens
+    console.log('[thread API] Parsing email content...');
     const parsedMessages = parseEmailThread(
       email.htmlBody || email.body,
       !!email.htmlBody,
       email.from,
       isFromMe
     );
+    console.log(`[thread API] Found ${parsedMessages.length} messages`);
 
     // Converter para o formato esperado pelo frontend
     const messages = parsedMessages.map((msg, index) => ({
@@ -64,6 +66,10 @@ export async function GET(
     return NextResponse.json({
       success: true,
       data: messages,
+      debug: {
+        originalContentLength: (email.htmlBody || email.body)?.length,
+        messageCount: messages.length,
+      }
     });
   } catch (error) {
     console.error('Error fetching email thread:', error);
