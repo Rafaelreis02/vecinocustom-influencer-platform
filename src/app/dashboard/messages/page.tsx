@@ -32,6 +32,8 @@ interface ChatMessage {
   isFromMe: boolean;
   timestamp: string;
   type: 'text' | 'html';
+  senderName?: string | null;
+  senderAvatar?: string | null;
 }
 
 export default function MessagesPage() {
@@ -81,20 +83,58 @@ export default function MessagesPage() {
     return () => clearInterval(interval);
   }, []);
 
+  // Buscar histórico da thread quando email é selecionado
   useEffect(() => {
     if (selectedEmail) {
-      // Convert email to chat format
-      const messages: ChatMessage[] = [{
-        id: selectedEmail.id,
-        content: selectedEmail.htmlBody || selectedEmail.body,
-        isFromMe: false,
-        timestamp: selectedEmail.receivedAt,
-        type: selectedEmail.htmlBody ? 'html' : 'text'
-      }];
-      setChatMessages(messages);
-      scrollToBottom();
+      fetchEmailThread(selectedEmail.id);
     }
   }, [selectedEmail]);
+
+  async function fetchEmailThread(emailId: string) {
+    try {
+      const res = await fetch(`/api/emails/${emailId}/thread`);
+      const data = await res.json();
+      
+      if (data.success && data.data.length > 0) {
+        // Converter emails para formato de chat
+        const messages: ChatMessage[] = data.data.map((email: any) => ({
+          id: email.id,
+          content: email.htmlBody || email.body,
+          isFromMe: !email.from.includes('vecino'), // Assumir que emails nossos têm vecino no from
+          timestamp: email.receivedAt,
+          type: email.htmlBody ? 'html' : 'text',
+          senderName: email.influencer?.name || email.from.split('<')[0].trim(),
+          senderAvatar: email.influencer?.avatarUrl,
+        }));
+        setChatMessages(messages);
+      } else {
+        // Fallback: mostrar só o email atual
+        const messages: ChatMessage[] = [{
+          id: selectedEmail!.id,
+          content: selectedEmail!.htmlBody || selectedEmail!.body,
+          isFromMe: false,
+          timestamp: selectedEmail!.receivedAt,
+          type: selectedEmail!.htmlBody ? 'html' : 'text',
+          senderName: selectedEmail!.influencer?.name || selectedEmail!.from.split('<')[0].trim(),
+          senderAvatar: selectedEmail!.influencer?.avatarUrl,
+        }];
+        setChatMessages(messages);
+      }
+    } catch (error) {
+      console.error('Error fetching thread:', error);
+      // Fallback: mostrar só o email atual
+      const messages: ChatMessage[] = [{
+        id: selectedEmail!.id,
+        content: selectedEmail!.htmlBody || selectedEmail!.body,
+        isFromMe: false,
+        timestamp: selectedEmail!.receivedAt,
+        type: selectedEmail!.htmlBody ? 'html' : 'text',
+        senderName: selectedEmail!.influencer?.name || selectedEmail!.from.split('<')[0].trim(),
+        senderAvatar: selectedEmail!.influencer?.avatarUrl,
+      }];
+      setChatMessages(messages);
+    }
+  }
 
   useEffect(() => {
     scrollToBottom();
@@ -608,37 +648,57 @@ export default function MessagesPage() {
               </div>
 
               {/* Chat Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {chatMessages.map((message, index) => (
-                  <div key={message.id} className={`flex ${message.isFromMe ? 'justify-end' : 'justify-start'}`}>
-                    {!message.isFromMe && (
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#0E1E37] to-[#1a2f4f] text-white flex items-center justify-center text-xs font-semibold mr-2 shrink-0 self-end">
-                        {selectedEmail.from.charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                    
-                    <div className={`max-w-[85%] md:max-w-[70%] ${message.isFromMe ? 'ml-12' : 'mr-12'}`}>
-                      <div className={`px-4 py-3 rounded-2xl ${
-                        message.isFromMe 
-                          ? 'bg-[#0E1E37] text-white rounded-br-md' 
-                          : 'bg-white text-gray-800 rounded-bl-md shadow-sm border border-gray-100'
-                      }`}>
-                        {message.type === 'html' ? (
-                          <div 
-                            className={`prose prose-sm max-w-none ${message.isFromMe ? 'prose-invert' : ''} chat-message-content`}
-                            dangerouslySetInnerHTML={{ __html: message.content }}
-                          />
-                        ) : (
-                          <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{message.content}</p>
-                        )}
-                      </div>
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#F5F5F7]">
+                {chatMessages.map((message, index) => {
+                  const showSender = !message.isFromMe && index > 0 && chatMessages[index - 1].isFromMe;
+                  const isFirstMessage = index === 0 || chatMessages[index - 1].isFromMe !== message.isFromMe;
+                  
+                  return (
+                    <div key={message.id} className={`flex ${message.isFromMe ? 'justify-end' : 'justify-start'}`}>
+                      {!message.isFromMe && (
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#0E1E37] to-[#1a2f4f] text-white flex items-center justify-center text-sm font-semibold mr-3 shrink-0 self-end shadow-sm overflow-hidden">
+                          {message.senderAvatar ? (
+                            <img src={message.senderAvatar} alt={message.senderName || 'Influencer'} className="w-full h-full object-cover" />
+                          ) : (
+                            message.senderName?.charAt(0).toUpperCase() || 'I'
+                          )}
+                        </div>
+                      )}
                       
-                      <p className={`text-[10px] mt-1 ${message.isFromMe ? 'text-right text-gray-400' : 'text-gray-400'}`}>
-                        {formatTime(message.timestamp)}
-                      </p>
+                      <div className={`max-w-[80%] md:max-w-[65%] ${message.isFromMe ? 'mr-2' : ''}`}>
+                        {/* Nome do remetente */}
+                        {showSender && message.senderName && (
+                          <p className="text-xs text-gray-500 mb-1 ml-1">{message.senderName}</p>
+                        )}
+                        
+                        <div className={`px-4 py-3 ${
+                          isFirstMessage 
+                            ? message.isFromMe 
+                              ? 'rounded-2xl rounded-br-md' 
+                              : 'rounded-2xl rounded-bl-md'
+                            : 'rounded-2xl'
+                        } ${
+                          message.isFromMe 
+                            ? 'bg-[#0E1E37] text-white shadow-md' 
+                            : 'bg-white text-gray-800 shadow-sm'
+                        }`}>
+                          {message.type === 'html' ? (
+                            <div 
+                              className={`prose prose-sm max-w-none ${message.isFromMe ? 'prose-invert' : ''} chat-message-content`}
+                              dangerouslySetInnerHTML={{ __html: message.content }}
+                            />
+                          ) : (
+                            <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                          )}
+                        </div>
+                        
+                        <p className={`text-[11px] mt-1 ${message.isFromMe ? 'text-right text-gray-400' : 'text-gray-400 ml-1'}`}>
+                          {formatTime(message.timestamp)}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
                 <div ref={chatEndRef} />
               </div>
 
