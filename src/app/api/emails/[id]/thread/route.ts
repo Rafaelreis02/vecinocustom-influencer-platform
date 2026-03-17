@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { getGmailAuth } from '@/lib/gmail';
 import { google } from 'googleapis';
 
 function extractEmail(str: string): string {
@@ -67,10 +66,18 @@ export async function GET(
       });
     }
 
-    const auth = await getGmailAuth();
-    const gmail = google.gmail({ version: 'v1', auth });
+    // Inline Gmail client - same pattern as sync-emails (which works!)
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      process.env.NEXT_PUBLIC_APP_URL + '/api/auth/gmail/callback'
+    );
+    oauth2Client.setCredentials({
+      refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
+    });
+    const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
 
-    // Buscar thread do Gmail
+    // Fetch thread from Gmail
     const thread = await gmail.users.threads.get({
       userId: 'me',
       id: email.gmailThreadId,
@@ -100,11 +107,11 @@ export async function GET(
           }
         }
       } else if (msg.payload?.body?.data) {
-        const data = Buffer.from(msg.payload.body.data, 'base64').toString('utf-8');
+        const decoded = Buffer.from(msg.payload.body.data, 'base64').toString('utf-8');
         if (msg.payload.mimeType === 'text/html') {
-          htmlBody = data;
+          htmlBody = decoded;
         } else {
-          body = data;
+          body = decoded;
         }
       }
 
@@ -131,18 +138,6 @@ export async function GET(
 
   } catch (error: any) {
     console.error('[thread API] Error:', error.message);
-    
-    if (error.message?.includes('unauthorized')) {
-      return NextResponse.json(
-        { 
-          error: 'Gmail authorization failed', 
-          message: 'Token needs gmail.readonly scope. Go to /admin/gmail-auth to generate new token.',
-          needsAuth: true 
-        },
-        { status: 401 }
-      );
-    }
-    
     return NextResponse.json(
       { error: 'Failed to fetch thread', message: error.message },
       { status: 500 }
