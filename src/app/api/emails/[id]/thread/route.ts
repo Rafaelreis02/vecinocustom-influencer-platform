@@ -2,6 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { getGmailAuth } from '@/lib/gmail';
+import { google } from 'googleapis';
+
+function extractEmail(str: string): string {
+  const match = str.match(/<([^>]+)>/);
+  return match ? match[1].toLowerCase() : str.toLowerCase();
+}
+
+function isOurEmail(from: string): boolean {
+  const email = extractEmail(from);
+  const ourEmail = (process.env.GMAIL_USER || 'brand@vecinocustom.com').toLowerCase();
+  return email.includes(ourEmail);
+}
 
 export async function GET(
   request: NextRequest,
@@ -15,15 +28,19 @@ export async function GET(
 
     const { id } = await params;
 
-    // Buscar email e suas respostas enviadas
     const email = await prisma.email.findUnique({
       where: { id },
-      include: {
+      select: {
+        id: true,
+        gmailThreadId: true,
+        from: true,
+        to: true,
+        subject: true,
+        body: true,
+        htmlBody: true,
+        receivedAt: true,
         influencer: {
           select: { id: true, name: true, avatarUrl: true },
-        },
-        sentEmails: {
-          orderBy: { sentAt: 'asc' },
         },
       },
     });
@@ -32,39 +49,80 @@ export async function GET(
       return NextResponse.json({ error: 'Email not found' }, { status: 404 });
     }
 
-    const messages: any[] = [];
-
-    // Adicionar respostas enviadas (da nossa BD)
-    for (const sent of email.sentEmails) {
-      messages.push({
-        id: `sent-${sent.id}`,
-        from: process.env.GMAIL_USER || 'brand@vecinocustom.com',
-        to: sent.toEmail,
-        subject: sent.subject,
-        body: sent.body,
-        htmlBody: sent.htmlBody,
-        receivedAt: sent.sentAt.toISOString(),
-        isSent: true,
-        senderName: 'Vecino Custom',
+    if (!email.gmailThreadId) {
+      return NextResponse.json({
+        success: true,
+        data: [{
+          id: email.id,
+          from: email.from,
+          to: email.to,
+          subject: email.subject,
+          body: email.body,
+          htmlBody: email.htmlBody,
+          receivedAt: email.receivedAt,
+          isSent: false,
+          influencer: email.influencer,
+          senderName: email.influencer?.name || email.from.split('<')[0].trim(),
+        }],
       });
     }
 
-    // Adicionar email original (recebido)
-    messages.push({
-      id: email.id,
-      from: email.from,
-      to: email.to,
-      subject: email.subject,
-      body: email.body,
-      htmlBody: email.htmlBody,
-      receivedAt: email.receivedAt,
-      isSent: false,
-      influencer: email.influencer,
-      senderName: email.influencer?.name || email.from.split('<')[0].trim(),
+    const auth = await getGmailAuth();
+    const gmail = google.gmail({ version: 'v1', auth });
+
+    // Buscar thread do Gmail
+    const thread = await gmail.users.threads.get({
+      userId: 'me',
+      id: email.gmailThreadId,
+      format: 'full',
     });
 
-    // Ordenar por data (mais antigo primeiro)
-    messages.sort((a, b) => new Date(a.receivedAt).getTime() - new Date(b.receivedAt).getTime());
+    const gmailMessages = thread.data.messages || [];
+    const messages = [];
+
+    for (const msg of gmailMessages) {
+      const headers = msg.payload?.headers || [];
+      const from = headers.find((h: any) => h.name === 'From')?.value || '';
+      const to = headers.find((h: any) => h.name === 'To')?.value || '';
+      const subject = headers.find((h: any) => h.name === 'Subject')?.value || '';
+      const date = msg.internalDate;
+
+      let body = '';
+      let htmlBody = '';
+
+      if (msg.payload?.parts) {
+        for (const part of msg.payload.parts) {
+          if (part.mimeType === 'text/plain' && part.body?.data) {
+            body = Buffer.from(part.body.data, 'base64').toString('utf-8');
+          }
+          if (part.mimeType === 'text/html' && part.body?.data) {
+            htmlBody = Buffer.from(part.body.data, 'base64').toString('utf-8');
+          }
+        }
+      } else if (msg.payload?.body?.data) {
+        const data = Buffer.from(msg.payload.body.data, 'base64').toString('utf-8');
+        if (msg.payload.mimeType === 'text/html') {
+          htmlBody = data;
+        } else {
+          body = data;
+        }
+      }
+
+      const isFromMe = isOurEmail(from);
+
+      messages.push({
+        id: msg.id,
+        from,
+        to,
+        subject,
+        body,
+        htmlBody,
+        receivedAt: date ? new Date(parseInt(date)).toISOString() : new Date().toISOString(),
+        isSent: isFromMe,
+        influencer: isFromMe ? null : email.influencer,
+        senderName: isFromMe ? 'Vecino Custom' : (email.influencer?.name || from.split('<')[0].trim()),
+      });
+    }
 
     return NextResponse.json({
       success: true,
@@ -72,7 +130,19 @@ export async function GET(
     });
 
   } catch (error: any) {
-    console.error('[thread API] Error:', error);
+    console.error('[thread API] Error:', error.message);
+    
+    if (error.message?.includes('unauthorized')) {
+      return NextResponse.json(
+        { 
+          error: 'Gmail authorization failed', 
+          message: 'Token needs gmail.readonly scope. Go to /admin/gmail-auth to generate new token.',
+          needsAuth: true 
+        },
+        { status: 401 }
+      );
+    }
+    
     return NextResponse.json(
       { error: 'Failed to fetch thread', message: error.message },
       { status: 500 }
