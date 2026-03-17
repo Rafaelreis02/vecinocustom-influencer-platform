@@ -97,22 +97,48 @@ export async function GET(
       let body = '';
       let htmlBody = '';
 
-      if (msg.payload?.parts) {
-        for (const part of msg.payload.parts) {
-          if (part.mimeType === 'text/plain' && part.body?.data) {
-            body = Buffer.from(part.body.data, 'base64').toString('utf-8');
+      // Recursive function to extract body from nested MIME parts
+      function extractParts(payload: any) {
+        if (!payload) return;
+        
+        // Direct body data
+        if (payload.body?.data) {
+          const decoded = Buffer.from(payload.body.data, 'base64').toString('utf-8');
+          if (payload.mimeType === 'text/plain' && !body) {
+            body = decoded;
           }
-          if (part.mimeType === 'text/html' && part.body?.data) {
-            htmlBody = Buffer.from(part.body.data, 'base64').toString('utf-8');
+          if (payload.mimeType === 'text/html' && !htmlBody) {
+            htmlBody = decoded;
           }
         }
-      } else if (msg.payload?.body?.data) {
-        const decoded = Buffer.from(msg.payload.body.data, 'base64').toString('utf-8');
-        if (msg.payload.mimeType === 'text/html') {
-          htmlBody = decoded;
-        } else {
-          body = decoded;
+        
+        // Recurse into parts
+        if (payload.parts) {
+          for (const part of payload.parts) {
+            extractParts(part);
+          }
         }
+      }
+      
+      extractParts(msg.payload);
+      
+      // Strip quoted replies from body to show only the new content
+      if (body) {
+        // Remove "On ... wrote:" quoted sections
+        body = body.split(/\nOn .+wrote:\n/)[0].trim();
+        // Remove "> quoted" lines at the end
+        const lines = body.split('\n');
+        while (lines.length > 0 && lines[lines.length - 1].startsWith('>')) {
+          lines.pop();
+        }
+        body = lines.join('\n').trim();
+      }
+      
+      if (htmlBody) {
+        // Remove Gmail quoted content (div.gmail_quote)
+        htmlBody = htmlBody.replace(/<div class="gmail_quote"[\s\S]*$/, '').trim();
+        // Remove blockquote sections
+        htmlBody = htmlBody.replace(/<blockquote[\s\S]*?<\/blockquote>/gi, '').trim();
       }
 
       const isFromMe = isOurEmail(from);
