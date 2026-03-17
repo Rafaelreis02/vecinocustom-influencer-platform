@@ -28,11 +28,22 @@ export async function POST(request: Request) {
       );
     }
 
+    // DEBUG: Log credential status
+    const clientId = process.env.GOOGLE_CLIENT_ID || '';
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET || '';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || '';
+    const redirectUri = appUrl + '/api/auth/gmail/callback';
+    
+    logger.info(`[SYNC] CLIENT_ID: ${clientId ? clientId.substring(0, 15) + '...' : 'MISSING'}`);
+    logger.info(`[SYNC] CLIENT_SECRET: ${clientSecret ? clientSecret.substring(0, 5) + '...' : 'MISSING'}`);
+    logger.info(`[SYNC] REFRESH_TOKEN: ${refreshToken ? refreshToken.substring(0, 10) + '...' : 'MISSING'}`);
+    logger.info(`[SYNC] REDIRECT_URI: ${redirectUri}`);
+    
     // Create Gmail client inline (fix for googleapis v171.x bug)
     const oauth2Client = new google.auth.OAuth2(
-      process.env.GOOGLE_CLIENT_ID,
-      process.env.GOOGLE_CLIENT_SECRET,
-      process.env.NEXT_PUBLIC_APP_URL + '/api/auth/gmail/callback'
+      clientId,
+      clientSecret,
+      redirectUri
     );
 
     oauth2Client.setCredentials({
