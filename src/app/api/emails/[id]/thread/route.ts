@@ -122,23 +122,49 @@ export async function GET(
       
       extractParts(msg.payload);
       
-      // Strip quoted replies from body to show only the new content
+      // Strip quoted replies to show only the NEW content per message
       if (body) {
-        // Remove "On ... wrote:" quoted sections
-        body = body.split(/\nOn .+wrote:\n/)[0].trim();
-        // Remove "> quoted" lines at the end
+        // Multi-language "On ... wrote:" patterns
+        const quotePatterns = [
+          /\n.*escreveu\s*\(.*\):\s*\n/i,       // PT: "escreveu (sábado, ...)"
+          /\n.*wrote:\s*\n/i,                     // EN: "wrote:"
+          /\n.*schrieb:\s*\n/i,                   // DE: "schrieb:"
+          /\n.*a écrit\s*:\s*\n/i,                // FR: "a écrit:"
+          /\n.*ha scritto:\s*\n/i,                // IT: "ha scritto:"
+          /\n.*escribió:\s*\n/i,                  // ES: "escribió:"
+          /\nOn .+<.+@.+>.*:\s*\n/i,             // "On date, Name <email> wrote:"
+          /\n-{3,}\s*\n/,                          // "---" separator
+          /\n_{3,}\s*\n/,                          // "___" separator
+          /\nFrom:\s*.+\n/i,                       // "From: ..." (Outlook style)
+        ];
+        
+        for (const pattern of quotePatterns) {
+          const match = body.search(pattern);
+          if (match > 0) {
+            body = body.substring(0, match).trim();
+            break;
+          }
+        }
+        
+        // Remove trailing ">" quoted lines
         const lines = body.split('\n');
-        while (lines.length > 0 && lines[lines.length - 1].startsWith('>')) {
+        while (lines.length > 0 && lines[lines.length - 1].trimStart().startsWith('>')) {
           lines.pop();
         }
         body = lines.join('\n').trim();
       }
       
       if (htmlBody) {
-        // Remove Gmail quoted content (div.gmail_quote)
-        htmlBody = htmlBody.replace(/<div class="gmail_quote"[\s\S]*$/, '').trim();
+        // Remove Gmail quoted content
+        htmlBody = htmlBody.replace(/<div class="gmail_quote"[\s\S]*$/i, '').trim();
+        // Remove Outlook quoted content
+        htmlBody = htmlBody.replace(/<div id="appendonsend"[\s\S]*$/i, '').trim();
         // Remove blockquote sections
         htmlBody = htmlBody.replace(/<blockquote[\s\S]*?<\/blockquote>/gi, '').trim();
+        // Remove "escreveu" / "wrote" citation line + everything after
+        htmlBody = htmlBody.replace(/<div[^>]*>.*(?:escreveu|wrote|schrieb|ha scritto|a écrit).*<\/div>\s*<blockquote[\s\S]*/gi, '').trim();
+        // Clean trailing <br> and empty divs
+        htmlBody = htmlBody.replace(/(<br\s*\/?>|\s|<div>\s*<\/div>)+$/gi, '').trim();
       }
 
       const isFromMe = isOurEmail(from);
