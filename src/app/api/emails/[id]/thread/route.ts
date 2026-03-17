@@ -70,13 +70,31 @@ export async function GET(
 
     const auth = await getGmailAuth();
     const gmail = google.gmail({ version: 'v1', auth });
-    const thread = await gmail.users.threads.get({
+    
+    // Buscar mensagens da thread usando messages.list com threadId
+    const listRes = await gmail.users.messages.list({
       userId: 'me',
-      id: email.gmailThreadId,
-      format: 'full',
+      q: `threadId:${email.gmailThreadId}`,
+      maxResults: 50,
     });
-
-    const gmailMessages = thread.data.messages || [];
+    
+    const messageIds = listRes.data.messages || [];
+    console.log(`[thread API] Found ${messageIds.length} messages in thread`);
+    
+    // Buscar cada mensagem individualmente
+    const gmailMessages = [];
+    for (const msgInfo of messageIds) {
+      try {
+        const msg = await gmail.users.messages.get({
+          userId: 'me',
+          id: msgInfo.id!,
+          format: 'full',
+        });
+        gmailMessages.push(msg.data);
+      } catch (e: any) {
+        console.error(`[thread API] Failed to get message ${msgInfo.id}:`, e.message);
+      }
+    }
     const messages = [];
 
     for (const msg of gmailMessages) {
