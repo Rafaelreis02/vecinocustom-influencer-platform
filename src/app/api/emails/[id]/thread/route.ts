@@ -2,19 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { getGmailAuth } from '@/lib/gmail';
-import { google } from 'googleapis';
-
-function extractEmail(str: string): string {
-  const match = str.match(/<([^>]+)>/);
-  return match ? match[1].toLowerCase() : str.toLowerCase();
-}
-
-function isOurEmail(from: string): boolean {
-  const email = extractEmail(from);
-  const ourEmail = (process.env.GMAIL_USER || 'brand@vecinocustom.com').toLowerCase();
-  return email.includes(ourEmail);
-}
 
 export async function GET(
   request: NextRequest,
@@ -28,20 +15,15 @@ export async function GET(
 
     const { id } = await params;
 
+    // Buscar email e suas respostas enviadas
     const email = await prisma.email.findUnique({
       where: { id },
-      select: {
-        id: true,
-        gmailThreadId: true,
-        gmailId: true,
-        from: true,
-        to: true,
-        subject: true,
-        body: true,
-        htmlBody: true,
-        receivedAt: true,
+      include: {
         influencer: {
           select: { id: true, name: true, avatarUrl: true },
+        },
+        sentEmails: {
+          orderBy: { sentAt: 'asc' },
         },
       },
     });
@@ -50,100 +32,39 @@ export async function GET(
       return NextResponse.json({ error: 'Email not found' }, { status: 404 });
     }
 
-    if (!email.gmailThreadId) {
-      return NextResponse.json({
-        success: true,
-        data: [{
-          id: email.id,
-          from: email.from,
-          to: email.to,
-          subject: email.subject,
-          body: email.body,
-          htmlBody: email.htmlBody,
-          receivedAt: email.receivedAt,
-          isSent: false,
-          influencer: email.influencer,
-          senderName: email.influencer?.name || email.from.split('<')[0].trim(),
-        }],
-      });
-    }
+    const messages: any[] = [];
 
-    console.log('[thread API] Getting Gmail auth...');
-    const auth = await getGmailAuth();
-    console.log('[thread API] Gmail auth obtained');
-    
-    const gmail = google.gmail({ version: 'v1', auth });
-    console.log('[thread API] Calling messages.list with threadId:', email.gmailThreadId);
-    
-    // Buscar mensagens da thread usando messages.list com threadId
-    const listRes = await gmail.users.messages.list({
-      userId: 'me',
-      q: `threadId:${email.gmailThreadId}`,
-      maxResults: 50,
-    });
-    
-    const messageIds = listRes.data.messages || [];
-    console.log(`[thread API] Found ${messageIds.length} messages in thread`);
-    
-    // Buscar cada mensagem individualmente
-    const gmailMessages = [];
-    for (const msgInfo of messageIds) {
-      try {
-        const msg = await gmail.users.messages.get({
-          userId: 'me',
-          id: msgInfo.id!,
-          format: 'full',
-        });
-        gmailMessages.push(msg.data);
-      } catch (e: any) {
-        console.error(`[thread API] Failed to get message ${msgInfo.id}:`, e.message);
-      }
-    }
-    const messages = [];
-
-    for (const msg of gmailMessages) {
-      const headers = msg.payload?.headers || [];
-      const from = headers.find((h: any) => h.name === 'From')?.value || '';
-      const to = headers.find((h: any) => h.name === 'To')?.value || '';
-      const subject = headers.find((h: any) => h.name === 'Subject')?.value || '';
-      const date = msg.internalDate;
-
-      let body = '';
-      let htmlBody = '';
-
-      if (msg.payload?.parts) {
-        for (const part of msg.payload.parts) {
-          if (part.mimeType === 'text/plain' && part.body?.data) {
-            body = Buffer.from(part.body.data, 'base64').toString('utf-8');
-          }
-          if (part.mimeType === 'text/html' && part.body?.data) {
-            htmlBody = Buffer.from(part.body.data, 'base64').toString('utf-8');
-          }
-        }
-      } else if (msg.payload?.body?.data) {
-        const data = Buffer.from(msg.payload.body.data, 'base64').toString('utf-8');
-        if (msg.payload.mimeType === 'text/html') {
-          htmlBody = data;
-        } else {
-          body = data;
-        }
-      }
-
-      const isFromMe = isOurEmail(from);
-
+    // Adicionar respostas enviadas (da nossa BD)
+    for (const sent of email.sentEmails) {
       messages.push({
-        id: msg.id,
-        from,
-        to,
-        subject,
-        body,
-        htmlBody,
-        receivedAt: date ? new Date(parseInt(date)).toISOString() : new Date().toISOString(),
-        isSent: isFromMe,
-        influencer: isFromMe ? null : email.influencer,
-        senderName: isFromMe ? 'Vecino Custom' : (email.influencer?.name || from.split('<')[0].trim()),
+        id: `sent-${sent.id}`,
+        from: process.env.GMAIL_USER || 'brand@vecinocustom.com',
+        to: sent.toEmail,
+        subject: sent.subject,
+        body: sent.body,
+        htmlBody: sent.htmlBody,
+        receivedAt: sent.sentAt.toISOString(),
+        isSent: true,
+        senderName: 'Vecino Custom',
       });
     }
+
+    // Adicionar email original (recebido)
+    messages.push({
+      id: email.id,
+      from: email.from,
+      to: email.to,
+      subject: email.subject,
+      body: email.body,
+      htmlBody: email.htmlBody,
+      receivedAt: email.receivedAt,
+      isSent: false,
+      influencer: email.influencer,
+      senderName: email.influencer?.name || email.from.split('<')[0].trim(),
+    });
+
+    // Ordenar por data (mais antigo primeiro)
+    messages.sort((a, b) => new Date(a.receivedAt).getTime() - new Date(b.receivedAt).getTime());
 
     return NextResponse.json({
       success: true,
@@ -151,11 +72,9 @@ export async function GET(
     });
 
   } catch (error: any) {
-    console.error('[thread API] Error:', error.message);
-    console.error('[thread API] Error code:', error.code);
-    console.error('[thread API] Error status:', error.status);
+    console.error('[thread API] Error:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch thread', message: error.message, code: error.code },
+      { error: 'Failed to fetch thread', message: error.message },
       { status: 500 }
     );
   }
