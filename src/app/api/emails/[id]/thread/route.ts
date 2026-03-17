@@ -68,8 +68,12 @@ export async function GET(
       });
     }
 
+    console.log('[thread API] Getting Gmail auth...');
     const auth = await getGmailAuth();
+    console.log('[thread API] Gmail auth obtained');
+    
     const gmail = google.gmail({ version: 'v1', auth });
+    console.log('[thread API] Calling messages.list with threadId:', email.gmailThreadId);
     
     // Buscar mensagens da thread usando messages.list com threadId
     const listRes = await gmail.users.messages.list({
@@ -147,9 +151,11 @@ export async function GET(
     });
 
   } catch (error: any) {
-    console.error('[thread API] Error:', error);
+    console.error('[thread API] Error:', error.message);
+    console.error('[thread API] Error code:', error.code);
+    console.error('[thread API] Error status:', error.status);
     return NextResponse.json(
-      { error: 'Failed to fetch thread', message: error.message },
+      { error: 'Failed to fetch thread', message: error.message, code: error.code },
       { status: 500 }
     );
   }
