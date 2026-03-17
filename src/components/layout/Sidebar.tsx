@@ -12,7 +12,6 @@ import {
   LogOut,
   X,
   Mail,
-  UserCog,
 } from 'lucide-react';
 import { useRole, UserRole } from '@/hooks/useRole';
 
@@ -119,21 +118,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
             <p className="px-3 text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">
               Admin
             </p>
-            <Link
-              href="/dashboard/users"
-              className={clsx(
-                'flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200',
-                pathname.startsWith('/dashboard/users')
-                  ? 'bg-[#0E1E37] text-white shadow-sm'
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-              )}
-            >
-              <UserCog className={clsx(
-                "h-5 w-5",
-                pathname.startsWith('/dashboard/users') ? "text-white" : "text-gray-400"
-              )} strokeWidth={1.5} />
-              Utilizadores
-            </Link>
+            {/* Utilizadores removido - disponível nas Definições */}
           </div>
         )}
 
